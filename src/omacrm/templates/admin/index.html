@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {% for kpi in kpis %}
+                {% component "unfold/components/card.html" with title=kpi.label href=kpi.link icon=kpi.icon %}
+                    <div class="text-2xl font-semibold text-important">{{ kpi.value }}</div>
+                {% endcomponent %}
+            {% endfor %}
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {% component "unfold/components/card.html" with title=_("Recent activity") %}
+                <div class="flex flex-col gap-3">
+                    {% for note in recent_notes %}
+                        <div class="flex flex-col gap-1 border-b border-base-200 pb-2 dark:border-base-800">
+                            <div class="text-sm text-important">
+                                {{ note.get_type_display }}
+                                {{ note.parent_display }}
+                            </div>
+                            <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                {{ note.created_by|default:"-" }} &middot; {{ note.created_at }}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                            {% translate "No activity yet." %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with title=_("Unread notifications") %}
+                <div class="flex flex-col gap-3">
+                    {% for notification in unread_notifications %}
+                        <div class="flex flex-col gap-1 border-b border-base-200 pb-2 dark:border-base-800">
+                            <div class="text-sm text-important">{{ notification.message }}</div>
+                            <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                                {{ notification.get_type_display }} &middot; {{ notification.created_at }}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                            {% translate "No unread notifications." %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endcomponent %}
+        </div>
+    </div>
+{% endblock %}

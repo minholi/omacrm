@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6">
+        <div class="flex flex-row items-center gap-2">
+            <a href="{% url 'admin:core_layout_changelist' %}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                &larr; {% translate "Layouts" %}
+            </a>
+            <span class="font-semibold ml-2 text-important">{% translate "Layout Editor" %}</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {% for entity in entities %}
+                {% component "unfold/components/card.html" with href=entity.url title=entity.label %}
+                    <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        {{ entity.field_count }} {% translate "fields" %}
+                    </div>
+                    <div class="text-xs mt-1">
+                        {% if entity.custom_list %}{% translate "custom list" %} {% endif %}
+                        {% if entity.custom_detail %}{% translate "custom detail" %} {% endif %}
+                    </div>
+                {% endcomponent %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}&assigned={{ assigned }}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                &larr; {% translate "Previous" %}
+            </a>
+            <a href="?year={{ today.year }}&month={{ today.month }}&assigned={{ assigned }}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                {% translate "Today" %}
+            </a>
+            <a href="?year={{ next_year }}&month={{ next_month }}&assigned={{ assigned }}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                {% translate "Next" %} &rarr;
+            </a>
+            <span class="font-semibold ml-2 text-important">{{ month_label }}</span>
+
+            <div class="flex gap-2 ml-auto">
+                <a href="?year={{ year }}&month={{ month }}&assigned=me"
+                   class="border rounded-default px-3 py-1.5 text-sm {% if assigned == 'me' %}border-primary-500 text-primary-600 dark:text-primary-500{% else %}border-base-200 dark:border-base-800 hover:text-primary-600 dark:hover:text-primary-500{% endif %}">
+                    {% translate "My events" %}
+                </a>
+                <a href="?year={{ year }}&month={{ month }}&assigned=all"
+                   class="border rounded-default px-3 py-1.5 text-sm {% if assigned == 'all' %}border-primary-500 text-primary-600 dark:text-primary-500{% else %}border-base-200 dark:border-base-800 hover:text-primary-600 dark:hover:text-primary-500{% endif %}">
+                    {% translate "All events" %}
+                </a>
+            </div>
+        </div>
+
+        {% component "unfold/components/card.html" %}
+            <div class="grid grid-cols-7 gap-1">
+                {% for weekday in weekdays %}
+                    <div class="font-semibold p-1 text-xs uppercase text-font-subtle-light dark:text-font-subtle-dark">
+                        {{ weekday }}
+                    </div>
+                {% endfor %}
+
+                {% for week in weeks %}
+                    {% for day in week %}
+                        <div class="border border-base-200 rounded-default p-1 dark:border-base-800"
+                             style="min-height:104px{% if not day.in_month %};opacity:.45{% endif %}{% if day.today %};border-color:var(--color-primary-500){% endif %}">
+                            <div class="text-xs {% if day.today %}font-bold text-primary-600 dark:text-primary-500{% endif %}">
+                                {{ day.date.day }}
+                            </div>
+                            {% for event in day.events %}
+                                <a href="{{ event.url }}"
+                                   title="{{ event.type }}: {{ event.name }}"
+                                   class="block mt-1 px-1 py-0.5 rounded-default text-xs truncate {% if event.variant == 'info' %}bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400{% elif event.variant == 'primary' %}bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400{% else %}bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400{% endif %}">
+                                    {{ event.when|time:"H:i" }} {{ event.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with title=_("Agenda") %}
+            <div class="flex flex-col gap-2">
+                {% for event in agenda %}
+                    <a href="{{ event.url }}"
+                       class="border-b border-base-200 pb-2 flex flex-col gap-0.5 dark:border-base-800">
+                        <div class="text-sm text-important">
+                            <span class="material-symbols-outlined md-18 mr-1 align-[-3px]">{{ event.icon }}</span>
+                            {{ event.name }}
+                        </div>
+                        <div class="text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                            {{ event.when|date:"Y-m-d H:i" }} &middot; {{ event.type }}
+                            {% if event.assigned %}&middot; {{ event.assigned }}{% endif %}
+                        </div>
+                    </a>
+                {% empty %}
+                    <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                        {% translate "No events this month." %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endcomponent %}
+    </div>
+{% endblock %}

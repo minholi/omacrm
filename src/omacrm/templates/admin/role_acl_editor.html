@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <form method="post" class="flex flex-col gap-6">
+        {% csrf_token %}
+        <input type="hidden" name="selected_entity" value="{{ selected_entity }}">
+
+        <div class="flex flex-row items-center gap-2">
+            <a href="{% url 'admin:core_role_changelist' %}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                &larr; {% translate "Roles" %}
+            </a>
+            <span class="font-semibold ml-2 text-important">{{ role.name }}</span>
+            <button type="submit"
+                    class="ml-auto bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
+                {% translate "Save access matrix" %}
+            </button>
+        </div>
+
+        {% component "unfold/components/card.html" with title=_("Scope access") %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-font-subtle-light dark:text-font-subtle-dark">
+                            <th class="py-2 pr-3">{% translate "Entity" %}</th>
+                            {% for action in actions %}
+                                <th class="py-2 pr-3 capitalize">{{ action }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in entity_rows %}
+                            <tr class="border-t border-base-200 dark:border-base-800">
+                                <td class="py-1.5 pr-3 text-important">{{ row.label }}</td>
+                                {% for action in actions %}
+                                    <td class="py-1.5 pr-3">
+                                        <select name="scope__{{ row.entity_type }}__{{ action }}"
+                                                class="bg-white border border-base-200 rounded-default px-2 py-1 text-sm dark:bg-base-900 dark:border-base-800">
+                                            {% for level in levels %}
+                                                <option value="{{ level }}" {% if row.levels|default_if_none:'' == level %}selected{% endif %}>
+                                                    {% if level %}{{ level }}{% else %}{% translate "not set" %}{% endif %}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endcomponent %}
+
+        {% if selected_entity %}
+            {% component "unfold/components/card.html" with title=_("Field access") %}
+                <div class="flex flex-wrap gap-2 mb-3">
+                    {% for row in entity_rows %}
+                        <a href="?entity={{ row.entity_type }}"
+                           class="border rounded-default px-2 py-1 text-xs {% if row.entity_type == selected_entity %}border-primary-500 text-primary-600 dark:text-primary-500{% else %}border-base-200 dark:border-base-800 hover:text-primary-600 dark:hover:text-primary-500{% endif %}">
+                            {{ row.label }}
+                        </a>
+                    {% endfor %}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                    {% for field in field_rows %}
+                        <div class="flex flex-row items-center gap-2">
+                            <span class="text-sm grow">{{ field.name }}</span>
+                            <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ field.type }}</span>
+                            <select name="field__{{ selected_entity }}__{{ field.name }}"
+                                    class="bg-white border border-base-200 rounded-default px-2 py-1 text-sm dark:bg-base-900 dark:border-base-800">
+                                {% for level in levels %}
+                                    <option value="{{ level }}" {% if field.level|default_if_none:'' == level %}selected{% endif %}>
+                                        {% if level %}{{ level }}{% else %}{% translate "not set" %}{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endcomponent %}
+        {% endif %}
+    </form>
+{% endblock %}
