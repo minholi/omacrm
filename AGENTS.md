@@ -27,13 +27,24 @@ uv run python src/omacrm/manage.py migrate       # apply migrations
 uv run python src/omacrm/manage.py makemigrations
 uv run python src/omacrm/manage.py check         # system checks
 uv run python src/omacrm/manage.py test          # tests (discovers from src/)
-uv run python src/omacrm/manage.py seed_demo     # admin/admin12345 + demo/demo12345
+uv run python src/omacrm/manage.py seed_demo     # rich demo dataset (--reset to rebuild)
 uv run python src/omacrm/manage.py rebuild_metadata
 uv run python src/omacrm/manage.py run_jobs [--loop] [--limit N] [--queue Q]
 uv run python src/omacrm/manage.py run_cron [--process]
 uv run python src/omacrm/manage.py createsuperuser
 uv run python src/omacrm/manage.py shell
 ```
+
+`seed_demo` is idempotent and refuses to run when business data already
+exists; `--reset` hard-deletes demo business data (keeping the `admin`, `demo`
+and `portal` logins) and rebuilds it. Other flags: `--rng-seed` (generated
+values), `--base-url` (links in seeded data) and the password flags. The
+seeders live in `core/services/demo/` and create demo users/teams, portal
+access, currencies with dated rates, sales pipeline, cases/KB/documents,
+activities/attendees, inbound email threads, marketing (campaigns with
+consistent logs/counters, mass email, lead capture), stream notes/reactions/
+notifications, webhooks, custom fields/layouts, formulas/workflows and a
+`Project` custom entity (its admin/API pages need a server restart).
 
 ## Layout
 
@@ -51,7 +62,7 @@ src/omacrm/
     services/        # acl, hooks, stream, notifications, duplicates, jobs,
                      # context, builtin_jobs, currency, webhooks, formula,
                      # workflows, custom_entities, phone, reactions, address,
-                     # crypto, inbound_email
+                     # crypto, inbound_email, demo/ (rich seed_demo data)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, views.py

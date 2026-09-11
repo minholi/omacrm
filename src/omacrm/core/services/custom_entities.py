@@ -67,6 +67,9 @@ def materialize(custom_entity):
     proxy = get_proxy(name)
 
     try:
+        # The CT manager caches model -> content type lookups; a previous
+        # unregister may have deleted the row, so never trust a stale entry.
+        ContentType.objects.clear_cache()
         ContentType.objects.get_for_model(proxy, for_concrete_model=False)
     except Exception:  # noqa: BLE001 - DB may be unavailable during setup
         logger.debug("Could not ensure content type for %s", name, exc_info=True)

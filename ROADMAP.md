@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-272 tests passing; see
+275 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -291,8 +291,8 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (272 tests)
-uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
+uv run python src/omacrm/manage.py test      # must be green (275 tests)
+uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
 
@@ -307,6 +307,13 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Rich demo dataset: `seed_demo` now populates every
+  feature (sales pipeline, activities/attendees/recurrence, cases/KB/
+  documents, email threads, marketing with consistent analytics, stream/
+  notifications, webhooks, custom fields/layouts/formulas/workflows and a
+  `Project` custom entity) with `--reset`, `--rng-seed` and `--base-url`
+  flags (275 tests).
 
 - **2026-09-11** — P10: command palette custom entries (static commands,
   permission-filtered entity shortcuts, saved filters), extra formula

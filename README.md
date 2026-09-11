@@ -19,7 +19,7 @@ Requirements: [uv](https://docs.astral.sh/uv/) (Python 3.13 is managed by uv).
 ```bash
 uv sync
 uv run python src/omacrm/manage.py migrate
-uv run python src/omacrm/manage.py seed_demo   # admin/admin12345, demo/demo12345
+uv run python src/omacrm/manage.py seed_demo   # rich demo dataset (admin/demo/portal logins)
 uv run python src/omacrm/manage.py runserver
 ```
 
