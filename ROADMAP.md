@@ -6,8 +6,8 @@
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
-phone/address utilities, stream reactions, layout drag-and-drop and the
-workflow webhook action (161 tests passing). See the
+phone/address utilities, stream reactions, layout drag-and-drop, the
+workflow webhook action and inbound email (172 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -43,7 +43,7 @@ built as admin pages, actions, datasets and custom Unfold views).
 | D — Productivity | Cases, Knowledge Base, Documents, Email templates/send, multi-currency | ✅ done |
 | E — Marketing | Target lists, campaigns, mass email, lead capture, webhooks | ✅ done |
 | F — Customization | Formula engine, workflow rules, layout editor, role/ACL editor | ✅ done |
-| G — Platform | Entity Manager, notifications, customer portal done; IMAP/phone/address, drag-drop layouts next | 🚧 in progress |
+| G — Platform | Entity Manager, notifications, portal, utilities, inbound email done; real-time stream updates and saved filters next | 🚧 in progress |
 
 ## What was delivered (by phase)
 
@@ -173,6 +173,15 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — inbound email:** `Email` + `EmailAccount` models; IMAP
+accounts store passwords encrypted (Fernet key derived from `SECRET_KEY`).
+`core/services/inbound_email.py` parses RFC822 messages (plain/HTML bodies,
+addresses, date, Message-ID), deduplicates by Message-ID, links senders to
+Contact/Lead/Account records and imports them as `Email` records; the
+`core.fetch_inbound_email` job polls every active account. Manage accounts
+under System → Email Accounts (with a "Fetch now" action) and messages under
+Activities → Emails.
+
 **Delivered — address utilities:** `core/services/address.py` formats
 `address_*`/`billing_address_*`/`shipping_address_*` blocks into display
 strings, skipping empty parts.
@@ -189,7 +198,6 @@ keeps the on-screen order, which the admin list view honours.
 **Next in Phase G:**
 
 - **Real-time stream/record updates** (notifications are done over SSE).
-- **IMAP fetch/import** (last EspoCRM parity item; needs an `Email` entity first).
 - Extra workflow actions (update related records) and more formula functions.
 - Optional: saved filter presets.
 
@@ -227,7 +235,7 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Inbound email (IMAP fetch/import, personal/group accounts, reply threading) | D/G | Outbound templates only; dev uses the console backend. Target: Phase G. |
+| Inbound email advanced features (folders, per-user accounts, reply threading, attachments) | D/G | Basic IMAP fetch/import is done; folders/threading/attachments are not. Target: backlog. |
 | Per-recipient unsubscribe links / opt-out from mass email | E | Opt-out is currently managed via target-list actions. Target: Phase G. |
 | Bounce classification (hard/soft) and campaign revenue tracking | E | `CampaignLogRecord` supports `Bounced` but nothing sets it. Target: backlog. |
 | Web-to-lead double opt-in and hosted form page | E | Only the JSON endpoint exists. Target: backlog. |
@@ -247,7 +255,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (161 tests)
+uv run python src/omacrm/manage.py test      # must be green (172 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -263,6 +271,10 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Inbound email: `Email`/`EmailAccount`, encrypted IMAP
+  credentials, message import with dedup and CRM parent linking, and the
+  `core.fetch_inbound_email` job (172 tests).
 
 - **2026-09-11** — Address formatting utilities for record address blocks
   (161 tests).

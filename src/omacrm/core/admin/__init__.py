@@ -4,6 +4,7 @@ from omacrm.core.admin import (  # noqa: F401
     currency,
     dashboard,
     dynamic,
+    email,
     jobs,
     metadata_admin,
     users,

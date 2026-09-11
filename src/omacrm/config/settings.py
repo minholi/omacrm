@@ -269,6 +269,7 @@ UNFOLD = {
                     {"title": _("Calendar"), "icon": "calendar_month", "link": reverse_lazy("crm_calendar")},
                     {"title": _("Calls"), "icon": "call", "link": reverse_lazy("admin:crm_call_changelist")},
                     {"title": _("Meetings"), "icon": "event", "link": reverse_lazy("admin:crm_meeting_changelist")},
+                    {"title": _("Emails"), "icon": "mail", "link": reverse_lazy("admin:core_email_changelist")},
                 ],
             },
             {
@@ -301,6 +302,7 @@ UNFOLD = {
                     {"title": _("Jobs"), "icon": "pending_actions", "link": reverse_lazy("admin:core_job_changelist")},
                     {"title": _("Scheduled Jobs"), "icon": "schedule", "link": reverse_lazy("admin:core_scheduledjob_changelist")},
                     {"title": _("Email Templates"), "icon": "mail", "link": reverse_lazy("admin:crm_emailtemplate_changelist")},
+                    {"title": _("Email Accounts"), "icon": "inbox", "link": reverse_lazy("admin:core_emailaccount_changelist")},
                     {"title": _("Currencies"), "icon": "currency_exchange", "link": reverse_lazy("admin:core_currency_changelist")},
                     {"title": _("Webhooks"), "icon": "webhook", "link": reverse_lazy("admin:core_webhook_changelist")},
                     {"title": _("Notes"), "icon": "forum", "link": reverse_lazy("admin:core_note_changelist")},

@@ -5,3 +5,4 @@ __all__ = ["EntityDef", "FieldDef", "MetadataRegistry", "registry"]
 
 # Importing built-in definitions registers them with the registry.
 from omacrm.core.metadata import entities  # noqa: E402,F401
+from omacrm.core.metadata import email as email_metadata  # noqa: E402,F401

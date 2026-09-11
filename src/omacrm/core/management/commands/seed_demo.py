@@ -109,6 +109,13 @@ class Command(BaseCommand):
                 "scheduling": "*/5 * * * *",
             },
         )
+        ScheduledJob.objects.get_or_create(
+            name="Fetch inbound email",
+            defaults={
+                "job": "core.fetch_inbound_email",
+                "scheduling": "*/5 * * * *",
+            },
+        )
 
         for code, name, symbol, rate in (
             ("USD", "US Dollar", "$", "1"),

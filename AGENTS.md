@@ -43,18 +43,19 @@ src/omacrm/
   config/            # project package: settings, urls, wsgi/asgi, test_runner
   core/              # platform layer
     models/          # base.py (BaseEntity/CustomDataMixin), user.py, meta.py,
-                     # collab.py (Attachment/Note/Notification), jobs.py,
-                     # currency.py, webhooks.py, automation.py (Formula/Workflow),
-                     # dynamic.py (CustomEntity/DynamicRecord)
-    metadata/        # defs.py, registry.py, fields.py, entities.py
+                     # collab.py (Attachment/Note/Notification/UserReaction),
+                     # jobs.py, currency.py, webhooks.py, automation.py
+                     # (Formula/Workflow), dynamic.py (CustomEntity/
+                     # DynamicRecord), email.py (Email/EmailAccount)
+    metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
     services/        # acl, hooks, stream, notifications, duplicates, jobs,
                      # context, builtin_jobs, currency, webhooks, formula,
-                     # workflows, custom_entities, phone, reactions
+                     # workflows, custom_entities, phone, reactions, address,
+                     # crypto, inbound_email
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
-                     # automation, dynamic (custom entity admins), dashboard,
-                     # views.py (calendar + layout/ACL editors), datasets.py,
-                     # inlines.py
+                     # automation, dynamic, email, dashboard, views.py
+                     # (calendar + layout/ACL editors), datasets.py, inlines.py
     api/             # serializers.py, viewsets.py, router.py
     middleware.py    # CurrentUserMiddleware
     forms.py, managers.py
@@ -138,6 +139,10 @@ src/omacrm/
   `Send Email` dialog action on Account/Contact/Lead renders a template,
   sends via Django mail and logs an `Email` note on the record stream.
   Dev uses the console email backend (`EMAIL_BACKEND` in settings).
+  Inbound: `EmailAccount` rows (IMAP credentials encrypted via
+  `core/services/crypto.py`) are polled by the `core.fetch_inbound_email`
+  job, which imports messages as `Email` records with Message-ID dedup and
+  links senders to Contact/Lead/Account parents.
 - **Multi-currency**: `Currency.rate` is the value of one unit in the base
   currency (`base_currency` constance setting); `core/services/currency.py`
   converts and hooks fill `amount_converted` on Opportunity/Lead.
