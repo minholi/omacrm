@@ -9,7 +9,34 @@ TEMPLATES = (
     (
         "Welcome",
         "Welcome, {{ name }}!",
-        "<p>Dear {{ name }},</p><p>Thank you for your interest. Our team will contact you shortly.</p>",
+        """
+<style>
+    .wrapper { background-color: #f3f4f6; padding: 24px; }
+    .card { background-color: #ffffff; border-radius: 8px; padding: 24px;
+            font-family: Arial, sans-serif; color: #1f2937; width: 600px; }
+    .button { background-color: #4f46e5; border-radius: 6px; color: #ffffff;
+              display: inline-block; padding: 10px 20px; text-decoration: none; }
+    .muted { color: #6b7280; font-size: 12px; }
+</style>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="wrapper">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="card">
+                <tr>
+                    <td>
+                        <h1 style="margin: 0 0 12px 0;">Welcome, {{ name }}!</h1>
+                        <p>Thank you for your interest in {{ company_name }}. Our team will
+                           contact you shortly to understand how we can help.</p>
+                        <p><a class="button" href="{{ record.email_address }}">Get in touch</a></p>
+                        <p class="muted">{{ company_name }} &middot; This message was sent to
+                           {{ email_address }}.</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+""",
     ),
     (
         "Follow-up",
@@ -19,7 +46,36 @@ TEMPLATES = (
     (
         "Newsletter",
         "OmaCRM monthly news",
-        "<p>Hello {{ name }},</p><p>Here is what is new at OmaCRM this month.</p>",
+        """
+<style>
+    .wrapper { background-color: #eef2ff; padding: 24px; }
+    .card { background-color: #ffffff; border-radius: 8px; padding: 24px;
+            font-family: Arial, sans-serif; color: #1f2937; width: 600px; }
+    .heading { color: #4338ca; margin: 0 0 12px 0; }
+    .item { border-top: 1px solid #e5e7eb; padding: 12px 0; }
+    .muted { color: #6b7280; font-size: 12px; }
+</style>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="wrapper">
+    <tr>
+        <td align="center">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="card">
+                <tr>
+                    <td>
+                        <h1 class="heading">{{ company_name }} monthly news</h1>
+                        <p>Hello {{ name }}, here is what is new this month.</p>
+                        <div class="item"><strong>New reports</strong><br>
+                            Dashboards now show campaign performance by channel.</div>
+                        <div class="item"><strong>Faster search</strong><br>
+                            Global search results now highlight matched fields.</div>
+                        <p class="muted">You are receiving this email because you subscribed to
+                           {{ company_name }} updates.</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+""",
     ),
     (
         "Case reply",

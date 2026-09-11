@@ -18,9 +18,42 @@ from omacrm.core.admin.views import (
 from omacrm.core.api.router import router
 from omacrm.core.api.viewsets import DynamicRecordViewSet
 from omacrm.crm import views as crm_views
+from omacrm.crm.admin_views import (
+    EmailTemplateDesignView,
+    email_asset_upload,
+    email_template_design_save,
+    email_template_preview,
+    email_template_test_send,
+)
+from omacrm.crm import views as crm_views
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/admin/", permanent=False)),
+    path(
+        "admin/email-assets/upload/",
+        admin.site.admin_view(email_asset_upload),
+        name="email_asset_upload",
+    ),
+    path(
+        "admin/email-template/<int:pk>/design/",
+        admin.site.admin_view(EmailTemplateDesignView.as_view()),
+        name="email_template_design",
+    ),
+    path(
+        "admin/email-template/<int:pk>/design/save/",
+        admin.site.admin_view(email_template_design_save),
+        name="email_template_design_save",
+    ),
+    path(
+        "admin/email-template/<int:pk>/preview/",
+        admin.site.admin_view(email_template_preview),
+        name="email_template_preview",
+    ),
+    path(
+        "admin/email-template/<int:pk>/test-send/",
+        admin.site.admin_view(email_template_test_send),
+        name="email_template_test_send",
+    ),
     path(
         "admin/calendar/",
         admin.site.admin_view(CalendarView.as_view(admin_site=admin.site)),

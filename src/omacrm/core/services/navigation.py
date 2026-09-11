@@ -109,6 +109,11 @@ def sidebar_navigation(request=None):
                 ),
                 _item(_("Mass Emails"), "mail", "admin:crm_massemail_changelist"),
                 _item(
+                    _("Email Templates"),
+                    "draft",
+                    "admin:crm_emailtemplate_changelist",
+                ),
+                _item(
                     _("Lead Capture"), "webhook", "admin:crm_leadcapture_changelist"
                 ),
             ],
@@ -166,11 +171,6 @@ def sidebar_navigation(request=None):
                     _("Scheduled Jobs"),
                     "schedule",
                     "admin:core_scheduledjob_changelist",
-                ),
-                _item(
-                    _("Email Templates"),
-                    "mail",
-                    "admin:crm_emailtemplate_changelist",
                 ),
                 _item(
                     _("Email Accounts"),

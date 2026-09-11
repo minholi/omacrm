@@ -163,6 +163,12 @@ CONSTANCE_CONFIG = {
         "Default region (ISO country code) used to parse phone numbers",
         str,
     ),
+    "public_base_url": (
+        "",
+        "Absolute base URL used to turn relative links and images (e.g. "
+        "/media/...) into absolute URLs in outgoing emails; empty disables it",
+        str,
+    ),
     "notification_email_enabled": (
         True,
         "Email unread notifications as a digest",
@@ -180,6 +186,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "time_format",
     ),
     "Localization": ("phone_default_region",),
+    "Email": ("public_base_url",),
     "Notifications": ("notification_email_enabled",),
 }
 

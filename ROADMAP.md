@@ -6,8 +6,9 @@
 
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
-notifications, utilities, inbound email, saved filters, soft-delete restore).
-327 tests passing; see
+notifications, utilities, inbound email, saved filters, soft-delete restore,
+GrapesJS visual email designer).
+354 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -279,7 +280,7 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog. |
+| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog; can reuse the GrapesJS designer as a second design target. |
 
 ### Customization & platform (Phase G)
 
@@ -291,7 +292,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (327 tests)
+uv run python src/omacrm/manage.py test      # must be green (354 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -307,6 +308,16 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — GrapesJS visual email designer: vendored GrapesJS 0.23.6 +
+  newsletter preset (BSD-3) under `core/static/vendor/grapesjs/`;
+  `EmailTemplate.design` stores the project data and the **Design** detail
+  action opens a standalone editor at `/admin/email-template/<pk>/design/`
+  with merge-tag blocks, preview, test send and image uploads to
+  `media/email-assets/`. Outgoing HTML is CSS-inlined with `premailer` and
+  relative URLs are absolutized via the new `public_base_url` constance
+  setting (`prepare_email_html`, shared by send/mass email); demo seeds
+  include two table-based templates (354 tests).
 
 - **2026-09-11** — Unfold adoption pass (R1–R9): link/linkMultiple pickers
   now use Unfold select2 autocomplete over a new ACL-scoped

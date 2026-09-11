@@ -24,6 +24,13 @@ class CommandPaletteTests(TestCase):
         results = command_search(self._request(self.admin), "cal")
         self.assertIn("Calendar", [result.title for result in results])
 
+    def test_email_templates_command_is_superuser_only(self):
+        results = command_search(self._request(self.admin), "email template")
+        self.assertIn("Email templates", [result.title for result in results])
+
+        results = command_search(self._request(self.staff), "email template")
+        self.assertNotIn("Email templates", [result.title for result in results])
+
     def test_no_match_returns_empty(self):
         self.assertEqual(command_search(self._request(self.admin), "zzzz"), [])
 

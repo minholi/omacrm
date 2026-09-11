@@ -6,7 +6,6 @@ from django.core.mail import send_mail
 from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import strip_tags
 
 from omacrm.core.models import Note
 from omacrm.core.services.jobs import jobs, schedule
@@ -16,7 +15,7 @@ from omacrm.crm.models import (
     EmailQueueItem,
     MassEmail,
 )
-from omacrm.crm.services.email import render_email_template
+from omacrm.crm.services.email import prepare_email_html, render_email_template
 
 UNSUBSCRIBE_SALT = "omacrm.mass_email.unsubscribe"
 
@@ -123,12 +122,13 @@ def process_mass_email(job):
             subject, body = render_email_template(mass_email.email_template, record)
             opt_out_url = unsubscribe_url(item)
             body = f'{body}\n<p><a href="{opt_out_url}">{opt_out_url}</a></p>'
+            html_body, text_body = prepare_email_html(body)
             send_mail(
                 subject,
-                strip_tags(body),
+                text_body,
                 mass_email.from_address or settings.DEFAULT_FROM_EMAIL,
                 [item.email_address],
-                html_message=body,
+                html_message=html_body or None,
                 fail_silently=False,
             )
             item.status = EmailQueueItem.Status.SENT

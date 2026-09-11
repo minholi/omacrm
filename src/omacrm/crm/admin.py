@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.db import models
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import GenericTabularInline, ModelAdmin, TabularInline
@@ -637,11 +638,25 @@ class EmailTemplateAdmin(ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name", "subject")
     readonly_fields = ("created_at", "modified_at")
+    actions_detail = ("open_designer",)
     fieldsets = (
         (None, {"fields": ("name", "subject", "is_active")}),
-        (_("Body"), {"fields": ("body",)}),
+        (
+            _("Body"),
+            {
+                "fields": ("body",),
+                "description": _(
+                    "Prefer the Design action for rich emails; the raw HTML field "
+                    "is kept for advanced or legacy templates."
+                ),
+            },
+        ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    @action(description=_("Design"), icon="palette", variant="primary")
+    def open_designer(self, request, object_id):
+        return redirect("email_template_design", pk=object_id)
 
 
 CAMPAIGN_STATUS_LABELS = {

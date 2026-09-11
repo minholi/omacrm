@@ -1,0 +1,59 @@
+{% load i18n static %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'vendor/grapesjs/grapes.min.css' %}">
+    <style>
+        html, body { height: 100%; margin: 0; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+        #app { display: flex; flex-direction: column; height: 100%; }
+        .editor-toolbar {
+            align-items: center;
+            background: #111827;
+            color: #f9fafb;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+        }
+        .editor-toolbar a { color: #d1d5db; text-decoration: none; }
+        .editor-toolbar a:hover { color: #ffffff; }
+        .editor-toolbar .name { font-weight: 600; }
+        .editor-toolbar .spacer { flex: 1; }
+        .editor-toolbar button {
+            background: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+            color: #f9fafb;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .editor-toolbar button:hover { background: #4b5563; }
+        .editor-toolbar button.primary { background: #4f46e5; border-color: #4f46e5; }
+        .editor-toolbar button.primary:hover { background: #4338ca; }
+        .editor-toolbar .status { color: #9ca3af; font-size: 0.8125rem; }
+        #gjs { flex: 1; min-height: 0; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="editor-toolbar">
+            <a href="{{ designer_config.backUrl }}">&larr; {% translate "Back" %}</a>
+            <span class="name">{{ email_template.name }}</span>
+            <span class="spacer"></span>
+            <span class="status" id="email-designer-status"></span>
+            <button type="button" id="email-designer-preview">{% translate "Preview" %}</button>
+            <button type="button" id="email-designer-test">{% translate "Send test" %}</button>
+            <button type="button" class="primary" id="email-designer-save">{% translate "Save" %}</button>
+        </div>
+        <div id="gjs"></div>
+    </div>
+    {{ designer_config|json_script:"email-designer-config" }}
+    <script src="{% static 'vendor/grapesjs/grapes.min.js' %}"></script>
+    <script src="{% static 'vendor/grapesjs/grapesjs-preset-newsletter.min.js' %}"></script>
+    <script src="{% static 'crm/js/email-designer.js' %}"></script>
+</body>
+</html>

@@ -7,8 +7,14 @@ class EmailTemplate(models.Model):
     subject = models.CharField(max_length=255)
     body = models.TextField(
         help_text=_(
-            "Django template syntax is supported, e.g. {{ name }} or {{ record.name }}."
+            "Rendered HTML. Django template syntax is supported, e.g. {{ name }} "
+            "or {{ record.name }}; the visual designer writes to this field."
         )
+    )
+    design = models.JSONField(
+        null=True,
+        blank=True,
+        help_text=_("Visual designer project data (used to reopen the editor)."),
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

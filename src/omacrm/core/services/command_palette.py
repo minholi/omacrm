@@ -30,6 +30,13 @@ STATIC_COMMANDS = (
         False,
     ),
     (
+        "Email templates",
+        _("Design and edit email templates"),
+        "draft",
+        "admin:crm_emailtemplate_changelist",
+        True,
+    ),
+    (
         "Custom entities",
         _("Manage runtime custom entities"),
         "category",
