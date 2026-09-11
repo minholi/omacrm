@@ -253,7 +253,7 @@ def seed_customization(context):
 
     proxy = get_proxy(project_entity.name)
     projects = []
-    if proxy.objects.count() == 0:
+    if proxy.objects.filter(entity_type=project_entity.name).count() == 0:
         for name, status, budget in PROJECTS:
             projects.append(
                 proxy.objects.create(
@@ -333,6 +333,36 @@ def seed_customization(context):
                 ],
             )
 
+    candidate_entity, _ = CustomEntity.objects.get_or_create(
+        name="Candidate",
+        defaults={
+            "label": "Candidate",
+            "label_plural": "Candidates",
+            "template": "person",
+            "description": "Demo Person-template custom entity.",
+            "menu_order": 20,
+            "is_active": True,
+        },
+    )
+    candidate_proxy = get_proxy(candidate_entity.name)
+    if candidate_proxy.objects.filter(entity_type=candidate_entity.name).count() == 0:
+        for first, last, title, email, phone in (
+            ("Ada", "Lovelace", "Engineer", "ada.lovelace@example.com", "+14155552671"),
+            ("Alan", "Turing", "Researcher", "alan.turing@example.com", "+14155552672"),
+        ):
+            candidate_proxy.objects.create(
+                entity_type="Candidate",
+                assigned_user=context["demo"],
+                custom_data={
+                    "salutation": "",
+                    "first_name": first,
+                    "last_name": last,
+                    "title": title,
+                    "email_address": email,
+                    "phone_number": phone,
+                },
+            )
+
     context.update(
         {
             "custom_fields": fields,
@@ -341,5 +371,6 @@ def seed_customization(context):
             "workflows": workflows,
             "project_entity": project_entity,
             "projects": all_projects,
+            "candidate_entity": candidate_entity,
         }
     )

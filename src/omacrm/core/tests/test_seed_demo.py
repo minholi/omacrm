@@ -69,6 +69,10 @@ class SeedDemoTests(TestCase):
         self.assertIn("code", project.custom_data)
         self.assertTrue(project.custom_data["site_address"]["city"])
         self.assertTrue(project.custom_data["files"])
+
+        candidates = DynamicRecord.objects.filter(entity_type="Candidate")
+        self.assertEqual(candidates.count(), 2)
+        self.assertTrue(candidates.filter(name="Ada Lovelace").exists())
         self.assertGreaterEqual(CustomField.objects.count(), 6)
         self.assertGreaterEqual(Layout.objects.count(), 2)
         self.assertGreaterEqual(SavedFilter.objects.count(), 3)

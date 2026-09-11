@@ -14,6 +14,137 @@ logger = logging.getLogger(__name__)
 
 _proxies: dict[str, type] = {}
 
+ENTITY_TEMPLATES = {
+    "base": {},
+    "person": {
+        "icon": "person",
+        "fields": (
+            (
+                "salutation",
+                "Salutation",
+                "enum",
+                {"choices": [["Mr.", "Mr."], ["Ms.", "Ms."], ["Mrs.", "Mrs."], ["Dr.", "Dr."]]},
+            ),
+            ("first_name", "First Name", "varchar", {}),
+            ("last_name", "Last Name", "varchar", {}),
+            ("title", "Job Title", "varchar", {}),
+            ("email_address", "Email", "email", {}),
+            ("phone_number", "Phone", "phone", {}),
+            ("address", "Address", "address", {}),
+        ),
+        "list": ["name", "title", "email_address", "phone_number"],
+        "detail": [
+            {
+                "title": "Identity",
+                "fields": ["name", "salutation", "first_name", "last_name"],
+            },
+            {
+                "title": "Contact",
+                "fields": ["title", "email_address", "phone_number", "address"],
+            },
+        ],
+    },
+    "company": {
+        "icon": "domain",
+        "fields": (
+            ("email_address", "Email", "email", {}),
+            ("phone_number", "Phone", "phone", {}),
+            ("website", "Website", "url", {}),
+            ("industry", "Industry", "varchar", {}),
+            ("billing_address", "Billing Address", "address", {}),
+        ),
+        "list": ["name", "email_address", "phone_number", "website"],
+        "detail": [
+            {
+                "title": "Overview",
+                "fields": ["name", "email_address", "phone_number", "website", "industry"],
+            },
+            {"title": "Address", "fields": ["billing_address"]},
+        ],
+    },
+    "event": {
+        "icon": "event",
+        "show_in_calendar": True,
+        "fields": (
+            (
+                "status",
+                "Status",
+                "enum",
+                {"choices": [["Planned", "Planned"], ["Held", "Held"], ["Not Held", "Not Held"]]},
+            ),
+            ("date_start", "Start", "datetime", {}),
+            ("date_end", "End", "datetime", {}),
+            ("location", "Location", "varchar", {}),
+            ("description", "Notes", "text", {}),
+        ),
+        "list": ["name", "status", "date_start", "date_end"],
+        "detail": [
+            {
+                "title": "Schedule",
+                "fields": ["name", "status", "date_start", "date_end", "location"],
+            },
+            {"title": "Notes", "fields": ["description"]},
+        ],
+    },
+}
+
+
+def apply_template(custom_entity) -> None:
+    """Create the initial fields and layouts of an entity template."""
+
+    spec = ENTITY_TEMPLATES.get(custom_entity.template or "base")
+    if not spec:
+        return
+
+    from omacrm.core.models import CustomField, Layout
+
+    updates = []
+    if spec.get("icon") and (custom_entity.icon in {"", "extension"}):
+        custom_entity.icon = spec["icon"]
+        updates.append("icon")
+    if spec.get("show_in_calendar") and not custom_entity.show_in_calendar:
+        custom_entity.show_in_calendar = True
+        updates.append("show_in_calendar")
+    if updates:
+        custom_entity.save(update_fields=updates)
+
+    for name, label, field_type, params in spec.get("fields", ()):
+        CustomField.objects.get_or_create(
+            entity_type=custom_entity.name,
+            name=name,
+            defaults={"label": label, "field_type": field_type, "params": params},
+        )
+    if spec.get("list"):
+        Layout.objects.get_or_create(
+            entity_type=custom_entity.name,
+            layout_name="list",
+            defaults={"data": list(spec["list"]), "is_custom": True},
+        )
+    if spec.get("detail"):
+        Layout.objects.get_or_create(
+            entity_type=custom_entity.name,
+            layout_name="detail",
+            defaults={"data": spec["detail"], "is_custom": True},
+        )
+
+
+def _connect_person_name(model) -> None:
+    from django.db.models.signals import pre_save
+
+    def receiver(sender, instance, **kwargs):
+        data = instance.custom_data or {}
+        first = data.get("first_name") or ""
+        last = data.get("last_name") or ""
+        if first or last:
+            instance.name = f"{first} {last}".strip()
+
+    pre_save.connect(
+        receiver,
+        sender=model,
+        dispatch_uid=f"omacrm.custom_entity.person_name.{model._meta.model_name}",
+        weak=False,
+    )
+
 
 def get_proxy(entity_name: str):
     if entity_name in _proxies:
@@ -77,6 +208,11 @@ def materialize(custom_entity):
 
     if not django_admin.site.is_registered(proxy):
         django_admin.site.register(proxy, dynamic_admin_for(name))
+
+    from omacrm.core.models import CustomEntity
+
+    if custom_entity.template == CustomEntity.Template.PERSON:
+        _connect_person_name(proxy)
 
     hooks.connect_entity(name, proxy)
     registry.invalidate()
@@ -152,11 +288,13 @@ def unregister(custom_entity) -> None:
         logger.exception("Could not remove links of custom entity %s", name)
 
 
-def sync(custom_entity) -> None:
+def sync(custom_entity, created: bool = False) -> None:
     """Called on CustomEntity save: register or unregister accordingly."""
 
     try:
         if custom_entity.is_active:
+            if created:
+                apply_template(custom_entity)
             materialize(custom_entity)
         else:
             unregister(custom_entity)

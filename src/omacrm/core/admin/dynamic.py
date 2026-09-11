@@ -42,7 +42,19 @@ class CustomEntityAdmin(ModelAdmin):
     search_fields = ("name", "label", "description")
     readonly_fields = ("created_at", "modified_at")
     fieldsets = (
-        (None, {"fields": ("name", "label", "label_plural", "is_active", "description")}),
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "label",
+                    "label_plural",
+                    "template",
+                    "is_active",
+                    "description",
+                )
+            },
+        ),
         (
             _("Menu"),
             {
@@ -57,6 +69,7 @@ class CustomEntityAdmin(ModelAdmin):
             {
                 "fields": (
                     "stream",
+                    "show_in_calendar",
                     "sort_field",
                     "sort_direction",
                     "search_fields",
@@ -66,3 +79,9 @@ class CustomEntityAdmin(ModelAdmin):
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None and "template" not in readonly:
+            readonly.append("template")
+        return readonly

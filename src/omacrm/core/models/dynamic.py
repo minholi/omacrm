@@ -23,6 +23,12 @@ class CustomEntity(models.Model):
         ASC = "asc", _("Ascending")
         DESC = "desc", _("Descending")
 
+    class Template(models.TextChoices):
+        BASE = "base", _("Base")
+        PERSON = "person", _("Person")
+        COMPANY = "company", _("Company")
+        EVENT = "event", _("Event")
+
     name = models.CharField(
         max_length=64,
         unique=True,
@@ -31,6 +37,12 @@ class CustomEntity(models.Model):
     label = models.CharField(max_length=120, blank=True, default="")
     label_plural = models.CharField(max_length=120, blank=True, default="")
     description = models.TextField(blank=True, default="")
+    template = models.CharField(
+        max_length=20,
+        choices=Template.choices,
+        default=Template.BASE,
+        help_text=_("Initial fields and layouts; locked after creation."),
+    )
     icon = models.CharField(
         max_length=64,
         blank=True,
@@ -42,6 +54,7 @@ class CustomEntity(models.Model):
     )
     show_in_menu = models.BooleanField(default=True)
     menu_order = models.PositiveSmallIntegerField(default=100)
+    show_in_calendar = models.BooleanField(default=False)
     stream = models.BooleanField(default=True)
     sort_field = models.CharField(
         max_length=20, choices=SortField.choices, default=SortField.CREATED_AT
@@ -140,6 +153,15 @@ class CustomEntity(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        if self.pk:
+            previous = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("template", flat=True)
+                .first()
+            )
+            if previous and previous != self.template:
+                self.template = previous
         if self.pk is None and not self.icon:
             self.icon = "extension"
         super().save(*args, **kwargs)

@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-302 tests passing; see
+307 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -285,7 +285,6 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Entity templates (Person/Company/Event) and entity-type Event on the calendar | E | Event template deferred; calendar currently reads Call/Meeting/Task only. |
 | Kanban view by status field | E | Unfold has no native Kanban; would be a custom page. |
 
 ## Resume checklist
@@ -293,7 +292,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (302 tests)
+uv run python src/omacrm/manage.py test      # must be green (307 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -309,6 +308,12 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — E4 (entity templates): `CustomEntity.template`
+  (Base/Person/Company/Event, locked after creation) seeds initial custom
+  fields and layouts; Person builds `name` from first/last; Event enables
+  `show_in_calendar` and the calendar renders custom event records. The
+  demo adds a Person-template `Candidate` entity (307 tests).
 
 - **2026-09-11** — E2 (advanced field types): custom fields gained phone
   (E.164), decimal (JSON-safe; also fixes float/currency Decimal crashes),

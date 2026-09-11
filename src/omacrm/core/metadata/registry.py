@@ -128,6 +128,7 @@ class MetadataRegistry:
             list_filter=["assigned_user"],
             detail_layout=detail_layout,
             stream=row.stream if row else True,
+            calendar=row.show_in_calendar if row else False,
             duplicate_check_fields=(
                 list(row.duplicate_field_list) if row else []
             ),

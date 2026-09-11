@@ -58,8 +58,8 @@ class CoreConfig(AppConfig):
                 weak=False,
             )
 
-        def _sync_custom_entity(sender, instance, **kwargs):
-            custom_entities.sync(instance)
+        def _sync_custom_entity(sender, instance, created=False, **kwargs):
+            custom_entities.sync(instance, created=created)
 
         def _remove_custom_entity(sender, instance, **kwargs):
             custom_entities.unregister(instance)

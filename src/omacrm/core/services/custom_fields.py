@@ -1,5 +1,6 @@
 """Helpers for advanced custom-field types (phone, number, files, foreign)."""
 
+from datetime import date, datetime, time as dt_time
 from decimal import Decimal
 
 FILE_TYPES = {"file", "image", "attachmentMultiple"}
@@ -9,10 +10,16 @@ ADDRESS_KEYS = ("street", "city", "state", "postal_code", "country")
 
 
 def json_safe(value):
-    """Convert Decimal (and nested structures) to JSON-serializable values."""
+    """Convert Decimal/datetime (and nested structures) to JSON values."""
 
     if isinstance(value, Decimal):
         return float(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dt_time):
+        return value.isoformat()
     if isinstance(value, dict):
         return {key: json_safe(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):

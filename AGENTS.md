@@ -140,7 +140,9 @@ src/omacrm/
   dialog action `Convert Lead`; opportunity stage rules (probability,
   last stage, weighted amount) run in `crm/hooks.py`.
 - **Activities**: `/admin/calendar/` (`core/admin/views.py`) is a server-rendered
-  month calendar + agenda over Call/Meeting/Task. `crm/services/reminders.py`
+  month calendar + agenda over Call/Meeting/Task plus custom entities with
+  `show_in_calendar` (their `date_start`/`date_end` custom fields are read from
+  `custom_data`). `crm/services/reminders.py`
   syncs the `reminders` JSON of events/tasks into `Reminder` rows and the
   `crm.send_reminders` scheduled job turns due reminders into notifications.
   Call/Meeting attendees live in `Attendance` (user/contact/lead + acceptance
@@ -236,8 +238,11 @@ src/omacrm/
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.
   Create/edit them under Customization → Custom Entities; custom fields,
   layouts, formulas, workflows, stream and webhooks work on them. Entities
-  expose icon/color, `show_in_menu`/`menu_order`, `stream`, sort, search and
-  duplicate-check fields; the sidebar is built per request by
+  expose icon/color, `show_in_menu`/`menu_order`, `show_in_calendar`, `stream`,
+  sort, search and duplicate-check fields; the `template` (Base/Person/Company/
+  Event, locked after creation) seeds initial fields/layouts (Person builds
+  `name` from first/last, Event enables the calendar). The sidebar is built per
+  request by
   `core/services/navigation.py`, saving an entity refreshes the URLconf and
   the catch-all `/api/v1/<Entity>/` routes resolve in runtime, so admin/API
   pages are available **without a restart**. The generated proxy models are

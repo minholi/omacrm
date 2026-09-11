@@ -2,7 +2,7 @@ import calendar
 import json
 import time
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.contrib import admin, messages
 from django.db.models import Q
@@ -136,8 +136,68 @@ class CalendarView(TemplateView):
                     }
                 )
 
+        events.extend(self._collect_dynamic_events(first_day, last_day, assigned))
         events.sort(key=lambda event: event["when"])
         return events
+
+    def _collect_dynamic_events(self, first_day: date, last_day: date, assigned: str):
+        """Calendar records of custom entities flagged with ``show_in_calendar``."""
+
+        events = []
+        for entity_type in registry.entity_types():
+            entity = registry.get(entity_type)
+            if not entity.dynamic or not entity.calendar:
+                continue
+            model = registry.model_for(entity_type)
+            queryset = model.objects.filter(entity_type=entity_type)
+            if assigned == "me":
+                queryset = queryset.filter(assigned_user=self.request.user)
+            queryset = AclService.scope_queryset(
+                self.request.user, entity_type, queryset, "read"
+            )
+            meta = model._meta
+            for obj in queryset.select_related("assigned_user"):
+                data = obj.custom_data or {}
+                start = _parse_json_moment(data.get("date_start"))
+                end = _parse_json_moment(data.get("date_end"))
+                moment = start or end
+                if moment is None or not (first_day <= moment.date() <= last_day):
+                    continue
+                events.append(
+                    {
+                        "type": entity_type,
+                        "name": str(obj),
+                        "when": moment,
+                        "date": moment.date(),
+                        "url": reverse(
+                            f"admin:{meta.app_label}_{meta.model_name}_change",
+                            args=[obj.pk],
+                        ),
+                        "variant": "success",
+                        "icon": entity.icon or "event",
+                        "status": data.get("status", ""),
+                        "assigned": obj.assigned_user.name if obj.assigned_user else "",
+                    }
+                )
+        return events
+
+
+def _parse_json_moment(value):
+    """Parse an ISO date/datetime stored in a custom field."""
+
+    from django.utils.dateparse import parse_date, parse_datetime
+
+    if not value or not isinstance(value, str):
+        return None
+    parsed = parse_datetime(value)
+    if parsed is None:
+        day = parse_date(value)
+        if day is None:
+            return None
+        parsed = datetime.combine(day, datetime.min.time())
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
 
 
 def _jsonable(value):
