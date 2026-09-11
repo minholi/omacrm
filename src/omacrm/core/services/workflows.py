@@ -95,6 +95,17 @@ def _run_action(action: dict, instance) -> None:
             webhook=webhook, payload=build_payload(instance, event)
         )
 
+    elif action_type == "update_related":
+        relation = action.get("relation")
+        fields = action.get("fields") or {}
+        if not relation or not fields:
+            raise ValueError("update_related requires relation and fields")
+
+        manager = getattr(instance, relation, None)
+        if manager is None or not hasattr(manager, "update"):
+            raise ValueError(f"Unknown relation: {relation}")
+        manager.update(**fields)
+
     elif action_type == "create_record":
         entity_type = action.get("entity_type")
         if not entity_type or not registry.has(entity_type):

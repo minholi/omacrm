@@ -169,8 +169,9 @@ src/omacrm/
   fields or custom fields (`custom.<name> = value`), with string/date helpers
   (`lower`, `upper`, `substring`, `replace`, `coalesce`, `parse_date`,
   `date_format`, ...); `Workflow` rules evaluate a condition and run actions
-  (`set_field`, `notify`, `create_record`, templated `send_email`, `webhook`)
-  in `core/services/workflows.py`, wired in `core/services/hooks.py`. Entity
+  (`set_field`, `notify`, `create_record`, templated `send_email`, `webhook`,
+  `update_related`) in `core/services/workflows.py`, wired in
+  `core/services/hooks.py`. Entity
   admins also provide a **Mass update** action (enum/bool fields + assigned
   user) through an intermediate page (`MassUpdateView`). `/admin/layout-editor/`
   edits `Layout` rows (list columns, draggable for ordering, + detail sections);

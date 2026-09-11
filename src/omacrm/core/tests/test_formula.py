@@ -13,7 +13,7 @@ from omacrm.core.models import (
 )
 from omacrm.core.services import formula as formula_service
 from omacrm.core.services.formula import FormulaError, interpret
-from omacrm.crm.models import Account, Lead, Task
+from omacrm.crm.models import Account, Lead, Opportunity, Task
 
 
 class FormulaTests(TestCase):
@@ -170,6 +170,55 @@ class WorkflowTests(TestCase):
             entity_type="Task",
             event=Workflow.Event.CREATE,
             actions=[{"type": "set_field", "field": "nope", "value": 1}],
+        )
+        with self.assertRaises(ValidationError):
+            workflow.full_clean()
+
+    def test_update_related_action(self):
+        Workflow.objects.create(
+            name="Lose all opportunities",
+            entity_type="Account",
+            event=Workflow.Event.UPDATE,
+            actions=[
+                {
+                    "type": "update_related",
+                    "relation": "opportunities",
+                    "fields": {"stage": "Closed Lost"},
+                }
+            ],
+        )
+        account = Account.objects.create(name="Related Co")
+        opportunity = Opportunity.objects.create(name="Deal", account=account)
+
+        account.description = "trigger"
+        account.save()
+
+        opportunity.refresh_from_db()
+        self.assertEqual(opportunity.stage, "Closed Lost")
+
+    def test_update_related_validation(self):
+        workflow = Workflow(
+            name="Bad relation",
+            entity_type="Account",
+            event=Workflow.Event.UPDATE,
+            actions=[
+                {"type": "update_related", "relation": "nope", "fields": {"x": 1}}
+            ],
+        )
+        with self.assertRaises(ValidationError):
+            workflow.full_clean()
+
+        workflow = Workflow(
+            name="Bad related field",
+            entity_type="Account",
+            event=Workflow.Event.UPDATE,
+            actions=[
+                {
+                    "type": "update_related",
+                    "relation": "opportunities",
+                    "fields": {"not_a_field": 1},
+                }
+            ],
         )
         with self.assertRaises(ValidationError):
             workflow.full_clean()

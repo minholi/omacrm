@@ -7,8 +7,8 @@
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
 phone/address utilities, stream reactions, layout drag-and-drop, the
-workflow webhook action, inbound email and live stream updates
-(177 tests passing). See the
+workflow webhook action, inbound email, live stream updates and the
+update-related workflow action (179 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -174,6 +174,11 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — update-related workflow action:** an action like
+`{"type": "update_related", "relation": "opportunities", "fields": {"stage":
+"Closed Lost"}}` updates the related records of the triggering record;
+validation checks the relation and field names.
+
 **Delivered — live stream updates:** `StreamEvent` rows are queued when a
 stream note is created on a record assigned to someone other than the actor;
 the `/admin/notifications/stream/` SSE endpoint emits them and the admin JS
@@ -203,8 +208,7 @@ keeps the on-screen order, which the admin list view honours.
 
 **Next in Phase G:**
 
-- Extra workflow actions (update related records) and more formula functions.
-- Optional: saved filter presets.
+- Optional: more formula functions and saved filter presets.
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
 authoritative list of postponed work with origins and targets.
 
@@ -250,7 +254,6 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Drag-and-drop layout manager for detail sections/tabs | F | List columns can be reordered by dragging; detail sections are still JSON. Target: backlog. |
-| Workflow actions: update related records | F | Rules support `set_field`, `notify`, `create_record`, `send_email` and `webhook`. Target: backlog. |
 | Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
 ## Resume checklist
@@ -258,7 +261,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (177 tests)
+uv run python src/omacrm/manage.py test      # must be green (179 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -274,6 +277,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Workflow `update_related` action (with relation/field
+  validation) (179 tests).
 
 - **2026-09-11** — Live stream updates: `StreamEvent` queue, SSE delivery
   and admin toasts for changes on assigned records (177 tests).

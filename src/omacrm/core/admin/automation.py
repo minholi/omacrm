@@ -52,7 +52,9 @@ class WorkflowAdmin(ModelAdmin):
                     '"value": "High"}, {"type": "notify", "message": "Updated"}, '
                     '{"type": "send_email", "to": "email_address", '
                     '"subject": "Hi {{ name }}", "body": "<p>{{ name }}</p>"}, '
-                    '{"type": "webhook", "webhook_id": 1}].'
+                    '{"type": "webhook", "webhook_id": 1}, '
+                    '{"type": "update_related", "relation": "opportunities", '
+                    '"fields": {"stage": "Closed Lost"}}].'
                 ),
             },
         ),

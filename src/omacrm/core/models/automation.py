@@ -67,6 +67,7 @@ class Workflow(models.Model):
         CREATE_RECORD = "create_record", _("Create record")
         SEND_EMAIL = "send_email", _("Send email")
         WEBHOOK = "webhook", _("Call webhook")
+        UPDATE_RELATED = "update_related", _("Update related records")
 
     name = models.CharField(max_length=255, unique=True)
     entity_type = models.CharField(max_length=64, db_index=True)
@@ -129,6 +130,36 @@ class Workflow(models.Model):
                             errors["actions"] = _(
                                 "Action #%(index)s requires a numeric webhook_id."
                                 % {"index": index + 1}
+                            )
+                            break
+                    if action.get("type") == self.ActionType.UPDATE_RELATED:
+                        relation = action.get("relation")
+                        related_fields = action.get("fields") or {}
+                        try:
+                            related_field = model._meta.get_field(relation)
+                        except Exception:  # noqa: BLE001 - unknown relation
+                            errors["actions"] = _(
+                                "Action #%(index)s references an unknown relation."
+                                % {"index": index + 1}
+                            )
+                            break
+                        related_model = related_field.related_model
+                        if related_model is None:
+                            errors["actions"] = _(
+                                "Action #%(index)s is not a related field."
+                                % {"index": index + 1}
+                            )
+                            break
+                        valid_fields = {
+                            field.name for field in related_model._meta.get_fields()
+                        }
+                        unknown = [
+                            name for name in related_fields if name not in valid_fields
+                        ]
+                        if unknown:
+                            errors["actions"] = _(
+                                "Action #%(index)s references unknown related field(s): %(fields)s."
+                                % {"index": index + 1, "fields": ", ".join(unknown)}
                             )
                             break
         if errors:
