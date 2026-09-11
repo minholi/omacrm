@@ -28,6 +28,7 @@ class FormulaError(Exception):
 
 
 _ASSIGNMENT_RE = re.compile(r"^([A-Za-z_]\w*)\s*=(?!=)\s*(.+)$")
+_CUSTOM_ASSIGNMENT_RE = re.compile(r"^custom(?:_data)?\.([A-Za-z_]\w*)\s*=(?!=)\s*(.+)$")
 
 _BIN_OPS = {
     ast.Add: operator.add,
@@ -247,6 +248,20 @@ def interpret(script: str, instance, user=None, dry_run: bool = False):
     for line_number, raw_line in enumerate((script or "").splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
+            continue
+
+        custom_match = _CUSTOM_ASSIGNMENT_RE.match(line)
+        if custom_match:
+            if not hasattr(instance, "custom_data"):
+                raise FormulaError(
+                    f"Line {line_number}: record has no custom fields"
+                )
+            key = custom_match.group(1)
+            value = evaluate(custom_match.group(2), context)
+            if not dry_run:
+                data = dict(instance.custom_data or {})
+                data[key] = value
+                instance.custom_data = data
             continue
 
         match = _ASSIGNMENT_RE.match(line)

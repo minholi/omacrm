@@ -32,6 +32,17 @@ class FormulaTests(TestCase):
         lead.refresh_from_db()
         self.assertEqual(lead.phone_number, "555-0100")
 
+    def test_custom_field_assignment(self):
+        Formula.objects.create(
+            entity_type="Lead",
+            event=Formula.Event.BEFORE_SAVE,
+            script='custom.score = len(last_name) * 10\ncustom.label = "hot"',
+        )
+        lead = Lead.objects.create(first_name="F", last_name="Four")
+        lead.refresh_from_db()
+        self.assertEqual(lead.custom_data["score"], 40)
+        self.assertEqual(lead.custom_data["label"], "hot")
+
     def test_notify_function(self):
         Formula.objects.create(
             entity_type="Task",

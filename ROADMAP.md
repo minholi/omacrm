@@ -4,8 +4,8 @@
 > be resumed at any time by any developer/agent. Architecture conventions live
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
-_Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager and
-real-time/email notifications (119 tests passing). See the
+_Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
+notifications and mass update (125 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -147,14 +147,19 @@ updates the sidebar badge live and shows toasts. The
 notifications — controlled by the `notification_email_enabled` constance
 setting and the per-user `Preferences.notifications_config.email` flag.
 
+**Delivered — mass update + formula custom fields:** entity admins expose a
+"Mass update selected records" action (enum/bool fields and assigned user,
+ACL-checked, session-backed selection) with an intermediate page; formulas can
+now write custom fields with `custom.<name> = value`.
+
 **Next in Phase G:**
 
 - **Portal**: customer-facing app with portal roles/ACL.
 - **Real-time stream/record updates** (notifications are done over SSE).
 - **IMAP fetch/import** and **phone/address utilities** (Espo parity).
 - **Layout Manager drag-and-drop** (current editor is form/JSON based).
-- Formula support for custom fields; extra workflow actions.
-- Optional: mass update dialog, stream reactions, saved filter presets.
+- Extra workflow actions (send email, webhook) and more formula functions.
+- Optional: stream reactions, saved filter presets.
 
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
 authoritative list of postponed work with origins and targets.
@@ -172,7 +177,6 @@ Nothing here is required for the current feature set to be usable.
 | API `where` filter DSL (Espo-style JSON) | A | API has text search, ordering and django-filter; no nested and/or translator. Target: backlog. |
 | API key authentication (`X-Api-Key`) | A | `User.api_key` exists, but DRF only offers session/token auth. Target: backlog. |
 | Soft-delete restore UI | A/B | `deleted` flag + `all_objects` exist; no admin action/filter to view and restore deleted records. Target: backlog. |
-| Mass update dialog (selected rows → set field) | B | Django bulk-delete/export exist; no mass update. Target: backlog. |
 | Global search page across entity types | B | Unfold command palette searches registered models; no cross-entity results page. Target: backlog. |
 | Saved filter presets; custom command palette entries | C | — Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
@@ -204,7 +208,6 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Drag-and-drop layout manager (tabs, add/remove fieldsets) | F | Current editor handles list columns + detail sections JSON. Target: Phase G. |
-| Formula support for custom fields | F | Formulas assign model fields only, not `custom_data` keys. Target: backlog. |
 | Workflow actions: send email, call webhook, update related records | F | Rules currently support `set_field`, `notify`, `create_record`. Target: backlog. |
 | Portal (customer-facing app, portal roles/ACL, KB publishing) | F | — Target: Phase G. |
 | Real-time stream/record updates | F | Notifications already stream over SSE; stream/record updates do not. Target: Phase G. |
@@ -214,7 +217,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (119 tests)
+uv run python src/omacrm/manage.py test      # must be green (125 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -231,6 +234,8 @@ uv run python src/omacrm/manage.py runserver
 
 ## Change log
 
+- **2026-09-11** — Mass update action (enum/bool/assigned user, ACL-checked)
+  and formula custom-field support (`custom.<name> = value`) (125 tests).
 - **2026-09-11** — Project published on GitHub under
   **AGPL-3.0-or-later** (same license as EspoCRM); it is an independent
   reimplementation and contains no EspoCRM code.

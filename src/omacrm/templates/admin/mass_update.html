@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <form method="post" class="flex flex-col gap-6">
+        {% csrf_token %}
+        <input type="hidden" name="token" value="{{ token }}">
+
+        <div class="flex flex-row items-center gap-2">
+            <a href="{{ changelist_url }}"
+               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                &larr; {% translate "Back" %}
+            </a>
+            <span class="font-semibold ml-2 text-important">{{ title }}</span>
+        </div>
+
+        {% component "unfold/components/card.html" %}
+            <p class="text-sm mb-4">
+                {% blocktranslate count counter=count %}{{ counter }} record selected.{% plural %}{{ counter }} records selected.{% endblocktranslate %}
+            </p>
+
+            {% if fields %}
+                <div class="flex flex-col gap-2 max-w-xl">
+                    <label class="text-sm font-medium" for="id_definition">
+                        {% translate "Set field" %}
+                    </label>
+                    <select id="id_definition" name="definition"
+                            class="bg-white border border-base-200 rounded-default px-3 py-2 text-sm dark:bg-base-900 dark:border-base-800">
+                        {% for field in fields %}
+                            <optgroup label="{{ field.label }}">
+                                {% for value, label in field.choices %}
+                                    <option value="{{ field.name }}:{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex flex-row gap-2 mt-4">
+                    <button type="submit"
+                            class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
+                        {% translate "Apply" %}
+                    </button>
+                    <a href="{{ changelist_url }}"
+                       class="border border-base-200 rounded-default px-4 py-2 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                        {% translate "Cancel" %}
+                    </a>
+                </div>
+            {% else %}
+                <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                    {% translate "No mass-updateable fields are available." %}
+                </p>
+            {% endif %}
+        {% endcomponent %}
+    </form>
+{% endblock %}

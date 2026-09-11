@@ -4,9 +4,10 @@ import time
 from collections import defaultdict
 from datetime import date, timedelta
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Q
 from django.http import Http404, StreamingHttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -403,3 +404,88 @@ def notification_stream(request):
     response["Cache-Control"] = "no-cache"
     response["X-Accel-Buffering"] = "no"
     return response
+
+
+class MassUpdateView(TemplateView):
+    """Intermediate page that applies one value to many selected records."""
+
+    template_name = "admin/mass_update.html"
+
+    @property
+    def model_admin(self):
+        return self.kwargs.get("model_admin")
+
+    def _changelist_url(self):
+        meta = self.model_admin.model._meta
+        return reverse(f"admin:{meta.app_label}_{meta.model_name}_changelist")
+
+    def _mass_update_url(self, token):
+        return f"{reverse(f'admin:{self.model_admin.mass_update_url_name()}')}?token={token}"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(admin.site.each_context(self.request))
+        context["title"] = _("Mass update: %(model)s") % {
+            "model": self.model_admin.model._meta.verbose_name_plural
+        }
+        context["model_admin"] = self.model_admin
+        context["changelist_url"] = self._changelist_url()
+
+        token = self.request.GET.get("token") or self.request.POST.get("token") or ""
+        context["token"] = token
+        session_data = self.request.session.get(f"mass_update:{token}") or {}
+        context["count"] = len(session_data.get("pks", []))
+        context["fields"] = self.model_admin.mass_update_fields()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        model_admin = self.model_admin
+        token = request.POST.get("token") or ""
+        session_data = request.session.get(f"mass_update:{token}")
+
+        if not session_data:
+            messages.error(
+                request,
+                _("The selection expired. Please select the records again."),
+            )
+            return redirect(self._changelist_url())
+
+        definition = (request.POST.get("definition") or "").strip()
+        field_name, _separator, raw_value = definition.partition(":")
+        fields_by_name = {field["name"]: field for field in model_admin.mass_update_fields()}
+        field = fields_by_name.get(field_name)
+
+        valid_value = field is not None and any(
+            str(value) == raw_value for value, _label in field["choices"]
+        )
+        if not valid_value:
+            messages.error(request, _("Invalid mass update value."))
+            return redirect(self._mass_update_url(token))
+
+        pks = session_data.get("pks", [])
+        updated = 0
+        queryset = model_admin.model.objects.filter(pk__in=pks)
+        for obj in queryset:
+            if not AclService.check(request.user, model_admin.entity_type, "edit", obj):
+                continue
+
+            if field_name == "assigned_user":
+                obj.assigned_user_id = int(raw_value) if raw_value else None
+            else:
+                field_def = registry.field(model_admin.entity_type, field_name)
+                value = (
+                    raw_value == "True"
+                    if field_def and field_def.type == "bool"
+                    else raw_value
+                )
+                setattr(obj, field_name, value)
+            # A full save lets before-save hooks (e.g. date_completed) persist.
+            obj.save()
+            updated += 1
+
+        del request.session[f"mass_update:{token}"]
+        messages.success(
+            request,
+            _("%(count)s record(s) updated.") % {"count": updated},
+        )
+        return redirect(self._changelist_url())

@@ -1,9 +1,11 @@
 import csv
+import uuid
 
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.utils import flatten_fieldsets
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
@@ -89,7 +91,7 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
     enforces ACL. Business entities should set ``entity_type``.
     """
 
-    actions = ("export_as_csv",)
+    actions = ("export_as_csv", "mass_update")
     actions_detail = ("add_note",)
 
     # -- stream / attachments ----------------------------------------------
@@ -307,6 +309,76 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         if hasattr(obj, "modified_by_id"):
             obj.modified_by = request.user
         super().save_model(request, obj, form, change)
+
+    # -- mass update --------------------------------------------------------
+
+    def mass_update_url_name(self):
+        meta = self.model._meta
+        return f"{meta.app_label}_{meta.model_name}_mass_update"
+
+    def get_custom_urls(self):
+        from omacrm.core.admin.views import MassUpdateView
+
+        return tuple(super().get_custom_urls()) + (
+            ("mass-update/", self.mass_update_url_name(), MassUpdateView.as_view()),
+        )
+
+    def mass_update_fields(self) -> list[dict]:
+        """Editable fields offered by the mass update form."""
+
+        from django.contrib.auth import get_user_model
+
+        entity = self.metadata_entity()
+        model_fields = {field.name for field in self.model._meta.get_fields()}
+        fields = []
+
+        for name, field_def in registry.fields(self.entity_type).items():
+            if field_def.custom or field_def.read_only or name not in model_fields:
+                continue
+            if field_def.type == "enum" and field_def.options:
+                fields.append(
+                    {
+                        "name": name,
+                        "label": field_def.display_label,
+                        "choices": list(field_def.options),
+                    }
+                )
+            elif field_def.type == "bool":
+                fields.append(
+                    {
+                        "name": name,
+                        "label": field_def.display_label,
+                        "choices": [("True", _("Yes")), ("False", _("No"))],
+                    }
+                )
+
+        if "assigned_user" in model_fields:
+            users = get_user_model().objects.filter(is_active=True).order_by("user_name")
+            fields.append(
+                {
+                    "name": "assigned_user",
+                    "label": _("Assigned User"),
+                    "choices": [("", _("Unassigned"))]
+                    + [(str(user.pk), user.name) for user in users],
+                }
+            )
+
+        return fields
+
+    @admin.action(description=_("Mass update selected records"))
+    def mass_update(self, request, queryset):
+        if not self.has_change_permission(request) or not self.mass_update_fields():
+            self.message_user(
+                request, _("Mass update is not available."), level=messages.WARNING
+            )
+            return None
+
+        token = uuid.uuid4().hex
+        request.session[f"mass_update:{token}"] = {
+            "pks": list(queryset.values_list("pk", flat=True))
+        }
+        url = reverse(f"admin:{self.mass_update_url_name()}")
+        return redirect(f"{url}?token={token}")
 
     # -- actions ------------------------------------------------------------
 

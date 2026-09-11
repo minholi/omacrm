@@ -23,7 +23,8 @@ class FormulaAdmin(ModelAdmin):
                 "fields": ("script",),
                 "description": _(
                     "One statement per line. Assignments, e.g. "
-                    "`probability = 50`, and calls, e.g. "
+                    "`probability = 50`, custom fields, e.g. "
+                    "`custom.score = 10`, and calls, e.g. "
                     "`notify('Deal updated')` or `update('stage', 'Proposal')`."
                 ),
             },
