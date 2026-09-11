@@ -66,6 +66,7 @@ class Workflow(models.Model):
         NOTIFY = "notify", _("Notify assigned user")
         CREATE_RECORD = "create_record", _("Create record")
         SEND_EMAIL = "send_email", _("Send email")
+        WEBHOOK = "webhook", _("Call webhook")
 
     name = models.CharField(max_length=255, unique=True)
     entity_type = models.CharField(max_length=64, db_index=True)
@@ -118,6 +119,15 @@ class Workflow(models.Model):
                         if action.get("field") not in field_names:
                             errors["actions"] = _(
                                 "Action #%(index)s references an unknown field."
+                                % {"index": index + 1}
+                            )
+                            break
+                    if action.get("type") == self.ActionType.WEBHOOK:
+                        try:
+                            int(action.get("webhook_id"))
+                        except (TypeError, ValueError):
+                            errors["actions"] = _(
+                                "Action #%(index)s requires a numeric webhook_id."
                                 % {"index": index + 1}
                             )
                             break

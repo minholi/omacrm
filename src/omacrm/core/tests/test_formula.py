@@ -2,7 +2,15 @@ from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 
-from omacrm.core.models import Formula, Note, Notification, User, Workflow
+from omacrm.core.models import (
+    Formula,
+    Note,
+    Notification,
+    User,
+    Webhook,
+    WebhookQueueItem,
+    Workflow,
+)
 from omacrm.core.services import formula as formula_service
 from omacrm.core.services.formula import FormulaError, interpret
 from omacrm.crm.models import Account, Lead, Task
@@ -219,3 +227,46 @@ class WorkflowEmailTests(TestCase):
         )
         Lead.objects.create(first_name="No", last_name="Email")
         self.assertEqual(len(mail.outbox), 0)
+
+
+class WorkflowWebhookTests(TestCase):
+    def setUp(self):
+        self.webhook = Webhook.objects.create(
+            name="Lead hook",
+            entity_type="Lead",
+            event="update",
+            url="https://example.com/hook",
+        )
+
+    def test_webhook_action_enqueues_payload(self):
+        Workflow.objects.create(
+            name="Hook flow",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[{"type": "webhook", "webhook_id": self.webhook.pk}],
+        )
+        Lead.objects.create(first_name="Web", last_name="Hook")
+
+        item = WebhookQueueItem.objects.get(webhook=self.webhook)
+        self.assertEqual(item.payload["entity_type"], "Lead")
+        self.assertEqual(item.payload["data"]["last_name"], "Hook")
+
+    def test_unknown_webhook_is_ignored(self):
+        Workflow.objects.create(
+            name="Bad hook",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[{"type": "webhook", "webhook_id": 999999}],
+        )
+        Lead.objects.create(first_name="No", last_name="Hook")
+        self.assertFalse(WebhookQueueItem.objects.exists())
+
+    def test_validation_requires_numeric_webhook_id(self):
+        workflow = Workflow(
+            name="Invalid hook",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[{"type": "webhook", "webhook_id": "abc"}],
+        )
+        with self.assertRaises(ValidationError):
+            workflow.full_clean()

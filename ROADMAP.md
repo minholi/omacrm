@@ -6,8 +6,8 @@
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
-phone utilities, stream reactions and layout drag-and-drop
-(153 tests passing). See the
+phone utilities, stream reactions, layout drag-and-drop and the workflow
+webhook action (156 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -173,6 +173,11 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — workflow webhook action:** an action like
+`{"type": "webhook", "webhook_id": 1}` enqueues a `WebhookQueueItem` with the
+record payload for a configured (active) webhook; missing/invalid webhooks are
+ignored without breaking the save.
+
 **Delivered — layout drag-and-drop:** the Layout Editor renders list
 columns as draggable rows (native HTML5 drag and drop); the saved layout
 keeps the on-screen order, which the admin list view honours.
@@ -181,7 +186,7 @@ keeps the on-screen order, which the admin list view honours.
 
 - **Real-time stream/record updates** (notifications are done over SSE).
 - **IMAP fetch/import** and **address formatting utilities** (phone numbers are done).
-- Extra workflow actions (call webhook, update related records) and more formula functions.
+- Extra workflow actions (update related records) and more formula functions.
 - Optional: saved filter presets.
 
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
@@ -230,7 +235,7 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Drag-and-drop layout manager for detail sections/tabs | F | List columns can be reordered by dragging; detail sections are still JSON. Target: backlog. |
-| Workflow actions: call webhook, update related records | F | Rules support `set_field`, `notify`, `create_record` and `send_email`. Target: backlog. |
+| Workflow actions: update related records | F | Rules support `set_field`, `notify`, `create_record`, `send_email` and `webhook`. Target: backlog. |
 | Real-time stream/record updates | F | Notifications already stream over SSE; stream/record updates do not. Target: Phase G. |
 | Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
@@ -239,7 +244,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (153 tests)
+uv run python src/omacrm/manage.py test      # must be green (156 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -255,6 +260,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Workflow webhook action enqueues webhook payloads for
+  configured webhooks (156 tests).
 
 - **2026-09-11** — Layout Editor drag-and-drop for list column ordering
   (153 tests).

@@ -80,6 +80,21 @@ def _run_action(action: dict, instance) -> None:
             data={"to": recipient, "workflow": True},
         )
 
+    elif action_type == "webhook":
+        from omacrm.core.models import Webhook, WebhookQueueItem
+        from omacrm.core.services.webhooks import build_payload
+
+        webhook = Webhook.objects.filter(
+            pk=action.get("webhook_id"), is_active=True
+        ).first()
+        if webhook is None:
+            raise ValueError(f"Unknown webhook: {action.get('webhook_id')}")
+
+        event = action.get("event") or "update"
+        WebhookQueueItem.objects.create(
+            webhook=webhook, payload=build_payload(instance, event)
+        )
+
     elif action_type == "create_record":
         entity_type = action.get("entity_type")
         if not entity_type or not registry.has(entity_type):

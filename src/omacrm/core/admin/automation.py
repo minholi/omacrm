@@ -51,7 +51,8 @@ class WorkflowAdmin(ModelAdmin):
                     'JSON list, e.g. [{"type": "set_field", "field": "priority", '
                     '"value": "High"}, {"type": "notify", "message": "Updated"}, '
                     '{"type": "send_email", "to": "email_address", '
-                    '"subject": "Hi {{ name }}", "body": "<p>{{ name }}</p>"}].'
+                    '"subject": "Hi {{ name }}", "body": "<p>{{ name }}</p>"}, '
+                    '{"type": "webhook", "webhook_id": 1}].'
                 ),
             },
         ),
