@@ -170,6 +170,30 @@ class MetadataRegistry:
     def field(self, entity_type: str, name: str) -> FieldDef | None:
         return self.fields(entity_type).get(name)
 
+    # -- custom links -------------------------------------------------------
+
+    def link_definitions(self, entity_type: str):
+        from omacrm.core.metadata.links import link_definitions
+
+        return link_definitions(entity_type)
+
+    def link_fields(self, entity_type: str) -> dict[str, FieldDef]:
+        result: dict[str, FieldDef] = {}
+        for name, definition in self.link_definitions(entity_type).items():
+            result[name] = FieldDef(
+                name=name,
+                type=definition.field_type,
+                label=definition.label,
+                custom=True,
+                params={
+                    "link_name": definition.name,
+                    "target_entity": definition.target_entity,
+                    "link_type": definition.link_type,
+                    "custom_link": True,
+                },
+            )
+        return result
+
     def custom_fields(self, entity_type: str) -> list[FieldDef]:
         if entity_type in self._custom_fields:
             return self._custom_fields[entity_type]

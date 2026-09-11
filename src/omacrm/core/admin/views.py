@@ -196,7 +196,11 @@ class LayoutEditorView(TemplateView):
         context["title"] = _("Layout Editor: %(entity)s") % {"entity": entity.display_label}
         context["entity_type"] = entity_type
         context["entity"] = entity
-        context["fields"] = list(registry.fields(entity_type).values())
+        all_fields = {
+            **registry.fields(entity_type),
+            **registry.link_fields(entity_type),
+        }
+        context["fields"] = list(all_fields.values())
 
         layout_record = Layout.objects.filter(
             entity_type=entity_type, layout_name="list"
@@ -210,7 +214,7 @@ class LayoutEditorView(TemplateView):
         detail = registry.layout(entity_type, "detail") or []
         context["detail_layout_text"] = json.dumps(_jsonable(detail), indent=2)
 
-        field_map = registry.fields(entity_type)
+        field_map = all_fields
         sections = []
         if isinstance(detail, list):
             for section in detail:
@@ -240,7 +244,10 @@ class LayoutEditorView(TemplateView):
         if not registry.has(entity_type):
             raise Http404(f"Unknown entity type: {entity_type}")
         entity = registry.get(entity_type)
-        fields = registry.fields(entity_type)
+        fields = {
+            **registry.fields(entity_type),
+            **registry.link_fields(entity_type),
+        }
 
         list_fields = [name for name in request.POST.getlist("list_fields") if name in fields]
 

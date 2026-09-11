@@ -19,11 +19,14 @@ from omacrm.core.admin.datasets import note_dataset_for
 from omacrm.core.admin.inlines import AttachmentInline
 from omacrm.core.metadata.fields import (
     build_form_field,
+    build_link_form_field,
     build_list_filter,
     display_custom_value,
     form_field_name,
+    link_form_field_name,
 )
 from omacrm.core.metadata.registry import registry
+from omacrm.core.services import relations
 from omacrm.core.services.acl import AclService
 from omacrm.core.services.duplicates import DuplicateConflict, check_duplicates
 from omacrm.core.services.stream import post_note
@@ -315,20 +318,51 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
     # -- layout-driven rendering -------------------------------------------
 
     def get_fieldsets(self, request, obj=None):
-        custom_names = [
-            form_field_name(field_def)
-            for field_def in registry.custom_fields(self.entity_type)
-        ]
+        custom_fields = registry.custom_fields(self.entity_type)
+        link_fields = list(registry.link_fields(self.entity_type).values())
+        rename = {field_def.name: form_field_name(field_def) for field_def in custom_fields}
+        rename.update(
+            {field_def.name: link_form_field_name(field_def) for field_def in link_fields}
+        )
+        included: set[str] = set()
+
         layout = registry.layout(self.entity_type, "detail")
         if layout:
-            fieldsets = [
-                (section.get("title") or None, {"fields": list(section.get("fields", [])), **{k: v for k, v in section.items() if k in {"classes", "description"}}})
-                for section in layout
-            ]
+            fieldsets = []
+            for section in layout:
+                raw_names = list(section.get("fields", []))
+                included.update(name for name in raw_names if name in rename)
+                fieldsets.append(
+                    (
+                        section.get("title") or None,
+                        {
+                            "fields": [rename.get(name, name) for name in raw_names],
+                            **{
+                                key: value
+                                for key, value in section.items()
+                                if key in {"classes", "description"}
+                            },
+                        },
+                    )
+                )
         else:
             fieldsets = list(super().get_fieldsets(request, obj))
-        if custom_names:
-            fieldsets.append((_("Custom Fields"), {"fields": custom_names}))
+
+        remaining_custom = [
+            form_field_name(field_def)
+            for field_def in custom_fields
+            if field_def.name not in included
+        ]
+        if remaining_custom:
+            fieldsets.append((_("Custom Fields"), {"fields": remaining_custom}))
+
+        remaining_links = [
+            link_form_field_name(field_def)
+            for field_def in link_fields
+            if field_def.name not in included
+        ]
+        if remaining_links:
+            fieldsets.append((_("Relationships"), {"fields": remaining_links}))
         return fieldsets
 
     def _custom_display(self, field_def):
@@ -341,13 +375,58 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         display.admin_order_field = f"custom_data__{field_def.name}"
         return display
 
+    def _link_display(self, field_def):
+        def display(obj):
+            records = relations.get_related(obj, field_def.name)
+            if not records:
+                return "-"
+            if field_def.type == "link":
+                return str(records[0])
+            shown = ", ".join(str(record) for record in records[:3])
+            if len(records) > 3:
+                shown += f" +{len(records) - 3}"
+            return shown
+
+        display.short_description = field_def.display_label
+        return display
+
     def get_list_display(self, request):
         base = list(super().get_list_display(request))
         entity = self.metadata_entity()
-        if entity.list_layout and tuple(base) == ("__str__",):
-            base = list(entity.list_layout)
-        for field_def in registry.custom_fields(self.entity_type):
-            base.append(self._custom_display(field_def))
+        custom_fields = registry.custom_fields(self.entity_type)
+        link_fields = list(registry.link_fields(self.entity_type).values())
+        custom_map = {field_def.name: field_def for field_def in custom_fields}
+        link_map = {field_def.name: field_def for field_def in link_fields}
+
+        from omacrm.core.models import Layout
+
+        has_custom_list = bool(
+            self.entity_type
+            and Layout.objects.filter(
+                entity_type=self.entity_type, layout_name="list"
+            ).exists()
+        )
+        layout = list(registry.layout(self.entity_type, "list") or [])
+        used_custom: set[str] = set()
+
+        if layout and (
+            tuple(base) == ("__str__",) or (entity.dynamic and has_custom_list)
+        ):
+            valid_fields = {field.name for field in self.model._meta.get_fields()}
+            resolved = []
+            for name in layout:
+                if name in custom_map:
+                    resolved.append(self._custom_display(custom_map[name]))
+                    used_custom.add(name)
+                elif name in link_map:
+                    resolved.append(self._link_display(link_map[name]))
+                elif name in valid_fields or hasattr(self, name):
+                    resolved.append(name)
+            base = resolved
+
+        for field_def in custom_fields:
+            if field_def.name not in used_custom:
+                base.append(self._custom_display(field_def))
         return base
 
     def get_list_filter(self, request):
@@ -373,12 +452,14 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         custom_fields = registry.custom_fields(self.entity_type)
+        link_fields = list(registry.link_fields(self.entity_type).values())
         custom_names = {form_field_name(field_def) for field_def in custom_fields}
-        if custom_names:
+        link_names = {link_form_field_name(field_def) for field_def in link_fields}
+        if custom_names or link_names:
             kwargs["fields"] = [
                 name
                 for name in flatten_fieldsets(self.get_fieldsets(request, obj))
-                if name not in custom_names
+                if name not in custom_names and name not in link_names
             ]
         base_form = super().get_form(request, obj, change=change, **kwargs)
         entity = self.metadata_entity()
@@ -394,6 +475,17 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
                         self.fields[name].initial = (instance.custom_data or {}).get(
                             field_def.name
                         )
+                for field_def in link_fields:
+                    name = link_form_field_name(field_def)
+                    if name in self.fields and instance is not None and instance.pk:
+                        self.fields[name].initial = relations.linked_ids(
+                            entity_type, instance.pk, field_def.name
+                        )
+                if not instance or not instance.pk:
+                    for field_def in link_fields:
+                        name = link_form_field_name(field_def)
+                        if name in self.fields and field_def.type == "linkMultiple":
+                            self.fields[name].initial = []
 
             def clean(self):
                 cleaned = super().clean()
@@ -421,9 +513,38 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
                 (_MetadataForm,),
                 {form_field_name(field_def): build_form_field(field_def)},
             )
+        for field_def in link_fields:
+            _MetadataForm = type(
+                base_form.__name__,
+                (_MetadataForm,),
+                {
+                    link_form_field_name(field_def): build_link_form_field(
+                        field_def, user=request.user
+                    )
+                },
+            )
         return _MetadataForm
 
     # -- persistence --------------------------------------------------------
+
+    def _save_links(self, obj, form):
+        if not self.entity_type:
+            return
+        cleaned_data = getattr(form, "cleaned_data", None)
+        if not cleaned_data:
+            return
+        for field_def in registry.link_fields(self.entity_type).values():
+            name = link_form_field_name(field_def)
+            if name not in cleaned_data:
+                continue
+            value = cleaned_data[name]
+            if value in (None, ""):
+                targets = []
+            elif isinstance(value, (list, tuple)):
+                targets = list(value)
+            else:
+                targets = [value]
+            relations.set_related(obj, field_def.name, targets)
 
     def save_model(self, request, obj, form, change):
         custom_data = getattr(form, "_custom_data", None)
@@ -434,6 +555,7 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         if hasattr(obj, "modified_by_id"):
             obj.modified_by = request.user
         super().save_model(request, obj, form, change)
+        self._save_links(obj, form)
 
     # -- mass update --------------------------------------------------------
 

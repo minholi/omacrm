@@ -5,6 +5,22 @@ from omacrm.core.metadata.registry import registry
 _SERIALIZER_CACHE: dict[str, type] = {}
 
 
+def _link_representation(entity_type: str):
+    from omacrm.core.services import relations
+
+    def to_representation(self, instance):
+        data = serializers.ModelSerializer.to_representation(self, instance)
+        for name, definition in registry.link_definitions(entity_type).items():
+            records = relations.get_related(instance, name)
+            if definition.multiple:
+                data[name] = [record.pk for record in records]
+            else:
+                data[name] = records[0].pk if records else None
+        return data
+
+    return to_representation
+
+
 def serializer_for(entity_type: str) -> type:
     """Build (and cache) a ModelSerializer from the metadata registry."""
 
@@ -41,7 +57,9 @@ def serializer_for(entity_type: str) -> type:
         },
     )
     serializer_class = type(
-        f"{entity_type}Serializer", (serializers.ModelSerializer,), {"Meta": meta}
+        f"{entity_type}Serializer",
+        (serializers.ModelSerializer,),
+        {"Meta": meta, "to_representation": _link_representation(entity_type)},
     )
     _SERIALIZER_CACHE[entity_type] = serializer_class
     return serializer_class

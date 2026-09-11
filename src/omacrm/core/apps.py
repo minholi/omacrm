@@ -11,14 +11,21 @@ class CoreConfig(AppConfig):
         from django.db.models.signals import post_delete, post_save
 
         from omacrm.core.metadata.registry import registry
-        from omacrm.core.models import CustomEntity, CustomField, Formula, Layout, Workflow
+        from omacrm.core.models import (
+            CustomEntity,
+            CustomField,
+            CustomLink,
+            Formula,
+            Layout,
+            Workflow,
+        )
         from omacrm.core.services import custom_entities, formula
         from omacrm.core.services.hooks import hooks
 
         def _invalidate_metadata(sender, instance, **kwargs):
             registry.invalidate()
 
-        for model in (CustomField, Layout):
+        for model in (CustomField, CustomLink, Layout):
             label = model._meta.label
             post_save.connect(
                 _invalidate_metadata,

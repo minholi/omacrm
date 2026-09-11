@@ -140,6 +140,17 @@ def unregister(custom_entity) -> None:
     registry.unregister(name)
     registry.invalidate()
 
+    try:
+        from django.db.models import Q
+
+        from omacrm.core.models import CustomLink
+        from omacrm.core.services import relations
+
+        relations.delete_links_for_entity(name)
+        CustomLink.objects.filter(Q(entity_type=name) | Q(link_entity=name)).delete()
+    except Exception:  # noqa: BLE001 - cleanup is best effort
+        logger.exception("Could not remove links of custom entity %s", name)
+
 
 def sync(custom_entity) -> None:
     """Called on CustomEntity save: register or unregister accordingly."""

@@ -37,6 +37,8 @@ RESET_MODELS = (
     "crm.Contact",
     "crm.Account",
     "core.DynamicRecord",
+    "core.RecordLink",
+    "core.CustomLink",
     "core.CustomEntity",
     "core.Note",
     "core.UserReaction",

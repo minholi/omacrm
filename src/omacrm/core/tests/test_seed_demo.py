@@ -10,6 +10,7 @@ from omacrm.core.models import (
     DynamicRecord,
     Email,
     Layout,
+    RecordLink,
     SavedFilter,
     User,
     WebhookQueueItem,
@@ -63,6 +64,7 @@ class SeedDemoTests(TestCase):
         self.assertGreaterEqual(WebhookQueueItem.objects.count(), 3)
         self.assertEqual(CurrencyRate.objects.count(), 36)
         self.assertEqual(DynamicRecord.objects.filter(entity_type="Project").count(), 3)
+        self.assertGreaterEqual(RecordLink.objects.count(), 9)
         self.assertGreaterEqual(CustomField.objects.count(), 6)
         self.assertGreaterEqual(Layout.objects.count(), 2)
         self.assertGreaterEqual(SavedFilter.objects.count(), 3)

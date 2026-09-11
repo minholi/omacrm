@@ -85,6 +85,36 @@ def form_field_name(field_def: FieldDef) -> str:
     return f"custom__{field_def.name}"
 
 
+def link_form_field_name(field_def: FieldDef) -> str:
+    """Name of the generated admin form field for a custom link."""
+
+    return f"link__{field_def.name}"
+
+
+def build_link_form_field(field_def: FieldDef, user=None) -> forms.Field:
+    """Build an admin form field for a custom relationship."""
+
+    from omacrm.core.metadata.registry import registry
+    from omacrm.core.services.acl import AclService
+
+    params = field_def.params or {}
+    target_entity = params.get("target_entity", "")
+    model = registry.model_for(target_entity)
+    queryset = model.objects.all()
+    if user is not None and getattr(user, "is_authenticated", False):
+        queryset = AclService.scope_queryset(user, target_entity, queryset, "read")
+    ordering = registry.get(target_entity).ordering or ["pk"]
+    queryset = queryset.order_by(*ordering)
+
+    if field_def.type == "link":
+        return forms.ModelChoiceField(
+            queryset=queryset, required=False, label=field_def.display_label
+        )
+    return forms.ModelMultipleChoiceField(
+        queryset=queryset, required=False, label=field_def.display_label
+    )
+
+
 def custom_field_names(custom_fields) -> list[str]:
     return [form_field_name(field_def) for field_def in custom_fields]
 

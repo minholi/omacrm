@@ -3,11 +3,13 @@
 from omacrm.core.models import (
     CustomEntity,
     CustomField,
+    CustomLink,
     Formula,
     Layout,
     SavedFilter,
     Workflow,
 )
+from omacrm.core.services import relations
 from omacrm.core.services.custom_entities import get_proxy
 
 CUSTOM_FIELDS = (
@@ -219,6 +221,24 @@ def seed_customization(context):
         name="budget",
         defaults={"label": "Budget", "field_type": "currency"},
     )
+    CustomLink.objects.get_or_create(
+        entity_type="Project",
+        name="account",
+        defaults={
+            "link_type": "belongsTo",
+            "link_entity": "Account",
+            "label": "Account",
+        },
+    )
+    CustomLink.objects.get_or_create(
+        entity_type="Project",
+        name="contacts",
+        defaults={
+            "link_type": "manyToMany",
+            "link_entity": "Contact",
+            "label": "Team",
+        },
+    )
 
     proxy = get_proxy(project_entity.name)
     projects = []
@@ -233,6 +253,21 @@ def seed_customization(context):
                 )
             )
 
+    all_projects = list(proxy.objects.all())
+    accounts = list(context["accounts"].values())
+    contacts = list(context["contacts"].values())
+    for index, project in enumerate(all_projects):
+        relations.set_related(project, "account", [accounts[index % len(accounts)]])
+        if len(contacts) >= 2:
+            relations.set_related(
+                project,
+                "contacts",
+                [
+                    contacts[(index * 2) % len(contacts)],
+                    contacts[(index * 2 + 1) % len(contacts)],
+                ],
+            )
+
     context.update(
         {
             "custom_fields": fields,
@@ -240,6 +275,6 @@ def seed_customization(context):
             "formulas": formulas,
             "workflows": workflows,
             "project_entity": project_entity,
-            "projects": projects,
+            "projects": all_projects,
         }
     )

@@ -62,7 +62,8 @@ src/omacrm/
     services/        # acl, hooks, stream, notifications, duplicates, jobs,
                      # context, builtin_jobs, currency, webhooks, formula,
                      # workflows, custom_entities, phone, reactions, address,
-                     # crypto, inbound_email, navigation, demo/ (seed_demo)
+                     # crypto, inbound_email, navigation, relations,
+                     # demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, views.py
@@ -236,6 +237,13 @@ src/omacrm/
   the catch-all `/api/v1/<Entity>/` routes resolve in runtime, so admin/API
   pages are available **without a restart**. The generated proxy models are
   marked `auto_created` so `makemigrations` never serializes them.
+- **Custom relationships**: `CustomLink` rows describe a link from one entity
+  to another (`belongsTo`/`hasMany`/`manyToMany`) and the reverse side is
+  derived automatically; both directions are stored as mirrored `RecordLink`
+  rows by `core/services/relations.py`. Admin forms render link/linkMultiple
+  pickers (in the detail layout or a Relationships section), changelist columns
+  show related names when the list layout includes the link, and the API
+  reads/writes links by target ids (e.g. `{"account": 3}` / `{"contacts": [1,2]}`).
 - **Portal**: customer-portal users are `User` records with `type=portal`
   linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
   `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and

@@ -72,6 +72,7 @@ class RecordViewSet(viewsets.ModelViewSet):
         if registry.is_dynamic(self.entity_type):
             extra["entity_type"] = self.entity_type
         serializer.save(**extra)
+        self._apply_links(serializer.instance)
 
     def perform_update(self, serializer):
         extra = {}
@@ -81,6 +82,26 @@ class RecordViewSet(viewsets.ModelViewSet):
         if "modified_by" in model_field_names:
             extra["modified_by"] = self.request.user
         serializer.save(**extra)
+        self._apply_links(serializer.instance)
+
+    def _apply_links(self, instance):
+        definitions = registry.link_definitions(self.entity_type)
+        if not definitions:
+            return
+        from omacrm.core.services import relations
+
+        for name, definition in definitions.items():
+            if name not in self.request.data:
+                continue
+            value = self.request.data.get(name) or []
+            if isinstance(value, str):
+                value = [value]
+            elif not isinstance(value, (list, tuple)):
+                value = [value]
+            ids = [int(item) for item in value if str(item).isdigit()]
+            model = registry.model_for(definition.target_entity)
+            targets = list(model.objects.filter(pk__in=ids))
+            relations.set_related(instance, name, targets)
 
     def perform_destroy(self, instance):
         if not AclService.check(

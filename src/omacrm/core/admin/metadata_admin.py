@@ -60,7 +60,32 @@ class LayoutAdmin(ModelAdmin):
 
 @admin.register(CustomLink)
 class CustomLinkAdmin(ModelAdmin):
-    list_display = ("entity_type", "name", "link_type", "link_entity", "is_active")
+    list_display = (
+        "entity_type",
+        "name",
+        "link_type",
+        "link_entity",
+        "foreign_name",
+        "is_active",
+    )
     list_filter = ("entity_type", "link_type", "is_active")
-    search_fields = ("entity_type", "name", "link_entity")
+    search_fields = ("entity_type", "name", "link_entity", "foreign_name")
     readonly_fields = ("created_at",)
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    ("entity_type", "name"),
+                    ("link_type", "link_entity"),
+                    ("foreign_name", "label_foreign"),
+                    ("label", "is_active"),
+                ),
+                "description": _(
+                    "The link is stored on both sides: `name` on this entity and "
+                    "`foreign_name` on the target entity."
+                ),
+            },
+        ),
+        (_("System"), {"fields": ("created_at",)}),
+    )
