@@ -44,7 +44,7 @@ access, currencies with dated rates, sales pipeline, cases/KB/documents,
 activities/attendees, inbound email threads, marketing (campaigns with
 consistent logs/counters, mass email, lead capture), stream notes/reactions/
 notifications, webhooks, custom fields/layouts, formulas/workflows and a
-`Project` custom entity (its admin/API pages need a server restart).
+`Project` custom entity (available in the sidebar and API immediately).
 
 ## Layout
 
@@ -62,7 +62,7 @@ src/omacrm/
     services/        # acl, hooks, stream, notifications, duplicates, jobs,
                      # context, builtin_jobs, currency, webhooks, formula,
                      # workflows, custom_entities, phone, reactions, address,
-                     # crypto, inbound_email, demo/ (rich seed_demo data)
+                     # crypto, inbound_email, navigation, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, views.py
@@ -229,8 +229,13 @@ src/omacrm/
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.
   Create/edit them under Customization → Custom Entities; custom fields,
-  layouts, formulas, workflows, stream and webhooks work on them. New entities
-  need a server restart (admin URLs/API router are built at startup).
+  layouts, formulas, workflows, stream and webhooks work on them. Entities
+  expose icon/color, `show_in_menu`/`menu_order`, `stream`, sort, search and
+  duplicate-check fields; the sidebar is built per request by
+  `core/services/navigation.py`, saving an entity refreshes the URLconf and
+  the catch-all `/api/v1/<Entity>/` routes resolve in runtime, so admin/API
+  pages are available **without a restart**. The generated proxy models are
+  marked `auto_created` so `makemigrations` never serializes them.
 - **Portal**: customer-portal users are `User` records with `type=portal`
   linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
   `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and

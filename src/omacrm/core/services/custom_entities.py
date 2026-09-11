@@ -36,6 +36,7 @@ def get_proxy(entity_name: str):
             {
                 "app_label": "core",
                 "proxy": True,
+                "auto_created": True,
                 "verbose_name": entity_name,
                 "ordering": ["-created_at"],
             },
@@ -148,8 +149,24 @@ def sync(custom_entity) -> None:
             materialize(custom_entity)
         else:
             unregister(custom_entity)
+        _refresh_urlconf()
     except Exception:  # noqa: BLE001 - never break the admin save
         logger.exception("Failed to sync custom entity %s", custom_entity.name)
+
+
+def _refresh_urlconf() -> None:
+    """Rebuild the URLconf so a new admin resolves without a restart."""
+
+    try:
+        import importlib
+
+        import omacrm.config.urls
+        from django.urls import clear_url_caches
+
+        importlib.reload(omacrm.config.urls)
+        clear_url_caches()
+    except Exception:  # noqa: BLE001 - best effort during setup
+        logger.debug("Could not refresh URLconf", exc_info=True)
 
 
 def ensure_all() -> None:

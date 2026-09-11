@@ -51,9 +51,17 @@ class HookRegistry:
         from django.apps import apps as django_apps
 
         from omacrm.core.metadata.registry import registry
+        from omacrm.core.services import custom_entities
 
         for entity_type, entity_def in registry.entities().items():
-            self.connect_entity(entity_type, django_apps.get_model(entity_def.model))
+            if entity_def.dynamic:
+                model = custom_entities.get_proxy(entity_type)
+            else:
+                try:
+                    model = django_apps.get_model(entity_def.model)
+                except LookupError:
+                    continue
+            self.connect_entity(entity_type, model)
 
         self._connected = True
 

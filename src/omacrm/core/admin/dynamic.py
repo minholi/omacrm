@@ -43,5 +43,26 @@ class CustomEntityAdmin(ModelAdmin):
     readonly_fields = ("created_at", "modified_at")
     fieldsets = (
         (None, {"fields": ("name", "label", "label_plural", "is_active", "description")}),
+        (
+            _("Menu"),
+            {
+                "fields": ("show_in_menu", "menu_order", "icon", "color"),
+                "description": _(
+                    "Icon is a Material Symbols name (e.g. extension, rocket_launch)."
+                ),
+            },
+        ),
+        (
+            _("Behavior"),
+            {
+                "fields": (
+                    "stream",
+                    "sort_field",
+                    "sort_direction",
+                    "search_fields",
+                    "duplicate_check_fields",
+                )
+            },
+        ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )

@@ -65,6 +65,6 @@ class Command(BaseCommand):
             "(portal at /portal/)."
         )
         self.stdout.write(
-            "Note: custom entity 'Project' admin/API pages appear after a "
-            "server restart."
+            "The demo custom entity 'Project' is available in the sidebar and "
+            "API (/api/v1/Project/) immediately."
         )

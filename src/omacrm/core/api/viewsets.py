@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
 from omacrm.core.api.filters import parse_where
@@ -88,3 +88,16 @@ class RecordViewSet(viewsets.ModelViewSet):
         ):
             raise PermissionDenied()
         instance.delete()
+
+
+class DynamicRecordViewSet(RecordViewSet):
+    """Resolve a runtime custom entity from the URL (no restart needed)."""
+
+    @property
+    def entity_type(self):
+        return self.kwargs.get("entity_type", "")
+
+    def initial(self, request, *args, **kwargs):
+        if not registry.is_dynamic(self.entity_type):
+            raise NotFound("Unknown entity type.")
+        super().initial(request, *args, **kwargs)

@@ -1,7 +1,7 @@
 """URL configuration for the OmaCRM project."""
 
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.views.generic import RedirectView
 
 from omacrm.core.admin.views import (
@@ -13,6 +13,7 @@ from omacrm.core.admin.views import (
     notification_stream,
 )
 from omacrm.core.api.router import router
+from omacrm.core.api.viewsets import DynamicRecordViewSet
 from omacrm.crm import views as crm_views
 
 urlpatterns = [
@@ -80,5 +81,22 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("portal/", include("omacrm.crm.portal_urls")),
     path("hijack/", include("hijack.urls")),
+    re_path(
+        r"^api/v1/(?P<entity_type>[A-Z][A-Za-z0-9]*)/$",
+        DynamicRecordViewSet.as_view({"get": "list", "post": "create"}),
+        name="dynamic-entity-list",
+    ),
+    re_path(
+        r"^api/v1/(?P<entity_type>[A-Z][A-Za-z0-9]*)/(?P<pk>[^/.]+)/$",
+        DynamicRecordViewSet.as_view(
+            {
+                "get": "retrieve",
+                "put": "update",
+                "patch": "partial_update",
+                "delete": "destroy",
+            }
+        ),
+        name="dynamic-entity-detail",
+    ),
     path("api/v1/", include(router.urls)),
 ]

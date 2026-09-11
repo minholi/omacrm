@@ -198,6 +198,8 @@ def seed_customization(context):
             "label": "Project",
             "label_plural": "Projects",
             "description": "Demo custom entity seeded by seed_demo.",
+            "icon": "architecture",
+            "menu_order": 10,
             "is_active": True,
         },
     )

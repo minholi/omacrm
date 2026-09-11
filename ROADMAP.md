@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-275 tests passing; see
+283 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -285,13 +285,17 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
+| Entity Manager field types (phone, number/autoincrement, decimal, address, file/image/attachmentMultiple, foreign) | E | E1 delivered entity properties/menu/runtime; advanced field types still pending. |
+| Entity Manager relationships (`CustomLink` engine) | E | Agreed design: single `RecordLink(source_type, source_id, link, target_type, target_id)` table + belongsTo cached in `custom_data`; belongTo/hasMany/manyToMany widgets and relationship panel. |
+| Entity templates (Person/Company/Event) and entity-type Event on the calendar | E | Event template deferred; calendar currently reads Call/Meeting/Task only. |
+| Kanban view by status field | E | Unfold has no native Kanban; would be a custom page. |
 
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (275 tests)
+uv run python src/omacrm/manage.py test      # must be green (283 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -307,6 +311,13 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — E1 (Entity Manager): custom entities gained icon/color,
+  menu placement (`show_in_menu`/`menu_order`), stream/sort/search/
+  duplicate-check properties, a dynamic sidebar built per request
+  (`core/services/navigation.py`), immediate admin URLs (URLconf refresh on
+  save) and a catch-all `/api/v1/<Entity>/` route, so custom entities work
+  without a server restart (283 tests).
 
 - **2026-09-11** — Rich demo dataset: `seed_demo` now populates every
   feature (sales pipeline, activities/attendees/recurrence, cases/KB/

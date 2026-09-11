@@ -97,11 +97,14 @@ class MetadataRegistry:
     def _dynamic_entity_def(self, entity_type: str) -> EntityDef:
         from omacrm.core.models import CustomEntity
 
-        row = (
-            CustomEntity.objects.filter(name=entity_type, is_active=True).first()
-            if entity_type
-            else None
-        )
+        row = None
+        if entity_type:
+            try:
+                row = CustomEntity.objects.filter(
+                    name=entity_type, is_active=True
+                ).first()
+            except (OperationalError, ProgrammingError):
+                row = None
         label = row.display_label if row else entity_type
         label_plural = row.display_label_plural if row else f"{entity_type}s"
 
@@ -119,13 +122,16 @@ class MetadataRegistry:
             label=label,
             label_plural=label_plural,
             fields=fields,
-            ordering=["-created_at"],
-            search_fields=["name"],
+            ordering=list(row.ordering) if row else ["-created_at"],
+            search_fields=list(row.search_field_list) if row else ["name"],
             list_layout=["name"],
             list_filter=["assigned_user"],
             detail_layout=detail_layout,
-            stream=True,
-            icon="extension",
+            stream=row.stream if row else True,
+            duplicate_check_fields=(
+                list(row.duplicate_field_list) if row else []
+            ),
+            icon=(row.icon if row else "") or "extension",
             dynamic=True,
         )
 

@@ -8,8 +8,6 @@ The Unfold admin is the primary application interface.
 import os
 from pathlib import Path
 
-from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
 from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -239,88 +237,7 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": True,
-        "navigation": [
-            {
-                "title": _("Sales"),
-                "collapsible": True,
-                "separator": True,
-                "items": [
-                    {"title": _("Accounts"), "icon": "domain", "link": reverse_lazy("admin:crm_account_changelist")},
-                    {"title": _("Contacts"), "icon": "contacts", "link": reverse_lazy("admin:crm_contact_changelist")},
-                    {"title": _("Leads"), "icon": "person_add", "link": reverse_lazy("admin:crm_lead_changelist")},
-                    {"title": _("Opportunities"), "icon": "trending_up", "link": reverse_lazy("admin:crm_opportunity_changelist")},
-                    {"title": _("Tasks"), "icon": "task_alt", "link": reverse_lazy("admin:crm_task_changelist")},
-                    {"title": _("Documents"), "icon": "description", "link": reverse_lazy("admin:crm_document_changelist")},
-                ],
-            },
-            {
-                "title": _("Support"),
-                "collapsible": True,
-                "items": [
-                    {"title": _("Cases"), "icon": "support_agent", "link": reverse_lazy("admin:crm_case_changelist")},
-                    {"title": _("Knowledge Base"), "icon": "menu_book", "link": reverse_lazy("admin:crm_knowledgebasearticle_changelist")},
-                ],
-            },
-            {
-                "title": _("Marketing"),
-                "collapsible": True,
-                "items": [
-                    {"title": _("Campaigns"), "icon": "campaign", "link": reverse_lazy("admin:crm_campaign_changelist")},
-                    {"title": _("Target Lists"), "icon": "format_list_bulleted", "link": reverse_lazy("admin:crm_targetlist_changelist")},
-                    {"title": _("Mass Emails"), "icon": "mail", "link": reverse_lazy("admin:crm_massemail_changelist")},
-                    {"title": _("Lead Capture"), "icon": "webhook", "link": reverse_lazy("admin:crm_leadcapture_changelist")},
-                ],
-            },
-            {
-                "title": _("Activities"),
-                "collapsible": True,
-                "items": [
-                    {"title": _("Calendar"), "icon": "calendar_month", "link": reverse_lazy("crm_calendar")},
-                    {"title": _("Calls"), "icon": "call", "link": reverse_lazy("admin:crm_call_changelist")},
-                    {"title": _("Meetings"), "icon": "event", "link": reverse_lazy("admin:crm_meeting_changelist")},
-                    {"title": _("Emails"), "icon": "mail", "link": reverse_lazy("admin:core_email_changelist")},
-                ],
-            },
-            {
-                "title": _("Administration"),
-                "collapsible": True,
-                "separator": True,
-                "items": [
-                    {"title": _("Global Search"), "icon": "search", "link": reverse_lazy("global_search")},
-                    {"title": _("Users"), "icon": "person", "link": reverse_lazy("admin:core_user_changelist")},
-                    {"title": _("Teams"), "icon": "groups", "link": reverse_lazy("admin:core_team_changelist")},
-                    {"title": _("Roles"), "icon": "shield_person", "link": reverse_lazy("admin:core_role_changelist")},
-                    {"title": _("Preferences"), "icon": "tune", "link": reverse_lazy("admin:core_preferences_changelist")},
-                ],
-            },
-            {
-                "title": _("Customization"),
-                "collapsible": True,
-                "items": [
-                    {"title": _("Custom Fields"), "icon": "add_box", "link": reverse_lazy("admin:core_customfield_changelist")},
-                    {"title": _("Layouts"), "icon": "view_column", "link": reverse_lazy("admin:core_layout_changelist")},
-                    {"title": _("Layout Editor"), "icon": "dashboard_customize", "link": reverse_lazy("layout_editor_index")},
-                    {"title": _("Custom Entities"), "icon": "extension", "link": reverse_lazy("admin:core_customentity_changelist")},
-                    {"title": _("Formulas"), "icon": "function", "link": reverse_lazy("admin:core_formula_changelist")},
-                    {"title": _("Workflows"), "icon": "account_tree", "link": reverse_lazy("admin:core_workflow_changelist")},
-                ],
-            },
-            {
-                "title": _("System"),
-                "collapsible": True,
-                "items": [
-                    {"title": _("Jobs"), "icon": "pending_actions", "link": reverse_lazy("admin:core_job_changelist")},
-                    {"title": _("Scheduled Jobs"), "icon": "schedule", "link": reverse_lazy("admin:core_scheduledjob_changelist")},
-                    {"title": _("Email Templates"), "icon": "mail", "link": reverse_lazy("admin:crm_emailtemplate_changelist")},
-                    {"title": _("Email Accounts"), "icon": "inbox", "link": reverse_lazy("admin:core_emailaccount_changelist")},
-                    {"title": _("Currencies"), "icon": "currency_exchange", "link": reverse_lazy("admin:core_currency_changelist")},
-                    {"title": _("Webhooks"), "icon": "webhook", "link": reverse_lazy("admin:core_webhook_changelist")},
-                    {"title": _("Notes"), "icon": "forum", "link": reverse_lazy("admin:core_note_changelist")},
-                    {"title": _("Notifications"), "icon": "notifications", "badge": "omacrm.core.admin.dashboard.unread_notifications_badge", "link": reverse_lazy("admin:core_notification_changelist")},
-                    {"title": _("Settings"), "icon": "settings", "link": reverse_lazy("admin:constance_config_changelist")},
-                ],
-            },
-        ],
+        "navigation": "omacrm.core.services.navigation.sidebar_navigation",
     },
     "ACCOUNT": {
         "navigation": [],
