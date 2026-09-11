@@ -1,8 +1,21 @@
-from django.contrib import admin
+from django import forms
+from django.contrib import admin, messages
+from django.http import HttpResponse
+from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
+from unfold.decorators import action, display
+from unfold.forms import BaseDialogForm
 
 from omacrm.core.models import Attachment, Note, Notification
+from omacrm.core.services.reactions import SUPPORTED_EMOJIS, toggle_reaction
+
+
+class ReactionForm(BaseDialogForm):
+    emoji = forms.ChoiceField(
+        choices=[(emoji, emoji) for emoji in SUPPORTED_EMOJIS],
+        label=_("Reaction"),
+    )
 
 
 @admin.register(Attachment)
@@ -15,11 +28,47 @@ class AttachmentAdmin(ModelAdmin):
 
 @admin.register(Note)
 class NoteAdmin(ModelAdmin):
-    list_display = ("type", "parent_display", "created_by", "created_at", "is_internal")
+    list_display = (
+        "type",
+        "parent_display",
+        "display_reactions",
+        "created_by",
+        "created_at",
+        "is_internal",
+    )
     list_filter = ("type", "is_internal")
     search_fields = ("post",)
     readonly_fields = ("created_at",)
     ordering = ("-created_at",)
+    actions_row = ("react",)
+
+    @display(description=_("Reactions"))
+    def display_reactions(self, obj):
+        return obj.reaction_summary or "-"
+
+    @action(
+        description=_("React"),
+        icon="add_reaction",
+        dialog={
+            "title": _("React to note"),
+            "description": _("Choose an emoji. Repeating the action removes it."),
+            "form_class": ReactionForm,
+            "form_submit_text": _("React"),
+        },
+    )
+    def react(self, request, form, object_id):
+        note = self.get_object(request, object_id)
+        if note is None:
+            messages.error(request, _("Note not found."))
+        else:
+            added = toggle_reaction(note, request.user, form.cleaned_data["emoji"])
+            if added:
+                messages.success(request, _("Reaction added."))
+            else:
+                messages.success(request, _("Reaction removed."))
+        return HttpResponse(
+            headers={"HX-Redirect": reverse("admin:core_note_changelist")}
+        )
 
 
 @admin.register(Notification)

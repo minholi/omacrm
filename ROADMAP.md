@@ -6,7 +6,7 @@
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
-phone utilities (146 tests passing). See the
+phone utilities and stream reactions (151 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -168,13 +168,17 @@ Account/Contact/Lead `phone_number` values are normalized to E.164 on save
 using the `phone_default_region` constance setting (invalid values are kept
 as typed).
 
+**Delivered — stream reactions:** `UserReaction` (note + user + emoji)
+with a toggle service, a per-note **React** row action in the admin (dialog
+emoji picker) and reaction summaries in the Notes list and Stream tab.
+
 **Next in Phase G:**
 
 - **Real-time stream/record updates** (notifications are done over SSE).
 - **IMAP fetch/import** and **address formatting utilities** (phone numbers are done).
 - **Layout Manager drag-and-drop** (current editor is form/JSON based).
 - Extra workflow actions (call webhook, update related records) and more formula functions.
-- Optional: stream reactions, saved filter presets.
+- Optional: saved filter presets.
 
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
 authoritative list of postponed work with origins and targets.
@@ -195,7 +199,6 @@ Nothing here is required for the current feature set to be usable.
 | Global search page across entity types | B | Unfold command palette searches registered models; no cross-entity results page. Target: backlog. |
 | Saved filter presets; custom command palette entries | C | — Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
-| Emoji reactions on stream posts | C | — Target: backlog. |
 | Sales-by-month chart on the dashboard | C | dashboard has KPI cards only. Target: backlog. |
 
 ### CRM / activities
@@ -232,7 +235,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (146 tests)
+uv run python src/omacrm/manage.py test      # must be green (151 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -248,6 +251,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Stream reactions: `UserReaction`, toggle service and
+  React row action; summaries in Notes/Stream (151 tests).
 
 - **2026-09-11** — Phone utilities: `phonenumbers`-based
   normalize/validate/format service and automatic E.164 normalization for

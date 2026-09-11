@@ -1,6 +1,6 @@
 from omacrm.core.models.base import AuditMixin, BaseEntity, CustomDataMixin
 from omacrm.core.models.automation import Formula, Workflow
-from omacrm.core.models.collab import Attachment, Note, Notification
+from omacrm.core.models.collab import Attachment, Note, Notification, UserReaction
 from omacrm.core.models.currency import Currency
 from omacrm.core.models.dynamic import CustomEntity, DynamicRecord
 from omacrm.core.models.jobs import Job, ScheduledJob, ScheduledJobLog
@@ -32,6 +32,7 @@ __all__ = [
     "Team",
     "TeamUser",
     "User",
+    "UserReaction",
     "Webhook",
     "WebhookQueueItem",
     "Workflow",

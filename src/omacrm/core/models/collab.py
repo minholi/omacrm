@@ -104,6 +104,39 @@ class Note(models.Model):
             return ""
         return str(parent) if parent is not None else ""
 
+    @property
+    def reaction_summary(self) -> str:
+        from django.db.models import Count
+
+        rows = (
+            self.reactions.values("emoji")
+            .annotate(total=Count("id"))
+            .order_by("-total", "emoji")
+        )
+        return " · ".join(f"{row['emoji']} {row['total']}" for row in rows)
+
+
+class UserReaction(models.Model):
+    """An emoji reaction by a user on a stream note."""
+
+    note = models.ForeignKey(
+        Note, on_delete=models.CASCADE, related_name="reactions"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="note_reactions",
+    )
+    emoji = models.CharField(max_length=8)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("note", "user", "emoji")]
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.emoji} by {self.user}"
+
 
 class Notification(models.Model):
     class Type(models.TextChoices):

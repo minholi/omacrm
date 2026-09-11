@@ -14,6 +14,7 @@ def note_dataset_for(parent_model):
         list_display = (
             "display_type",
             "display_post",
+            "display_reactions",
             "display_author",
             "created_at",
             "is_internal",
@@ -48,6 +49,10 @@ def note_dataset_for(parent_model):
         @display(description=_("Author"), ordering="created_by")
         def display_author(self, obj):
             return obj.created_by.name if obj.created_by else "-"
+
+        @display(description=_("Reactions"))
+        def display_reactions(self, obj):
+            return obj.reaction_summary or "-"
 
     return type(
         f"{parent_model.__name__}NoteDataset",

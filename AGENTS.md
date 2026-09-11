@@ -49,7 +49,7 @@ src/omacrm/
     metadata/        # defs.py, registry.py, fields.py, entities.py
     services/        # acl, hooks, stream, notifications, duplicates, jobs,
                      # context, builtin_jobs, currency, webhooks, formula,
-                     # workflows, custom_entities
+                     # workflows, custom_entities, phone, reactions
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic (custom entity admins), dashboard,
@@ -122,7 +122,8 @@ src/omacrm/
   `crm.send_reminders` scheduled job turns due reminders into notifications.
 - **Stream & attachments**: stream-enabled entities get a Stream dataset tab
   and a `Post Note` dialog action (mentions `@user_name` create notifications);
-  `AttachmentInline` adds file uploads to entity change pages.
+  notes support emoji reactions (`UserReaction` + React row action, summaries
+  in Notes/Stream); `AttachmentInline` adds file uploads to entity change pages.
 - **Notifications**: unread count is shown as a sidebar badge and on the
   dashboard; `core.send_notification_emails` emails a digest of unread
   notifications (constance `notification_email_enabled` + per-user
