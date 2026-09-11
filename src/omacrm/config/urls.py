@@ -7,9 +7,11 @@ from django.views.generic import RedirectView
 from omacrm.core.admin.views import (
     CalendarView,
     GlobalSearchView,
+    KanbanView,
     LayoutEditorIndexView,
     LayoutEditorView,
     RoleAclEditorView,
+    kanban_move,
     notification_stream,
 )
 from omacrm.core.api.router import router
@@ -47,6 +49,16 @@ urlpatterns = [
         "admin/global-search/",
         admin.site.admin_view(GlobalSearchView.as_view()),
         name="global_search",
+    ),
+    path(
+        "admin/kanban/<str:entity_type>/",
+        admin.site.admin_view(KanbanView.as_view()),
+        name="kanban_board",
+    ),
+    path(
+        "admin/kanban/<str:entity_type>/move/",
+        admin.site.admin_view(kanban_move),
+        name="kanban_move",
     ),
     path(
         "campaigns/track/<int:pk>/",

@@ -51,6 +51,16 @@
                 {% endif %}
             </div>
         {% endif %}
+
+        {% if kanban_url %}
+            <div>
+                <a href="{{ kanban_url }}"
+                   class="inline-flex items-center gap-1 border border-base-200 rounded-default px-3 py-1 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                    <span class="material-symbols-outlined md-18">view_kanban</span>
+                    {% translate "Kanban view" %}
+                </a>
+            </div>
+        {% endif %}
     </div>
 
     {{ block.super }}

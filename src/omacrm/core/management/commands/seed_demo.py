@@ -31,10 +31,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         reset = options["reset"]
         if not reset and Account.objects.exists():
+            from omacrm.core.services.demo.platform import seed_platform
+
+            seed_platform(
+                password=options["password"],
+                admin_password=options["admin_password"],
+                rng_seed=options["rng_seed"],
+            )
             self.stdout.write(
                 self.style.WARNING(
-                    "Business data already exists; nothing to do. "
-                    "Run with --reset to rebuild the demo dataset."
+                    "Business data already exists; refreshed platform access "
+                    "(users, roles, currencies). Run with --reset to rebuild the "
+                    "demo dataset."
                 )
             )
             return

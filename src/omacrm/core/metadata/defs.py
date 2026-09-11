@@ -39,6 +39,7 @@ class EntityDef:
     list_layout: list = dataclass_field(default_factory=list)
     stream: bool = False
     calendar: bool = False
+    kanban_field: str = ""
     duplicate_check_fields: list = dataclass_field(default_factory=list)
     icon: str = "table"
     acl_default: str = "all"

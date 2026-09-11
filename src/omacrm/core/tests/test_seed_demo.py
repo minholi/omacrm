@@ -102,6 +102,14 @@ class SeedDemoTests(TestCase):
         for user_name in ("ana.souza", "bruno.almeida", "carla.mendes", "api.bot"):
             self.assertTrue(User.objects.filter(user_name=user_name).exists())
 
+        from omacrm.core.services.acl import AclService
+
+        demo = User.objects.get(user_name="demo")
+        for entity_type in ("Account", "Opportunity", "Task", "Case"):
+            self.assertTrue(
+                AclService.check(demo, entity_type, "read"), entity_type
+            )
+
     def test_seed_without_reset_keeps_existing_data(self):
         self._seed()
         account_count = Account.objects.count()

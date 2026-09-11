@@ -63,7 +63,7 @@ src/omacrm/
                      # context, builtin_jobs, currency, webhooks, formula,
                      # workflows, custom_entities, phone, reactions, address,
                      # crypto, inbound_email, navigation, relations,
-                     # custom_fields, demo/ (seed_demo)
+                     # custom_fields, kanban, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, views.py
@@ -240,11 +240,11 @@ src/omacrm/
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.
   Create/edit them under Customization → Custom Entities; custom fields,
   layouts, formulas, workflows, stream and webhooks work on them. Entities
-  expose icon/color, `show_in_menu`/`menu_order`, `show_in_calendar`, `stream`,
-  sort, search and duplicate-check fields; the `template` (Base/Person/Company/
-  Event, locked after creation) seeds initial fields/layouts (Person builds
-  `name` from first/last, Event enables the calendar). The sidebar is built per
-  request by
+  expose icon/color, `show_in_menu`/`menu_order`, `show_in_calendar`,
+  `status_field`, `stream`, sort, search and duplicate-check fields; the
+  `template` (Base/Person/Company/Event, locked after creation) seeds initial
+  fields/layouts (Person builds `name` from first/last, Event enables the
+  calendar). The sidebar is built per request by
   `core/services/navigation.py`, saving an entity refreshes the URLconf and
   the catch-all `/api/v1/<Entity>/` routes resolve in runtime, so admin/API
   pages are available **without a restart**. The generated proxy models are
@@ -256,6 +256,12 @@ src/omacrm/
   pickers (in the detail layout or a Relationships section), changelist columns
   show related names when the list layout includes the link, and the API
   reads/writes links by target ids (e.g. `{"account": 3}` / `{"contacts": [1,2]}`).
+- **Kanban**: entities with a `kanban_field` (built-ins Opportunity → stage,
+  Task → status; custom entities via `CustomEntity.status_field`) get a board
+  at `/admin/kanban/<Entity>/` (linked from the changelist), with ACL-scoped
+  columns from the field choices, drag-and-drop moves posted to
+  `/admin/kanban/<Entity>/move/` and empty/unknown values in a "No value"
+  column (`core/services/kanban.py`).
 - **Portal**: customer-portal users are `User` records with `type=portal`
   linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
   `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and

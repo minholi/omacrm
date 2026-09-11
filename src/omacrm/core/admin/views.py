@@ -5,8 +5,9 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import Http404, StreamingHttpResponse
+from django.http import Http404, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -180,6 +181,104 @@ class CalendarView(TemplateView):
                     }
                 )
         return events
+
+
+class KanbanView(TemplateView):
+    """Kanban board over an entity status field."""
+
+    template_name = "admin/kanban.html"
+
+    def get_context_data(self, **kwargs):
+        from omacrm.core.services import kanban
+
+        context = super().get_context_data(**kwargs)
+        context.update(admin.site.each_context(self.request))
+        entity_type = kwargs["entity_type"]
+        config = kanban.kanban_config(entity_type)
+        if config is None:
+            raise Http404("Kanban is not enabled for this entity.")
+        if not AclService.check(self.request.user, entity_type, "read"):
+            raise PermissionDenied("You cannot read this entity.")
+
+        entity = registry.get(entity_type)
+        model = registry.model_for(entity_type)
+        meta = model._meta
+        board = kanban.board(entity_type, self.request.user)
+        for column in board["columns"]:
+            cards = []
+            for record in column["records"]:
+                cards.append(
+                    {
+                        "pk": record.pk,
+                        "label": str(record),
+                        "assigned": (
+                            record.assigned_user.name
+                            if getattr(record, "assigned_user", None)
+                            else ""
+                        ),
+                        "change_url": reverse(
+                            f"admin:{meta.app_label}_{meta.model_name}_change",
+                            args=[record.pk],
+                        ),
+                    }
+                )
+            column["records"] = cards
+        context.update(
+            {
+                "title": _("%(entity)s — Kanban")
+                % {"entity": entity.display_label_plural},
+                "entity": entity,
+                "entity_type": entity_type,
+                "config": config,
+                "columns": board["columns"],
+                "change_list_url": reverse(
+                    f"admin:{meta.app_label}_{meta.model_name}_changelist"
+                ),
+                "move_url": reverse(
+                    "kanban_move", kwargs={"entity_type": entity_type}
+                ),
+            }
+        )
+        return context
+
+
+def kanban_move(request, entity_type):
+    """Move a record to another Kanban column (JSON endpoint)."""
+
+    from omacrm.core.services import kanban
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST required."}, status=405)
+
+    config = kanban.kanban_config(entity_type)
+    if config is None:
+        return JsonResponse(
+            {"ok": False, "error": "Kanban is not enabled for this entity."},
+            status=404,
+        )
+
+    try:
+        payload = json.loads(request.body or b"{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    model = registry.model_for(entity_type)
+    queryset = model.objects.all()
+    if registry.is_dynamic(entity_type):
+        queryset = queryset.filter(entity_type=entity_type)
+    record = queryset.filter(pk=payload.get("pk")).first()
+    if record is None:
+        return JsonResponse({"ok": False, "error": "Record not found."}, status=404)
+    if not AclService.check(request.user, entity_type, "edit", record):
+        return JsonResponse({"ok": False, "error": "Permission denied."}, status=403)
+
+    try:
+        kanban.move_record(
+            record, entity_type, config["field"], str(payload.get("value", ""))
+        )
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+    return JsonResponse({"ok": True})
 
 
 def _parse_json_moment(value):

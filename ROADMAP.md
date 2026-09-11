@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-308 tests passing; see
+320 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -285,14 +285,13 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Kanban view by status field | E | Unfold has no native Kanban; would be a custom page. |
 
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (308 tests)
+uv run python src/omacrm/manage.py test      # must be green (320 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -308,6 +307,13 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — E5 (Kanban): generic status-field boards for custom
+  entities (`status_field`) and built-ins (Opportunity stage, Task status)
+  at `/admin/kanban/<Entity>/` with ACL, drag-and-drop moves and a
+  changelist link; `seed_demo` without `--reset` now refreshes platform
+  access (roles/users) so stale role scopes pick up new entities (320
+  tests).
 
 - **2026-09-11** — Fix: custom entities are visible to users with roles
   again; when no role mentions a runtime entity, ACL falls back to its

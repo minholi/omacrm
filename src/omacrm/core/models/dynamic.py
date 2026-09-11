@@ -55,6 +55,14 @@ class CustomEntity(models.Model):
     show_in_menu = models.BooleanField(default=True)
     menu_order = models.PositiveSmallIntegerField(default=100)
     show_in_calendar = models.BooleanField(default=False)
+    status_field = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text=_(
+            "Enum field used by the Kanban board (blank disables Kanban)."
+        ),
+    )
     stream = models.BooleanField(default=True)
     sort_field = models.CharField(
         max_length=20, choices=SortField.choices, default=SortField.CREATED_AT
@@ -151,6 +159,37 @@ class CustomEntity(models.Model):
                     % {"fields": ", ".join(sorted(invalid_duplicate))}
                 }
             )
+
+        if self.status_field:
+            if not registry.has(self.name):
+                raise ValidationError(
+                    {"status_field": _("Unknown entity type.")}
+                )
+            field_def = registry.fields(self.name).get(self.status_field)
+            if field_def is None:
+                raise ValidationError({"status_field": _("Unknown field.")})
+            if not self._is_choice_field(field_def):
+                raise ValidationError(
+                    {
+                        "status_field": _(
+                            "Use an enum custom field or a built-in choice field."
+                        )
+                    }
+                )
+
+    def _is_choice_field(self, field_def) -> bool:
+        if field_def.type in {"enum", "multiEnum"} and field_def.options:
+            return True
+        model_field = getattr(field_def, "model_field", None)
+        if not model_field:
+            return False
+        from omacrm.core.metadata.registry import registry
+
+        try:
+            model = registry.model_for(self.name)
+            return bool(model._meta.get_field(model_field).choices)
+        except Exception:  # noqa: BLE001 - validation is best effort
+            return False
 
     def save(self, *args, **kwargs):
         if self.pk:

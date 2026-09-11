@@ -197,6 +197,7 @@ registry.register(
         ],
         stream=True,
         duplicate_check_fields=["name"],
+        kanban_field="stage",
         icon="trending_up",
     )
 )
@@ -228,6 +229,7 @@ registry.register(
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,
+        kanban_field="status",
         icon="task_alt",
     )
 )

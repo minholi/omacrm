@@ -213,6 +213,7 @@ def seed_customization(context):
             "description": "Demo custom entity seeded by seed_demo.",
             "icon": "architecture",
             "menu_order": 10,
+            "status_field": "status",
             "is_active": True,
         },
     )

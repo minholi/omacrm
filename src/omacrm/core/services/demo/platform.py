@@ -87,6 +87,24 @@ RATE_HISTORY = {
 }
 
 
+def _merge_role_data(role, data: dict) -> None:
+    """Add missing entity scopes without overriding edited levels."""
+
+    merged = dict(role.data or {})
+    changed = False
+    for entity_type, actions in data.items():
+        scope = dict(merged.get(entity_type) or {})
+        for action, level in actions.items():
+            if action not in scope:
+                scope[action] = level
+                changed = True
+        if scope != (merged.get(entity_type) or {}):
+            merged[entity_type] = scope
+    if changed:
+        role.data = merged
+        role.save(update_fields=["data"])
+
+
 def _user(defaults, user_name, **extra):
     User = get_user_model()
     user = User.objects.filter(user_name=user_name).first()
@@ -125,6 +143,8 @@ def seed_platform(*, password="demo12345", admin_password="admin12345", rng_seed
     sales_team.roles.add(sales_role)
     support_team, _ = Team.objects.get_or_create(name="Support")
     support_team.roles.add(support_role)
+    _merge_role_data(sales_role, DEFAULT_ROLE_DATA)
+    _merge_role_data(support_role, SUPPORT_ROLE_DATA)
 
     User = get_user_model()
     admin = User.objects.filter(user_name="admin").first()

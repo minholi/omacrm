@@ -220,6 +220,13 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
                 user=user, entity_type=entity_type
             ).order_by("name")
 
+            from omacrm.core.services import kanban
+
+            if kanban.kanban_config(entity_type):
+                extra_context["kanban_url"] = reverse(
+                    "kanban_board", kwargs={"entity_type": entity_type}
+                )
+
         return super().changelist_view(request, extra_context=extra_context)
 
     # -- stream / attachments ----------------------------------------------
