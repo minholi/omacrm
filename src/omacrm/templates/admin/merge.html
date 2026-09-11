@@ -1,0 +1,92 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    {% if invalid %}
+        <div class="flex flex-col gap-4">
+            <div class="bg-red-100 text-red-700 px-3 py-2.5 rounded-default dark:bg-red-500/20 dark:text-red-400">
+                {% translate "This merge selection is invalid or has expired." %}
+            </div>
+            <div>
+                <a href="{{ changelist_url }}"
+                   class="border border-base-200 rounded-default px-3 py-2 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                    &larr; {% translate "Back" %}
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <form method="post" class="flex flex-col gap-6">
+            {% csrf_token %}
+            <input type="hidden" name="token" value="{{ token }}">
+
+            <div class="flex flex-row items-center gap-2">
+                <a href="{{ changelist_url }}"
+                   class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                    &larr; {% translate "Back" %}
+                </a>
+                <span class="font-semibold ml-2 text-important">{{ title }}</span>
+                <button type="submit"
+                        class="ml-auto bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
+                    {% translate "Merge records" %}
+                </button>
+            </div>
+
+            <div class="bg-orange-100 text-orange-700 px-3 py-2.5 rounded-default text-sm dark:bg-orange-500/20 dark:text-orange-400">
+                {% translate "Choose which record to keep (master) and which value to keep for each field. The other record is deleted and its related records are moved." %}
+            </div>
+
+            {% component "unfold/components/card.html" %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-font-subtle-light dark:text-font-subtle-dark">
+                                <th class="py-2 pr-3">{% translate "Field" %}</th>
+                                <th class="py-2 pr-3">{% translate "Keep left" %}</th>
+                                <th class="py-2 pr-3">{% translate "Left value" %}</th>
+                                <th class="py-2 pr-3">{% translate "Keep right" %}</th>
+                                <th class="py-2 pr-3">{% translate "Right value" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t border-base-200 dark:border-base-800">
+                                <td class="py-2 pr-3 font-semibold">{% translate "Master record" %}</td>
+                                <td class="py-2 pr-3">
+                                    <input type="radio" name="master" value="left" checked>
+                                </td>
+                                <td class="py-2 pr-3">{{ left }}</td>
+                                <td class="py-2 pr-3">
+                                    <input type="radio" name="master" value="right">
+                                </td>
+                                <td class="py-2 pr-3">{{ right }}</td>
+                            </tr>
+                            {% for row in rows %}
+                                <tr class="border-t border-base-200 dark:border-base-800">
+                                    <td class="py-2 pr-3">{{ row.label }}</td>
+                                    <td class="py-2 pr-3">
+                                        <input type="radio" name="field__{{ row.name }}" value="left" checked>
+                                    </td>
+                                    <td class="py-2 pr-3">{{ row.left_display }}</td>
+                                    <td class="py-2 pr-3">
+                                        <input type="radio" name="field__{{ row.name }}" value="right">
+                                    </td>
+                                    <td class="py-2 pr-3">{{ row.right_display }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endcomponent %}
+
+            <div>
+                <button type="submit"
+                        class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
+                    {% translate "Merge records" %}
+                </button>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}

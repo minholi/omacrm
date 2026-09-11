@@ -193,7 +193,11 @@ src/omacrm/
   `update_related`) in `core/services/workflows.py`, wired in
   `core/services/hooks.py`. Entity
   admins also provide a **Mass update** action (enum/bool fields + assigned
-  user) through an intermediate page (`MassUpdateView`). `/admin/layout-editor/`
+  user) through an intermediate page (`MassUpdateView`). Entity admins also
+  offer a **Merge selected records** action (`MergeView` +
+  `core/services/merge.py`): pick the master and per-field values; stream
+  notes, attachments, emails and nullable reverse FKs are re-pointed and the
+  duplicate is soft-deleted. `/admin/layout-editor/`
   edits `Layout` rows (list columns, draggable for ordering, + detail sections);
   `/admin/access/role/<id>/` edits a role's scope and field-level access
   matrix. Entity changelists offer per-user **saved filters** (`SavedFilter`).

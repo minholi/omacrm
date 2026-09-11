@@ -534,6 +534,117 @@ class GlobalSearchView(TemplateView):
         return context
 
 
+def _display_value(value) -> str:
+    if value is None or value == "":
+        return "-"
+    if isinstance(value, bool):
+        return _("Yes") if value else _("No")
+    return str(value)
+
+
+class MergeView(TemplateView):
+    """Pick field values from two duplicate records and merge them."""
+
+    template_name = "admin/merge.html"
+
+    @property
+    def model_admin(self):
+        return self.kwargs.get("model_admin")
+
+    def _changelist_url(self):
+        meta = self.model_admin.model._meta
+        return reverse(f"admin:{meta.app_label}_{meta.model_name}_changelist")
+
+    def _rows(self):
+        model = self.model_admin.model
+        model_fields = {field.name for field in model._meta.concrete_fields}
+        rows = []
+        for name, field_def in registry.fields(self.model_admin.entity_type).items():
+            if field_def.custom or field_def.read_only:
+                continue
+            if name not in model_fields or name in {"id", "custom_data"}:
+                continue
+            rows.append((name, field_def))
+        return rows
+
+    def _load(self, token):
+        session_data = self.request.session.get(f"merge:{token}") if token else None
+        if not session_data:
+            return None
+        pks = session_data.get("pks") or []
+        if len(pks) != 2:
+            return None
+        model = self.model_admin.model
+        manager = model.all_objects if hasattr(model, "all_objects") else model.objects
+        left = manager.filter(pk=pks[0]).first()
+        right = manager.filter(pk=pks[1]).first()
+        if left is None or right is None:
+            return None
+        return left, right
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(admin.site.each_context(self.request))
+        context["title"] = _("Merge %(model)s") % {
+            "model": self.model_admin.model._meta.verbose_name_plural
+        }
+        context["changelist_url"] = self._changelist_url()
+
+        token = self.request.GET.get("token") or self.request.POST.get("token") or ""
+        context["token"] = token
+        loaded = self._load(token)
+        context["invalid"] = loaded is None
+        if loaded is None:
+            return context
+
+        left, right = loaded
+        context["left"] = left
+        context["right"] = right
+        context["rows"] = [
+            {
+                "name": name,
+                "label": field_def.display_label,
+                "left_display": _display_value(getattr(left, name, None)),
+                "right_display": _display_value(getattr(right, name, None)),
+            }
+            for name, field_def in self._rows()
+        ]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        from omacrm.core.services.merge import merge_records
+
+        token = request.POST.get("token") or ""
+        loaded = self._load(token)
+        if loaded is None:
+            messages.error(
+                request, _("The merge selection expired. Select the records again.")
+            )
+            return redirect(self._changelist_url())
+
+        left, right = loaded
+        master = right if request.POST.get("master") == "right" else left
+        duplicate = right if master is left else left
+
+        values = {}
+        for name, _field_def in self._rows():
+            side = request.POST.get(f"field__{name}")
+            source = right if side == "right" else left
+            values[name] = getattr(source, name)
+
+        merge_records(master, duplicate, values)
+        del request.session[f"merge:{token}"]
+
+        messages.success(
+            request,
+            _("Records merged. The other record was deleted."),
+        )
+        meta = master._meta
+        return redirect(
+            reverse(f"admin:{meta.app_label}_{meta.model_name}_change", args=[master.pk])
+        )
+
+
 class MassUpdateView(TemplateView):
     """Intermediate page that applies one value to many selected records."""
 

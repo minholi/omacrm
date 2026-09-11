@@ -100,7 +100,7 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
     enforces ACL. Business entities should set ``entity_type``.
     """
 
-    actions = ("export_as_csv", "mass_update", "restore_selected")
+    actions = ("export_as_csv", "mass_update", "restore_selected", "merge_selected")
     actions_detail = ("add_note",)
     actions_row = ("restore_record",)
 
@@ -441,12 +441,50 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         meta = self.model._meta
         return f"{meta.app_label}_{meta.model_name}_mass_update"
 
+    def merge_url_name(self):
+        meta = self.model._meta
+        return f"{meta.app_label}_{meta.model_name}_merge"
+
     def get_custom_urls(self):
-        from omacrm.core.admin.views import MassUpdateView
+        from omacrm.core.admin.views import MassUpdateView, MergeView
 
         return tuple(super().get_custom_urls()) + (
             ("mass-update/", self.mass_update_url_name(), MassUpdateView.as_view()),
+            ("merge/", self.merge_url_name(), MergeView.as_view()),
         )
+
+    @admin.action(description=_("Merge selected records"))
+    def merge_selected(self, request, queryset):
+        if not self.has_change_permission(request):
+            self.message_user(
+                request,
+                _("You do not have permission to merge records."),
+                level=messages.ERROR,
+            )
+            return None
+
+        pks = list(queryset.values_list("pk", flat=True))
+        if len(pks) != 2:
+            self.message_user(
+                request,
+                _("Select exactly two records to merge."),
+                level=messages.WARNING,
+            )
+            return None
+
+        # Preserve the order the records were selected in (left, right).
+        ordered = [
+            int(pk)
+            for pk in request.POST.getlist("_selected_action")
+            if str(pk).isdigit() and int(pk) in pks
+        ]
+        if len(ordered) == 2:
+            pks = ordered
+
+        token = uuid.uuid4().hex
+        request.session[f"merge:{token}"] = {"pks": pks}
+        url = reverse(f"admin:{self.merge_url_name()}")
+        return redirect(f"{url}?token={token}")
 
     def mass_update_fields(self) -> list[dict]:
         """Editable fields offered by the mass update form."""
