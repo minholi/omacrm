@@ -47,7 +47,7 @@ class SeedDemoTests(TestCase):
         self.assertGreaterEqual(Account.objects.count(), 13)
         self.assertGreaterEqual(Contact.objects.count(), 21)
         self.assertEqual(Lead.objects.count(), 12)
-        self.assertEqual(Opportunity.objects.filter(stage="Closed Won").count(), 2)
+        self.assertEqual(Opportunity.objects.filter(stage="Closed Won").count(), 8)
         self.assertEqual(Opportunity.objects.filter(stage="Closed Lost").count(), 1)
         self.assertGreaterEqual(Task.objects.count(), 17)
         self.assertGreaterEqual(Case.objects.count(), 8)

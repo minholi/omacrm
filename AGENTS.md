@@ -162,6 +162,14 @@ src/omacrm/
   and a `Post Note` dialog action (mentions `@user_name` create notifications);
   notes support emoji reactions (`UserReaction` + React row action, summaries
   in Notes/Stream); `AttachmentInline` adds file uploads to entity change pages.
+- **Dashboard**: `/admin/` (`core/admin/dashboard.py`, `templates/admin/index.html`)
+  shows KPI cards (system counts plus ACL-scoped Account/Contact/Lead/
+  Opportunity counts) and a **Sales by month** card: recorded Closed Won
+  revenue (bars) and weighted open pipeline (line) for the last 12 months,
+  zero-filled, computed by `crm/services/analytics.py` with
+  `AclService.scope_queryset` and rendered through Unfold's bundled Chart.js
+  (`unfold/components/chart/bar.html`); totals use compact K/M/B labels
+  (`format_compact`, full value in the `title`) and compact axis ticks.
 - **Notifications**: unread count is shown as a sidebar badge and on the
   dashboard; `core.send_notification_emails` emails a digest of unread
   notifications (constance `notification_email_enabled` + per-user

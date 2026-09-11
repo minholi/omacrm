@@ -75,6 +75,15 @@ OPPORTUNITIES = (
     ("GreenLeaf supply chain", "Closed Won", Money(90000, "USD"), "GreenLeaf Organic Foods", "michael.green@greenleaf.example", -60, "Partner"),
     ("Summit Legal case management", "Closed Lost", Money(35000, "USD"), "Summit Legal Partners", "sarah.bennett@summitlegal.example", -20, "Other"),
     ("Atlas fleet tracking", "Proposal", Money(110000, "EUR"), "Atlas Logistics", "lars.devries@atlaslog.example", 40, "Email"),
+    ("Meridian onboarding", "Closed Won", Money(55000, "USD"), "BlueWave Analytics", "emily.zhang@bluewave.example", -300, "Partner"),
+    ("Harbor CRM rollout", "Closed Won", Money(72000, "EUR"), "Rheinland Maschinenbau GmbH", "klaus.weber@rheinland.example", -250, "Existing Customer"),
+    ("Nimbus support renewal", "Closed Won", Money(38000, "USD"), "Northwind Traders", "john.carter@northwind.example", -195, "Existing Customer"),
+    ("Vertex data migration", "Closed Won", Money(64000, "USD"), "TechBrasil Sistemas", "mariana.silva@techbrasil.example", -150, "Campaign"),
+    ("Orchid retail suite", "Closed Won", Money(47000, "BRL"), "Copacabana Turismo", "rafael.costa@copacabana.example", -110, "Web Site"),
+    ("Pioneer field service", "Closed Won", Money(83000, "USD"), "GreenLeaf Organic Foods", "michael.green@greenleaf.example", -75, "Partner"),
+    ("Acme CRM expansion", "Qualification", Money(95000, "USD"), "Acme Corp", "olivia.brown@acme.example", 75, "Existing Customer"),
+    ("Rheinland IoT add-on", "Prospecting", Money(45000, "EUR"), "Rheinland Maschinenbau GmbH", "klaus.weber@rheinland.example", 105, "Partner"),
+    ("Atlas warehouse module", "Negotiation", Money(125000, "USD"), "Atlas Logistics", "lars.devries@atlaslog.example", 140, "Email"),
 )
 
 

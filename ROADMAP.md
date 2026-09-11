@@ -8,7 +8,7 @@ _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 GrapesJS visual email designer).
-354 tests passing; see
+364 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -268,7 +268,6 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
-| Sales-by-month chart on the dashboard | C | dashboard has KPI cards only. Target: backlog. |
 
 ### CRM / activities
 
@@ -292,7 +291,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (354 tests)
+uv run python src/omacrm/manage.py test      # must be green (364 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -308,6 +307,13 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Dashboard sales chart: KPI cards for Account/Contact/
+  Lead/Opportunity now follow `AclService.scope_queryset` and a **Sales by
+  month** card (last 12 months, zero-filled) plots Closed Won revenue as bars
+  and weighted open pipeline as a line using Unfold's bundled Chart.js
+  (`crm/services/analytics.py`); the demo seed gained six historical Closed
+  Won deals and three future pipeline deals (364 tests).
 
 - **2026-09-11** — GrapesJS visual email designer: vendored GrapesJS 0.23.6 +
   newsletter preset (BSD-3) under `core/static/vendor/grapesjs/`;
