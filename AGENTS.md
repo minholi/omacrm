@@ -163,7 +163,7 @@ src/omacrm/
   `core/services/workflows.py`, wired in `core/services/hooks.py`. Entity
   admins also provide a **Mass update** action (enum/bool fields + assigned
   user) through an intermediate page (`MassUpdateView`). `/admin/layout-editor/`
-  edits `Layout` rows (list columns + detail sections);
+  edits `Layout` rows (list columns, draggable for ordering, + detail sections);
   `/admin/access/role/<id>/` edits a role's scope and field-level access
   matrix. Caches invalidate on model saves.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized

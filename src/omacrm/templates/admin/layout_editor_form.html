@@ -22,14 +22,19 @@
         </div>
 
         {% component "unfold/components/card.html" with title=_("List columns") %}
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+            <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-3">
+                {% translate "Check the columns to show and drag rows to reorder them; the order is saved with the layout." %}
+            </p>
+            <div id="layout-list-fields" class="flex flex-col gap-1">
                 {% for field in fields %}
-                    <label class="flex flex-row items-center gap-2 text-sm">
+                    <div class="layout-field flex flex-row items-center gap-2 border border-base-200 rounded-default px-2 py-1.5 text-sm dark:border-base-800"
+                         draggable="true" data-field="{{ field.name }}">
+                        <span class="material-symbols-outlined md-18 text-base-400 cursor-move">drag_indicator</span>
                         <input type="checkbox" name="list_fields" value="{{ field.name }}"
                                {% if field.name in list_layout %}checked{% endif %}>
-                        <span>{{ field.display_label }}</span>
+                        <span class="grow">{{ field.display_label }}</span>
                         <span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{{ field.type }}</span>
-                    </label>
+                    </div>
                 {% endfor %}
             </div>
         {% endcomponent %}
@@ -49,4 +54,44 @@
             </button>
         </div>
     </form>
+
+    <script>
+        (function () {
+            var container = document.getElementById("layout-list-fields");
+            if (!container) {
+                return;
+            }
+
+            var dragged = null;
+
+            function rows() {
+                return container.querySelectorAll(".layout-field");
+            }
+
+            rows().forEach(function (row) {
+                row.addEventListener("dragstart", function (event) {
+                    dragged = row;
+                    if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = "move";
+                    }
+                    row.style.opacity = "0.5";
+                });
+
+                row.addEventListener("dragend", function () {
+                    row.style.opacity = "";
+                    dragged = null;
+                });
+
+                row.addEventListener("dragover", function (event) {
+                    event.preventDefault();
+                    if (!dragged || dragged === row) {
+                        return;
+                    }
+                    var rect = row.getBoundingClientRect();
+                    var after = event.clientY - rect.top > rect.height / 2;
+                    container.insertBefore(dragged, after ? row.nextSibling : row);
+                });
+            });
+        })();
+    </script>
 {% endblock %}

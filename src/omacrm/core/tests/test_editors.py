@@ -35,6 +35,23 @@ class LayoutEditorTests(TestCase):
             [{"title": "Main", "fields": ["name"]}],
         )
 
+    def test_save_preserves_column_order(self):
+        self.client.post(
+            reverse("layout_editor", kwargs={"entity_type": "Team"}),
+            {
+                "list_fields": ["description", "name"],
+                "detail_layout": "[]",
+            },
+        )
+        self.assertEqual(registry.layout("Team", "list"), ["description", "name"])
+
+    def test_form_has_drag_and_drop_markup(self):
+        response = self.client.get(
+            reverse("layout_editor", kwargs={"entity_type": "Team"})
+        )
+        self.assertContains(response, 'id="layout-list-fields"')
+        self.assertContains(response, 'draggable="true"')
+
     def test_invalid_field_is_rejected(self):
         self.client.post(
             reverse("layout_editor", kwargs={"entity_type": "Team"}),
