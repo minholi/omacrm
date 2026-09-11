@@ -2,7 +2,7 @@ import base64
 import json
 
 from django.db.models import F
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +15,7 @@ from omacrm.crm.models import (
     Lead,
     LeadCapture,
 )
+from omacrm.crm.services.event_invitations import confirm_attendance
 from omacrm.crm.services.target_lists import add_to_target_list
 
 PIXEL_GIF = base64.b64decode(
@@ -94,3 +95,22 @@ def lead_capture(request, api_key):
         add_to_target_list(lead, capture.target_list)
 
     return JsonResponse({"id": lead.pk}, status=201)
+
+
+def event_confirmation(request, pk, action, token):
+    """Public accept/decline page for event invitations."""
+
+    attendance = confirm_attendance(pk, action, token)
+    if attendance is None:
+        return HttpResponseBadRequest(
+            _("This invitation link is invalid or has expired.")
+        )
+    return render(
+        request,
+        "crm/event_confirmation.html",
+        {
+            "attendance": attendance,
+            "event": attendance.event,
+            "accepted": action == "accept",
+        },
+    )

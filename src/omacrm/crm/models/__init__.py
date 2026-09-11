@@ -1,4 +1,11 @@
-from omacrm.crm.models.activities import Call, Meeting, Reminder, Task
+from omacrm.crm.models.activities import (
+    AcceptanceStatus,
+    Attendance,
+    Call,
+    Meeting,
+    Reminder,
+    Task,
+)
 from omacrm.crm.models.base import (
     OPPORTUNITY_NON_CLOSED_STAGES,
     OPPORTUNITY_PROBABILITY_MAP,
@@ -49,7 +56,9 @@ __all__ = [
     "Account",
     "AccountContact",
     "AccountType",
+    "AcceptanceStatus",
     "AddressMixin",
+    "Attendance",
     "BillingAddressMixin",
     "Call",
     "CallDirection",

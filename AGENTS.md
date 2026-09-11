@@ -126,6 +126,10 @@ src/omacrm/
   month calendar + agenda over Call/Meeting/Task. `crm/services/reminders.py`
   syncs the `reminders` JSON of events/tasks into `Reminder` rows and the
   `crm.send_reminders` scheduled job turns due reminders into notifications.
+  Call/Meeting attendees live in `Attendance` (user/contact/lead + acceptance
+  status) with an admin inline and a **Send invitations** action; invitations
+  carry signed accept/decline links handled by the public
+  `event_confirmation` view (`crm/services/event_invitations.py`).
 - **Stream & attachments**: stream-enabled entities get a Stream dataset tab
   and a `Post Note` dialog action (mentions `@user_name` create notifications);
   notes support emoji reactions (`UserReaction` + React row action, summaries

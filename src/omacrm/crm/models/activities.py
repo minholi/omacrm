@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from omacrm.core.models import BaseEntity
 from omacrm.crm.models.base import (
@@ -117,3 +118,82 @@ class Reminder(models.Model):
 
     def __str__(self):
         return f"Reminder #{self.pk} at {self.remind_at:%Y-%m-%d %H:%M}"
+
+
+class AcceptanceStatus(models.TextChoices):
+    NONE = "None", _("None")
+    ACCEPTED = "Accepted", _("Accepted")
+    TENTATIVE = "Tentative", _("Tentative")
+    DECLINED = "Declined", _("Declined")
+
+
+class Attendance(models.Model):
+    """A user, contact or lead invited to a Call/Meeting."""
+
+    event_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, related_name="+"
+    )
+    event_id = models.PositiveBigIntegerField()
+    event = GenericForeignKey("event_type", "event_id", for_concrete_model=False)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="attendances",
+    )
+    contact = models.ForeignKey(
+        "crm.Contact",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="attendances",
+    )
+    lead = models.ForeignKey(
+        "crm.Lead",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="attendances",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=AcceptanceStatus.choices,
+        default=AcceptanceStatus.NONE,
+    )
+    invitation_sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["pk"]
+        verbose_name_plural = "attendances"
+
+    def __str__(self):
+        return str(self.display_name or f"Attendance #{self.pk}")
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+
+        selected = [bool(self.user_id), bool(self.contact_id), bool(self.lead_id)]
+        if sum(selected) != 1:
+            raise ValidationError(
+                "Select exactly one attendee: user, contact or lead."
+            )
+
+    @property
+    def display_name(self):
+        target = self.user or self.contact or self.lead
+        return target.name if target is not None and hasattr(target, "name") else str(target or "")
+
+    @property
+    def email(self) -> str:
+        target = self.user or self.contact or self.lead
+        if target is None:
+            return ""
+        return (
+            getattr(target, "email", "")
+            or getattr(target, "email_address", "")
+            or ""
+        )

@@ -3,7 +3,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import GenericTabularInline, ModelAdmin, TabularInline
 from unfold.decorators import action, display
 from unfold.forms import BaseDialogForm
 from unfold.widgets import UnfoldAdminTextareaWidget
@@ -15,6 +15,7 @@ from omacrm.core.services.jobs import schedule
 from omacrm.crm.models import (
     Account,
     AccountContact,
+    Attendance,
     Call,
     Campaign,
     CampaignLogRecord,
@@ -37,7 +38,7 @@ from omacrm.crm.models import (
     TargetListCategory,
     Task,
 )
-from omacrm.crm.services import LeadConversionService, send_email
+from omacrm.crm.services import LeadConversionService, send_email, send_invitations
 from omacrm.crm.services.mass_email import build_queue
 from omacrm.crm.services.target_lists import add_to_target_list
 
@@ -442,8 +443,33 @@ class TaskAdmin(MetadataImportExportMixin, MetadataModelAdmin):
         return obj.assigned_user.name if obj.assigned_user else "-"
 
 
+class AttendanceInline(GenericTabularInline):
+    model = Attendance
+    ct_field = "event_type"
+    ct_fk_field = "event_id"
+    extra = 0
+    autocomplete_fields = ("user", "contact", "lead")
+    fields = ("user", "contact", "lead", "status", "invitation_sent_at")
+    readonly_fields = ("invitation_sent_at",)
+
+
+class EventInvitationMixin:
+    actions = MetadataModelAdmin.actions + ("send_invitations_action",)
+    inlines = (AttendanceInline,)
+
+    @admin.action(description=_("Send invitations"))
+    def send_invitations_action(self, request, queryset):
+        base_url = request.build_absolute_uri("/").rstrip("/")
+        total = sum(send_invitations(event, base_url=base_url) for event in queryset)
+        self.message_user(
+            request,
+            _("%(count)s invitation(s) sent.") % {"count": total},
+            level=messages.SUCCESS,
+        )
+
+
 @admin.register(Call)
-class CallAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class CallAdmin(EventInvitationMixin, MetadataImportExportMixin, MetadataModelAdmin):
     entity_type = "Call"
     list_display = (
         "name",
@@ -466,7 +492,9 @@ class CallAdmin(MetadataImportExportMixin, MetadataModelAdmin):
 
 
 @admin.register(Meeting)
-class MeetingAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class MeetingAdmin(
+    EventInvitationMixin, MetadataImportExportMixin, MetadataModelAdmin
+):
     entity_type = "Meeting"
     list_display = (
         "name",

@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-202 tests passing; see
+210 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -54,8 +54,8 @@ agreed order is:
 | # | Priority | Why | Status |
 | --- | --- | --- | --- |
 | P1 | API completion: `X-Api-Key` auth + `where` filter DSL | Unblocks external integrations; small and self-contained | ✅ done |
-| P2 | Call/Meeting attendees (next), invitations and acceptance statuses | Core CRM parity (events are currently simple records) | pending |
-| P3 | Recurring events | Calendar completeness | pending |
+| P2 | Call/Meeting attendees, invitations and acceptance statuses | Core CRM parity (events are currently simple records) | ✅ done |
+| P3 | Recurring events (next) | Calendar completeness | pending |
 | P4 | Campaign advanced: unsubscribe links, bounce classification, revenue tracking, double opt-in | Marketing completeness | pending |
 | P5 | Global search page across entity types | Complements the command palette | pending |
 | P6 | Duplicate merge UI | Data quality (detection already exists) | pending |
@@ -287,7 +287,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (202 tests)
+uv run python src/omacrm/manage.py test      # must be green (210 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -303,6 +303,10 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P2: event attendees (`Attendance` with user/contact/lead,
+  acceptance status), admin inline plus a Send invitations action and a
+  public signed accept/decline page (210 tests).
 
 - **2026-09-11** — P1: API keys (`X-Api-Key`) and the Espo-style `where`
   filter DSL for the REST API; admin action to generate API keys (202 tests).

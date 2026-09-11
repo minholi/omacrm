@@ -52,6 +52,11 @@ urlpatterns = [
         name="campaign_track_open",
     ),
     path(
+        "events/confirm/<int:pk>/<str:action>/<str:token>/",
+        crm_views.event_confirmation,
+        name="event_confirmation",
+    ),
+    path(
         "api/v1/lead-capture/<str:api_key>/",
         crm_views.lead_capture,
         name="lead_capture",
