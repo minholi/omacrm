@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 
 from omacrm.core.admin.views import (
     CalendarView,
+    GlobalSearchView,
     LayoutEditorIndexView,
     LayoutEditorView,
     RoleAclEditorView,
@@ -40,6 +41,11 @@ urlpatterns = [
         "admin/notifications/stream/",
         admin.site.admin_view(notification_stream),
         name="notification_stream",
+    ),
+    path(
+        "admin/global-search/",
+        admin.site.admin_view(GlobalSearchView.as_view()),
+        name="global_search",
     ),
     path(
         "campaigns/track/<int:pk>/",

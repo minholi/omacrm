@@ -278,6 +278,7 @@ UNFOLD = {
                 "collapsible": True,
                 "separator": True,
                 "items": [
+                    {"title": _("Global Search"), "icon": "search", "link": reverse_lazy("global_search")},
                     {"title": _("Users"), "icon": "person", "link": reverse_lazy("admin:core_user_changelist")},
                     {"title": _("Teams"), "icon": "groups", "link": reverse_lazy("admin:core_team_changelist")},
                     {"title": _("Roles"), "icon": "shield_person", "link": reverse_lazy("admin:core_role_changelist")},

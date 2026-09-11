@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-231 tests passing; see
+236 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -57,8 +57,8 @@ agreed order is:
 | P2 | Call/Meeting attendees, invitations and acceptance statuses | Core CRM parity (events are currently simple records) | ✅ done |
 | P3 | Recurring events | Calendar completeness | ✅ done |
 | P4 | Campaign advanced: unsubscribe links, bounce classification, revenue tracking, double opt-in | Marketing completeness | ✅ done |
-| P5 | Global search page across entity types (next) | Complements the command palette | pending |
-| P6 | Duplicate merge UI | Data quality (detection already exists) | pending |
+| P5 | Global search page across entity types | Complements the command palette | ✅ done |
+| P6 | Duplicate merge UI (next) | Data quality (detection already exists) | pending |
 | P7 | Portal profile + documents | Customer self-service | pending |
 | P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | pending |
 | P9 | Historical currency rates | Multi-currency completeness | pending |
@@ -287,7 +287,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (231 tests)
+uv run python src/omacrm/manage.py test      # must be green (236 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -303,6 +303,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P5: global search page (`/admin/global-search/`) across
+  registered entities, ACL-scoped with per-entity result groups (236 tests).
 
 - **2026-09-11** — P4: campaign advanced features — per-recipient unsubscribe
   links, hard/soft bounce recording (service + queue admin actions),

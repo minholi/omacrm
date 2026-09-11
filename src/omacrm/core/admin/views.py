@@ -438,6 +438,102 @@ def notification_stream(request):
     return response
 
 
+class GlobalSearchView(TemplateView):
+    """Cross-entity text search for staff users (ACL-scoped)."""
+
+    template_name = "admin/global_search.html"
+    per_entity_limit = 10
+
+    @staticmethod
+    def _is_text_lookup(model, lookup: str) -> bool:
+        from django.core.exceptions import FieldDoesNotExist
+        from django.db import models as django_models
+
+        segment = lookup.split("__")[0]
+        try:
+            field = model._meta.get_field(segment)
+        except FieldDoesNotExist:
+            return False
+        if lookup != segment:
+            return True
+        return isinstance(
+            field,
+            (
+                django_models.CharField,
+                django_models.TextField,
+                django_models.EmailField,
+                django_models.URLField,
+            ),
+        )
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Q
+        from django.urls import NoReverseMatch
+
+        context = super().get_context_data(**kwargs)
+        context.update(admin.site.each_context(self.request))
+        context["title"] = _("Global search")
+
+        query = (self.request.GET.get("q") or "").strip()
+        context["query"] = query
+
+        groups = []
+        if query:
+            user = self.request.user
+            for entity_type in registry.entity_types():
+                entity = registry.get(entity_type)
+                if not entity.search_fields:
+                    continue
+                if not AclService.check(user, entity_type, "read"):
+                    continue
+
+                try:
+                    model = registry.model_for(entity_type)
+                except LookupError:
+                    continue
+
+                condition = Q()
+                for lookup in entity.search_fields:
+                    if self._is_text_lookup(model, lookup):
+                        condition |= Q(**{f"{lookup}__icontains": query})
+                for field_def in registry.custom_fields(entity_type):
+                    if field_def.type in {"varchar", "text", "email"}:
+                        condition |= Q(
+                            **{f"custom_data__{field_def.name}__icontains": query}
+                        )
+                if not condition:
+                    continue
+
+                queryset = AclService.scope_queryset(
+                    user, entity_type, model.objects.filter(condition), "read"
+                )[: self.per_entity_limit]
+
+                results = []
+                for obj in queryset:
+                    try:
+                        url = reverse(
+                            f"admin:{model._meta.app_label}_"
+                            f"{model._meta.model_name}_change",
+                            args=[obj.pk],
+                        )
+                    except NoReverseMatch:
+                        url = ""
+                    results.append({"object": obj, "url": url, "label": str(obj)})
+
+                if results:
+                    groups.append(
+                        {
+                            "entity_type": entity_type,
+                            "label": entity.display_label_plural,
+                            "results": results,
+                        }
+                    )
+
+        context["groups"] = groups
+        context["result_count"] = sum(len(group["results"]) for group in groups)
+        return context
+
+
 class MassUpdateView(TemplateView):
     """Intermediate page that applies one value to many selected records."""
 

@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% load i18n unfold %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6">
+        <form method="get" class="flex flex-row flex-wrap items-center gap-2">
+            <input type="text" name="q" value="{{ query }}"
+                   placeholder="{% translate 'Search accounts, contacts, leads, ...' %}"
+                   class="bg-white border border-base-200 rounded-default px-3 py-2 text-sm w-full max-w-xl dark:bg-base-900 dark:border-base-800">
+            <button type="submit"
+                    class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
+                {% translate "Search" %}
+            </button>
+            {% if query %}
+                <span class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                    {% blocktranslate count counter=result_count %}{{ counter }} result{% plural %}{{ counter }} results{% endblocktranslate %}
+                </span>
+            {% endif %}
+        </form>
+
+        {% if query and not groups %}
+            <div class="text-sm text-font-subtle-light dark:text-font-subtle-dark">
+                {% translate "No results found." %}
+            </div>
+        {% endif %}
+
+        {% for group in groups %}
+            {% component "unfold/components/card.html" with title=group.label %}
+                <div class="flex flex-col gap-2">
+                    {% for result in group.results %}
+                        {% if result.url %}
+                            <a href="{{ result.url }}"
+                               class="border-b border-base-200 pb-2 text-sm text-important hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                                {{ result.label }}
+                            </a>
+                        {% else %}
+                            <span class="border-b border-base-200 pb-2 text-sm dark:border-base-800">{{ result.label }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endcomponent %}
+        {% endfor %}
+    </div>
+{% endblock %}

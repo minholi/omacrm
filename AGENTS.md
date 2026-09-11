@@ -148,6 +148,9 @@ src/omacrm/
   someone else queues a `StreamEvent`; the same SSE endpoint delivers it and
   the admin shows a toast (`core/services/stream.py`,
   `core.cleanup_stream_events` prunes old events).
+- **Global search**: `/admin/global-search/` (`GlobalSearchView`) searches the
+  `search_fields` + custom text fields of every registered entity, ACL-scoped,
+  and groups results per entity with links to the change pages.
 - **Cases/KB/Documents**: `Case` gets an auto number; `KnowledgeBaseArticle`
   derives `bodyPlain` and a scheduled job publishes/archives by date;
   `Document`/`DocumentFolder` support file uploads and related records.
