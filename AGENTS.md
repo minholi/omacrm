@@ -160,8 +160,11 @@ src/omacrm/
   Dev uses the console email backend (`EMAIL_BACKEND` in settings).
   Inbound: `EmailAccount` rows (IMAP credentials encrypted via
   `core/services/crypto.py`) are polled by the `core.fetch_inbound_email`
-  job, which imports messages as `Email` records with Message-ID dedup and
-  links senders to Contact/Lead/Account parents.
+  job across every comma-separated `folder`, which imports messages as
+  `Email` records with Message-ID dedup, links senders to Contact/Lead/Account
+  parents, threads replies via `In-Reply-To`/`References`
+  (`Email.parent_email`/`thread_id`) and stores MIME attachments as
+  `Attachment` rows (attachment inline on the Email admin).
 - **Multi-currency**: `Currency.rate` is the value of one unit in the base
   currency (`base_currency` constance setting); `core/services/currency.py`
   converts and hooks fill `amount_converted` on Opportunity/Lead.

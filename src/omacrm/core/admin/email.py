@@ -5,6 +5,7 @@ from unfold.admin import ModelAdmin
 from unfold.widgets import UnfoldAdminPasswordToggleWidget
 
 from omacrm.core.admin.base import MetadataModelAdmin
+from omacrm.core.admin.inlines import AttachmentInline
 from omacrm.core.models import Email, EmailAccount
 from omacrm.core.services.jobs import schedule
 
@@ -12,6 +13,7 @@ from omacrm.core.services.jobs import schedule
 @admin.register(Email)
 class EmailAdmin(MetadataModelAdmin):
     entity_type = "Email"
+    inlines = (AttachmentInline,)
 
 
 class EmailAccountForm(forms.ModelForm):

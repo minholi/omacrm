@@ -3,15 +3,20 @@
 import email
 import imaplib
 import logging
+import os
+import re
 from email.header import decode_header, make_header
 from email.utils import getaddresses, parsedate_to_datetime
 
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from omacrm.core.models import Email, EmailAccount
+from omacrm.core.models import Attachment, Email, EmailAccount
 from omacrm.core.services.jobs import jobs
 
 logger = logging.getLogger(__name__)
+
+_MESSAGE_ID_RE = re.compile(r"<[^>]+>")
 
 
 def _decode(value) -> str:
@@ -57,6 +62,53 @@ def _extract_bodies(message) -> tuple[str, str]:
     return "\n".join(plain).strip(), "\n".join(html).strip()
 
 
+def _extract_attachments(message) -> list[tuple[str, str, bytes]]:
+    attachments = []
+    for part in message.walk():
+        if part.get_content_maintype() == "multipart":
+            continue
+        disposition = str(part.get("Content-Disposition") or "")
+        filename = _decode(part.get_filename())
+        if not filename and "attachment" not in disposition:
+            continue
+        try:
+            payload = part.get_payload(decode=True) or b""
+        except Exception:  # noqa: BLE001 - malformed part
+            continue
+        if not payload:
+            continue
+        safe_name = os.path.basename(filename).strip() or "attachment"
+        attachments.append((safe_name[:255], part.get_content_type(), payload))
+    return attachments
+
+
+def _thread_candidates(message) -> list[str]:
+    """Candidate parent Message-IDs, direct parent last."""
+
+    references = _MESSAGE_ID_RE.findall(message.get("References") or "")
+    in_reply_to = _MESSAGE_ID_RE.findall(message.get("In-Reply-To") or "")
+    ordered: list[str] = []
+    for message_id in references + in_reply_to:
+        message_id = message_id.strip()
+        if message_id and message_id not in ordered:
+            ordered.append(message_id)
+    return ordered
+
+
+def find_thread_parent(message):
+    """Find the stored Email this message replies to, if any."""
+
+    candidates = _thread_candidates(message)
+    if not candidates:
+        return None
+
+    rank = {message_id: index for index, message_id in enumerate(candidates)}
+    matches = list(Email.objects.filter(message_id__in=candidates))
+    if not matches:
+        return None
+    return max(matches, key=lambda item: rank.get(item.message_id, -1))
+
+
 def match_parent(from_address: str):
     """Link a message to a CRM record by sender email, when possible."""
 
@@ -78,7 +130,7 @@ def match_parent(from_address: str):
     return None
 
 
-def import_message(account: EmailAccount, raw: bytes):
+def import_message(account: EmailAccount, raw: bytes, folder: str = ""):
     """Store a raw RFC822 message as an Email; ``None`` when duplicated."""
 
     message = email.message_from_bytes(raw)
@@ -108,6 +160,8 @@ def import_message(account: EmailAccount, raw: bytes):
         cc_address=_address_list(message.get("Cc")),
         bcc_address=_address_list(message.get("Bcc")),
         message_id=message_id,
+        folder=folder or account.folder_names[0],
+        thread_id=message_id,
         date_sent=date_sent,
         status=Email.Status.ARCHIVED,
         is_read=False,
@@ -116,10 +170,29 @@ def import_message(account: EmailAccount, raw: bytes):
         record.assigned_user = account.default_assigned_user
     record.save()
 
+    update_fields: list[str] = []
     parent = match_parent(from_address)
+    thread_parent = find_thread_parent(message)
     if parent is not None:
         record.parent = parent
-        record.save(update_fields=["parent_type", "parent_id"])
+        update_fields += ["parent_type", "parent_id"]
+    elif thread_parent is not None and thread_parent.parent_id:
+        record.parent = thread_parent.parent
+        update_fields += ["parent_type", "parent_id"]
+    if thread_parent is not None:
+        record.parent_email = thread_parent
+        record.thread_id = thread_parent.thread_id or thread_parent.message_id
+        update_fields += ["parent_email", "thread_id"]
+    if update_fields:
+        record.save(update_fields=update_fields)
+
+    for name, mime_type, payload in _extract_attachments(message):
+        Attachment(
+            name=name,
+            mime_type=mime_type,
+            file=ContentFile(payload, name=name),
+            related=record,
+        ).save()
 
     return record
 
@@ -135,31 +208,40 @@ def fetch_account(account: EmailAccount, limit: int = 50) -> int:
     imported = 0
     try:
         client.login(account.imap_username, account.get_password())
-        client.select(account.folder or "INBOX")
 
-        criteria = "UNSEEN" if account.unseen_only else "ALL"
-        status, data = client.search(None, criteria)
-        if status != "OK":
-            return 0
+        for folder in account.folder_names:
+            try:
+                status, _data = client.select(folder)
+            except Exception:  # noqa: BLE001 - try the next folder
+                logger.exception("Cannot open folder %s of %s", folder, account.name)
+                continue
+            if status != "OK":
+                logger.warning("Cannot open folder %s of %s", folder, account.name)
+                continue
 
-        message_ids = data[0].split()[-limit:]
-        for message_id in message_ids:
-            status, payload = client.fetch(message_id, "(BODY.PEEK[])")
-            if status != "OK" or not payload:
+            criteria = "UNSEEN" if account.unseen_only else "ALL"
+            status, data = client.search(None, criteria)
+            if status != "OK":
                 continue
-            raw = None
-            for part in payload:
-                if isinstance(part, tuple) and len(part) > 1:
-                    raw = part[1]
-                    break
-            if not raw:
-                continue
-            if import_message(account, raw) is not None:
-                imported += 1
-                try:
-                    client.store(message_id, "+FLAGS", "(\\Seen)")
-                except Exception:  # noqa: BLE001 - optional
-                    pass
+
+            message_ids = data[0].split()[-limit:]
+            for message_id in message_ids:
+                status, payload = client.fetch(message_id, "(BODY.PEEK[])")
+                if status != "OK" or not payload:
+                    continue
+                raw = None
+                for part in payload:
+                    if isinstance(part, tuple) and len(part) > 1:
+                        raw = part[1]
+                        break
+                if not raw:
+                    continue
+                if import_message(account, raw, folder=folder) is not None:
+                    imported += 1
+                    try:
+                        client.store(message_id, "+FLAGS", "(\\Seen)")
+                    except Exception:  # noqa: BLE001 - optional
+                        pass
 
         account.last_fetched_at = timezone.now()
         account.save(update_fields=["last_fetched_at"])

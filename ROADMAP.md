@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-246 tests passing; see
+254 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -60,8 +60,8 @@ agreed order is:
 | P5 | Global search page across entity types | Complements the command palette | ✅ done |
 | P6 | Duplicate merge UI | Data quality (detection already exists) | ✅ done |
 | P7 | Portal profile + documents | Customer self-service | ✅ done |
-| P8 | IMAP advanced: folders, threading, attachments (next) | Inbound email completeness | pending |
-| P9 | Historical currency rates | Multi-currency completeness | pending |
+| P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | ✅ done |
+| P9 | Historical currency rates (next) | Multi-currency completeness | pending |
 | P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | pending |
 
 ## What was delivered (by phase)
@@ -218,8 +218,12 @@ accounts store passwords encrypted (Fernet key derived from `SECRET_KEY`).
 `core/services/inbound_email.py` parses RFC822 messages (plain/HTML bodies,
 addresses, date, Message-ID), deduplicates by Message-ID, links senders to
 Contact/Lead/Account records and imports them as `Email` records; the
-`core.fetch_inbound_email` job polls every active account. Manage accounts
-under System → Email Accounts (with a "Fetch now" action) and messages under
+`core.fetch_inbound_email` job polls every active account and every
+comma-separated folder in `EmailAccount.folder`. Replies are threaded via
+`In-Reply-To`/`References` (`Email.parent_email`, `Email.thread_id`) and
+inherit the thread's CRM parent; MIME attachments are imported as
+`Attachment` rows (shown in the Email admin inline). Manage accounts under
+System → Email Accounts (with a "Fetch now" action) and messages under
 Activities → Emails.
 
 **Delivered — address utilities:** `core/services/address.py` formats
@@ -251,9 +255,6 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| API `where` filter DSL (Espo-style JSON) | A | API has text search, ordering and django-filter; no nested and/or translator. Target: backlog. |
-| API key authentication (`X-Api-Key`) | A | `User.api_key` exists, but DRF only offers session/token auth. Target: backlog. |
-| Global search page across entity types | B | Unfold command palette searches registered models; no cross-entity results page. Target: backlog. |
 | Custom command palette entries | C | Saved filter presets are done via `SavedFilter`. Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
 | Sales-by-month chart on the dashboard | C | dashboard has KPI cards only. Target: backlog. |
@@ -262,19 +263,13 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Call/Meeting attendees + invitations/acceptance statuses | B/C | Events are simple records: no `Attendance` model, no invite/confirm flow. Target: backlog. |
-| Recurring events (RRULE) | C | Calendar is one-off events only. Target: backlog. |
-| Duplicate merge UI | B | Duplicate detection exists; merging two records does not. Target: backlog. |
 | Related-record datasets/panels beyond the Stream tab | B/C | Related lists are changelists/inlines only. Target: backlog. |
 
 ### Email & marketing
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Inbound email advanced features (folders, per-user accounts, reply threading, attachments) | D/G | Basic IMAP fetch/import is done; folders/threading/attachments are not. Target: backlog. |
-| Per-recipient unsubscribe links / opt-out from mass email | E | Opt-out is currently managed via target-list actions. Target: Phase G. |
-| Bounce classification (hard/soft) and campaign revenue tracking | E | `CampaignLogRecord` supports `Bounced` but nothing sets it. Target: backlog. |
-| Web-to-lead double opt-in and hosted form page | E | Only the JSON endpoint exists. Target: backlog. |
+| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog. |
 | Multi-currency historical rate tables + rate sync job | D | Manual `Currency.rate` values; conversion uses the current rate only. Target: backlog. |
 
 ### Customization & platform (Phase G)
@@ -282,14 +277,13 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Drag-and-drop layout manager for detail sections/tabs | F | List columns can be reordered by dragging; detail sections are still JSON. Target: backlog. |
-| Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (246 tests)
+uv run python src/omacrm/manage.py test      # must be green (254 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -305,6 +299,10 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P8: inbound email advanced (multiple IMAP folders,
+  reply threading with `parent_email`/`thread_id`, MIME attachments as
+  `Attachment` records, Email admin attachment inline) (254 tests).
 
 - **2026-09-11** — P7: customer portal profile (edit contact info, change
   password) and documents (active documents linked to the contact or their

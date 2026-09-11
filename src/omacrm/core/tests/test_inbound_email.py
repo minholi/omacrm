@@ -1,11 +1,12 @@
+import tempfile
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from omacrm.core.admin.email import EmailAccountForm
-from omacrm.core.models import Email, EmailAccount, User
+from omacrm.core.models import Attachment, Email, EmailAccount, User
 from omacrm.core.services.crypto import decrypt, encrypt
 from omacrm.core.services.inbound_email import (
     fetch_account,
@@ -22,6 +23,8 @@ def build_raw_message(
     message_id=None,
     plain="Plain body",
     html=None,
+    in_reply_to=None,
+    references=None,
 ):
     message = EmailMessage()
     message["Subject"] = subject
@@ -29,9 +32,29 @@ def build_raw_message(
     message["To"] = to
     message["Message-ID"] = message_id or make_msgid()
     message["Date"] = formatdate(localtime=True)
+    if in_reply_to:
+        message["In-Reply-To"] = in_reply_to
+    if references:
+        message["References"] = references
     message.set_content(plain)
     if html:
         message.add_alternative(html, subtype="html")
+    return message.as_bytes()
+
+
+def build_raw_message_with_attachment(
+    filename="report.txt", content=b"file-content", message_id=None
+):
+    message = EmailMessage()
+    message["Subject"] = "With attachment"
+    message["From"] = "jane@example.com"
+    message["To"] = "ops@example.com"
+    message["Message-ID"] = message_id or make_msgid()
+    message["Date"] = formatdate(localtime=True)
+    message.set_content("See attached")
+    message.add_attachment(
+        content, maintype="text", subtype="plain", filename=filename
+    )
     return message.as_bytes()
 
 
@@ -89,6 +112,75 @@ class ImportMessageTests(TestCase):
         record = import_message(self.account, build_raw_message())
         self.assertEqual(record.assigned_user, user)
 
+    def test_folder_recorded(self):
+        record = import_message(self.account, build_raw_message(), folder="Sent")
+        self.assertEqual(record.folder, "Sent")
+        record = import_message(self.account, build_raw_message(), folder="")
+        self.assertEqual(record.folder, "INBOX")
+
+    def test_reply_threading(self):
+        parent = import_message(
+            self.account, build_raw_message(message_id="<parent@example.com>")
+        )
+        reply = import_message(
+            self.account,
+            build_raw_message(
+                sender="bob@example.com",
+                message_id="<reply@example.com>",
+                in_reply_to="<parent@example.com>",
+                references="<parent@example.com>",
+            ),
+        )
+        self.assertEqual(reply.parent_email, parent)
+        self.assertEqual(reply.thread_id, parent.thread_id)
+        self.assertEqual(parent.thread_id, "<parent@example.com>")
+
+    def test_reply_inherits_crm_parent(self):
+        contact = Contact.objects.create(
+            first_name="Jane", last_name="Doe", email_address="jane@example.com"
+        )
+        parent = import_message(
+            self.account, build_raw_message(message_id="<p2@example.com>")
+        )
+        self.assertEqual(parent.parent, contact)
+        reply = import_message(
+            self.account,
+            build_raw_message(
+                sender="bob@example.com",
+                message_id="<r2@example.com>",
+                in_reply_to="<p2@example.com>",
+            ),
+        )
+        self.assertEqual(reply.parent, contact)
+        self.assertEqual(reply.parent_email, parent)
+
+
+MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+class AttachmentImportTests(TestCase):
+    def setUp(self):
+        self.account = EmailAccount.objects.create(
+            name="Files", imap_host="imap.example.com"
+        )
+
+    def test_attachment_imported_and_linked(self):
+        from django.contrib.contenttypes.models import ContentType
+
+        record = import_message(
+            self.account, build_raw_message_with_attachment()
+        )
+        attachment = Attachment.objects.get(
+            related_type=ContentType.objects.get_for_model(
+                record, for_concrete_model=False
+            ),
+            related_id=record.pk,
+        )
+        self.assertEqual(attachment.name, "report.txt")
+        self.assertEqual(attachment.mime_type, "text/plain")
+        self.assertEqual(attachment.file.read(), b"file-content")
+
 
 class FetchAccountTests(TestCase):
     def setUp(self):
@@ -132,6 +224,70 @@ class FetchAccountTests(TestCase):
             total = fetch_inbound_email(None)
         self.assertEqual(total, 2)
         self.assertEqual(mocked.call_count, 1)
+
+    def test_fetch_polls_multiple_folders(self):
+        self.account.folder = "INBOX, Sent"
+        self.account.save()
+        client = MagicMock()
+        client.login.return_value = ("OK", [b"Logged in"])
+        client.select.side_effect = [("OK", [b"1"]), ("OK", [b"1"])]
+        client.search.side_effect = [("OK", [b"1"]), ("OK", [b"2"])]
+        client.fetch.side_effect = [
+            ("OK", [(b"1", build_raw_message(message_id="<f1@example.com>"))]),
+            ("OK", [(b"2", build_raw_message(message_id="<f2@example.com>"))]),
+        ]
+        client.store.return_value = ("OK", [b"1"])
+        client.logout.return_value = ("BYE", [b""])
+
+        with patch(
+            "omacrm.core.services.inbound_email.imaplib.IMAP4_SSL",
+            return_value=client,
+        ):
+            imported = fetch_account(self.account)
+
+        self.assertEqual(imported, 2)
+        client.select.assert_any_call("INBOX")
+        client.select.assert_any_call("Sent")
+        self.assertEqual(
+            Email.objects.get(message_id="<f1@example.com>").folder, "INBOX"
+        )
+        self.assertEqual(
+            Email.objects.get(message_id="<f2@example.com>").folder, "Sent"
+        )
+
+    def test_fetch_skips_unopenable_folder(self):
+        self.account.folder = "Bad, INBOX"
+        self.account.save()
+        client = MagicMock()
+        client.login.return_value = ("OK", [b"Logged in"])
+        client.select.side_effect = [RuntimeError("no such folder"), ("OK", [b"1"])]
+        client.search.return_value = ("OK", [b"1"])
+        client.fetch.return_value = (
+            "OK",
+            [(b"1", build_raw_message(message_id="<ok@example.com>"))],
+        )
+        client.store.return_value = ("OK", [b"1"])
+        client.logout.return_value = ("BYE", [b""])
+
+        with patch(
+            "omacrm.core.services.inbound_email.imaplib.IMAP4_SSL",
+            return_value=client,
+        ):
+            imported = fetch_account(self.account)
+
+        self.assertEqual(imported, 1)
+        self.assertTrue(Email.objects.filter(message_id="<ok@example.com>").exists())
+
+
+class EmailAccountFolderTests(TestCase):
+    def test_folder_names_parsing(self):
+        account = EmailAccount.objects.create(
+            name="Folders", imap_host="imap.example.com", folder="INBOX, Sent; Archive"
+        )
+        self.assertEqual(account.folder_names, ["INBOX", "Sent", "Archive"])
+
+        account.folder = ""
+        self.assertEqual(account.folder_names, ["INBOX"])
 
 
 class EmailAccountFormTests(TestCase):
@@ -190,3 +346,8 @@ class EmailAdminTests(TestCase):
             "/admin/core/emailaccount/add/",
         ):
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    def test_email_detail_renders(self):
+        email = Email.objects.create(subject="Hello")
+        response = self.client.get(f"/admin/core/email/{email.pk}/change/")
+        self.assertEqual(response.status_code, 200)

@@ -26,6 +26,19 @@ class Email(AuditMixin, models.Model):
     cc_address = models.TextField(blank=True, default="")
     bcc_address = models.TextField(blank=True, default="")
     message_id = models.CharField(max_length=255, blank=True, default="", db_index=True)
+    folder = models.CharField(
+        max_length=255, blank=True, default="", help_text=_("IMAP folder it came from.")
+    )
+    thread_id = models.CharField(
+        max_length=255, blank=True, default="", db_index=True
+    )
+    parent_email = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="replies",
+    )
     date_sent = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.ARCHIVED
@@ -56,7 +69,12 @@ class EmailAccount(models.Model):
     imap_ssl = models.BooleanField(default=True)
     imap_username = models.CharField(max_length=255, blank=True, default="")
     imap_password = models.CharField(max_length=255, blank=True, default="")
-    folder = models.CharField(max_length=255, blank=True, default="INBOX")
+    folder = models.CharField(
+        max_length=255,
+        blank=True,
+        default="INBOX",
+        help_text=_("Comma-separated IMAP folders to poll."),
+    )
     unseen_only = models.BooleanField(
         default=True, help_text=_("Fetch only unread messages.")
     )
@@ -79,6 +97,12 @@ class EmailAccount(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def folder_names(self) -> list[str]:
+        raw = (self.folder or "INBOX").replace(";", ",")
+        names = [name.strip() for name in raw.split(",") if name.strip()]
+        return names or ["INBOX"]
 
     def set_password(self, raw: str) -> None:
         from omacrm.core.services.crypto import encrypt
