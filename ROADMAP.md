@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-190 tests passing; see
+202 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -44,7 +44,25 @@ built as admin pages, actions, datasets and custom Unfold views).
 | D — Productivity | Cases, Knowledge Base, Documents, Email templates/send, multi-currency | ✅ done |
 | E — Marketing | Target lists, campaigns, mass email, lead capture, webhooks | ✅ done |
 | F — Customization | Formula engine, workflow rules, layout editor, role/ACL editor | ✅ done |
-| G — Platform | Entity Manager, notifications, portal, utilities, inbound email and live stream updates done; saved filters next | 🚧 in progress |
+| G — Platform | Entity Manager, notifications, portal, utilities, inbound email, live stream updates, saved filters, soft-delete restore | ✅ done |
+
+## Next priorities (ordered, decided 2026-09-11)
+
+Phases A–G are implemented; the remaining work is the optional backlog. The
+agreed order is:
+
+| # | Priority | Why | Status |
+| --- | --- | --- | --- |
+| P1 | API completion: `X-Api-Key` auth + `where` filter DSL | Unblocks external integrations; small and self-contained | ✅ done |
+| P2 | Call/Meeting attendees (next), invitations and acceptance statuses | Core CRM parity (events are currently simple records) | pending |
+| P3 | Recurring events | Calendar completeness | pending |
+| P4 | Campaign advanced: unsubscribe links, bounce classification, revenue tracking, double opt-in | Marketing completeness | pending |
+| P5 | Global search page across entity types | Complements the command palette | pending |
+| P6 | Duplicate merge UI | Data quality (detection already exists) | pending |
+| P7 | Portal profile + documents | Customer self-service | pending |
+| P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | pending |
+| P9 | Historical currency rates | Multi-currency completeness | pending |
+| P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | pending |
 
 ## What was delivered (by phase)
 
@@ -269,7 +287,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (190 tests)
+uv run python src/omacrm/manage.py test      # must be green (202 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -285,6 +303,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P1: API keys (`X-Api-Key`) and the Espo-style `where`
+  filter DSL for the REST API; admin action to generate API keys (202 tests).
 
 - **2026-09-11** — Soft-delete restore UI: deleted-mode changelist toggle
   plus bulk and per-row restore actions (190 tests).

@@ -187,6 +187,7 @@ DEFAULT_CURRENCY = "USD"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "omacrm.core.api.auth.ApiKeyAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ],

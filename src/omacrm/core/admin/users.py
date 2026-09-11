@@ -1,4 +1,6 @@
-from django.contrib import admin
+import secrets
+
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from hijack.contrib.admin import HijackUserAdminMixin
@@ -37,6 +39,14 @@ class UserAdmin(HijackUserAdminMixin, AclAdminMixin, BaseUserAdmin, ModelAdmin):
     ordering = ("user_name",)
     filter_horizontal = ("roles", "portal_roles", "user_permissions")
     readonly_fields = ("last_access",)
+    actions = ("generate_api_key",)
+
+    @admin.action(description=_("Generate API key for selected users"))
+    def generate_api_key(self, request, queryset):
+        for user in queryset:
+            user.api_key = secrets.token_hex(32)
+            user.save(update_fields=["api_key"])
+        self.message_user(request, _("API keys generated."), level=messages.SUCCESS)
     fieldsets = (
         (None, {"fields": ("user_name", "password")}),
         (

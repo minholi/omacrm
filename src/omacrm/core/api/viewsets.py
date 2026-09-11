@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from omacrm.core.api.filters import parse_where
 from omacrm.core.api.serializers import serializer_for
 from omacrm.core.metadata.registry import registry
 from omacrm.core.services.acl import AclService
@@ -49,6 +50,13 @@ class RecordViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         return serializer_for(self.entity_type)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        where = self.request.query_params.get("where")
+        if where:
+            queryset = queryset.filter(parse_where(self.entity_type, where))
+        return queryset
 
     def perform_create(self, serializer):
         if not AclService.check(self.request.user, self.entity_type, "create"):

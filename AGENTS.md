@@ -111,8 +111,11 @@ src/omacrm/
   registered with `@jobs.register("key")`; `run_jobs` processes the queue,
   `run_cron` enqueues due scheduled jobs (croniter).
 - **API**: `/api/v1/{entity}/` with metadata-driven serializers/viewset
-  (`core/api/`), ACL-scoped, session + token auth (django-filter, search,
-  ordering, limit/offset pagination).
+  (`core/api/`), ACL-scoped, session + token + `X-Api-Key` auth (generate keys
+  with the User admin action; `core/api/auth.py`). Supports django-filter,
+  search, ordering, limit/offset pagination and an Espo-style `where` JSON
+  filter (`core/api/filters.py`, e.g. `?where=[{"type":"equals","attribute":
+  "stage","value":"Proposal"}]`, with `and`/`or`/`not` groups).
 - **Import/export**: `MetadataImportExportMixin`
   (`core/admin/import_export.py`) gives entity admins CSV/XLSX import and
   export from metadata; `MetadataModelAdmin` also provides a CSV export action.
