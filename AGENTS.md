@@ -87,8 +87,10 @@ src/omacrm/
 
 - **BaseEntity** (`core/models/base.py`): audit columns, `assigned_user`,
   `teams`, soft delete (`deleted`), `custom_data` JSON and simple-history.
-  `objects` hides soft-deleted rows; `all_objects` includes them.
-  `CustomDataMixin` adds just `custom_data` (used by User/Team/Role).
+  `objects` hides soft-deleted rows; `all_objects` includes them. Entity
+  changelists can show deleted records (`?deleted=1`) and restore them via the
+  bulk or row actions. `CustomDataMixin` adds just `custom_data` (used by
+  User/Team/Role).
 - **Metadata registry** (`core/metadata/`): `EntityDef`/`FieldDef` register from
   each app's `metadata` module; `CustomField`/`Layout` DB rows merge on top.
   Cache invalidates on metadata model save via signals; `rebuild_metadata`

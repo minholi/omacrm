@@ -35,6 +35,22 @@
                 {% translate "Save filter" %}
             </button>
         </form>
+
+        {% if supports_soft_delete %}
+            <div>
+                {% if deleted_mode %}
+                    <a href="{{ request.path }}"
+                       class="text-xs text-font-subtle-light hover:text-primary-600 dark:text-font-subtle-dark dark:hover:text-primary-500">
+                        {% translate "Show active records" %}
+                    </a>
+                {% else %}
+                    <a href="{{ request.path }}?deleted=1"
+                       class="text-xs text-font-subtle-light hover:text-primary-600 dark:text-font-subtle-dark dark:hover:text-primary-500">
+                        {% translate "Show deleted records" %}
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 
     {{ block.super }}

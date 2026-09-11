@@ -79,10 +79,18 @@ class AclAdminMixin:
         return self._acl_check(request, "delete", obj)
 
     def get_queryset(self, request):
-        queryset = super().get_queryset(request)
+        if self.supports_soft_delete() and request.GET.get("deleted") in {"1", "true"}:
+            queryset = self.model.all_objects.filter(deleted=True)
+        else:
+            queryset = super().get_queryset(request)
         if not self.entity_type or request.user.is_superuser:
             return queryset
         return AclService.scope_queryset(request.user, self.entity_type, queryset, "read")
+
+    def supports_soft_delete(self) -> bool:
+        return hasattr(self.model, "all_objects") and any(
+            field.name == "deleted" for field in self.model._meta.fields
+        )
 
 
 class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
@@ -92,10 +100,66 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
     enforces ACL. Business entities should set ``entity_type``.
     """
 
-    actions = ("export_as_csv", "mass_update")
+    actions = ("export_as_csv", "mass_update", "restore_selected")
     actions_detail = ("add_note",)
+    actions_row = ("restore_record",)
 
     change_list_template = "admin/saved_filters_change_list.html"
+
+    # -- soft delete --------------------------------------------------------
+
+    @admin.action(description=_("Restore selected records"))
+    def restore_selected(self, request, queryset):
+        if not self.supports_soft_delete():
+            self.message_user(
+                request,
+                _("This entity does not support restore."),
+                level=messages.WARNING,
+            )
+            return
+
+        restored = 0
+        for obj in queryset:
+            if getattr(obj, "deleted", False):
+                obj.restore()
+                restored += 1
+        self.message_user(
+            request,
+            _("%(count)s record(s) restored.") % {"count": restored},
+            level=messages.SUCCESS,
+        )
+
+    @action(description=_("Restore"), icon="restore_from_trash")
+    def restore_record(self, request, object_id):
+        meta = self.model._meta
+        changelist = reverse(
+            f"admin:{meta.app_label}_{meta.model_name}_changelist"
+        )
+        if not self.supports_soft_delete():
+            self.message_user(
+                request,
+                _("This entity does not support restore."),
+                level=messages.WARNING,
+            )
+            return redirect(changelist)
+
+        obj = self.model.all_objects.filter(pk=object_id).first()
+        if obj is None:
+            self.message_user(request, _("Record not found."), level=messages.ERROR)
+        elif not obj.deleted:
+            self.message_user(
+                request, _("Record is not deleted."), level=messages.INFO
+            )
+        elif not self.has_change_permission(request, obj):
+            self.message_user(
+                request,
+                _("You do not have permission to restore this record."),
+                level=messages.ERROR,
+            )
+        else:
+            obj.restore()
+            self.message_user(request, _("Record restored."), level=messages.SUCCESS)
+        return redirect(changelist)
 
     # -- saved filters ------------------------------------------------------
 
@@ -103,6 +167,9 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         extra_context = extra_context or {}
         entity_type = self.entity_type
         user = request.user
+
+        extra_context["supports_soft_delete"] = self.supports_soft_delete()
+        extra_context["deleted_mode"] = request.GET.get("deleted") in {"1", "true"}
 
         if entity_type and user.is_authenticated:
             from omacrm.core.models import SavedFilter

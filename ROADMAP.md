@@ -6,7 +6,8 @@
 
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
-notifications, utilities, inbound email, saved filters). 184 tests passing; see
+notifications, utilities, inbound email, saved filters, soft-delete restore).
+190 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -173,6 +174,11 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — soft-delete restore:** entity changelists have a "Show
+deleted records" toggle (`?deleted=1`), a bulk **Restore selected records**
+action and a per-row **Restore** action; the API keeps excluding deleted
+records.
+
 **Delivered — saved filters:** entity changelists render per-user filter
 chips with a "save current filters" box (`SavedFilter` model); applying a chip
 redirects with the stored query parameters. Filters are private per user.
@@ -227,7 +233,6 @@ Nothing here is required for the current feature set to be usable.
 | --- | --- | --- |
 | API `where` filter DSL (Espo-style JSON) | A | API has text search, ordering and django-filter; no nested and/or translator. Target: backlog. |
 | API key authentication (`X-Api-Key`) | A | `User.api_key` exists, but DRF only offers session/token auth. Target: backlog. |
-| Soft-delete restore UI | A/B | `deleted` flag + `all_objects` exist; no admin action/filter to view and restore deleted records. Target: backlog. |
 | Global search page across entity types | B | Unfold command palette searches registered models; no cross-entity results page. Target: backlog. |
 | Custom command palette entries | C | Saved filter presets are done via `SavedFilter`. Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
@@ -264,7 +269,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (184 tests)
+uv run python src/omacrm/manage.py test      # must be green (190 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -280,6 +285,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Soft-delete restore UI: deleted-mode changelist toggle
+  plus bulk and per-row restore actions (190 tests).
 
 - **2026-09-11** — Saved filters: per-user changelist filter presets with
   save/apply/delete chips (184 tests).
