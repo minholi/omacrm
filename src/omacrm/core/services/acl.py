@@ -70,6 +70,11 @@ class AclService:
             level = scope.get(action)
             if level:
                 levels.append(level)
+        if not levels and registry.is_dynamic(entity_type):
+            # Newly created custom entities are not listed in existing roles;
+            # fall back to the entity default instead of denying access. An
+            # explicit role entry (including "no") still wins.
+            return cls.default_level(entity_type)
         return _highest(levels)
 
     @classmethod

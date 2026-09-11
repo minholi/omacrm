@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-307 tests passing; see
+308 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -292,7 +292,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (307 tests)
+uv run python src/omacrm/manage.py test      # must be green (308 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -308,6 +308,10 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Fix: custom entities are visible to users with roles
+  again; when no role mentions a runtime entity, ACL falls back to its
+  `acl_default` (an explicit `no` still hides it) (308 tests).
 
 - **2026-09-11** — E4 (entity templates): `CustomEntity.template`
   (Base/Person/Company/Event, locked after creation) seeds initial custom

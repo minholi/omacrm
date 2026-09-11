@@ -117,7 +117,9 @@ src/omacrm/
   JSON-safe. A model must have `custom_data` to support them.
 - **ACL** (`core/services/acl.py`): `Role.data = {EntityType: {read|create|
   edit|delete: yes|all|team|own|no}}`, `field_data` for field level; roles come
-  from users and their teams, highest wins. Users without roles get the
+  from users and their teams, highest wins. Unset scopes deny access once a
+  user has roles, except runtime custom entities, which fall back to their
+  `acl_default` until a role mentions them. Users without roles get the
   entity's `acl_default` ("all" unless the entity sets otherwise; core
   User/Team/Role use "no"). Own/team scoping needs `assigned_user`,
   `created_by` or `teams` on the model.

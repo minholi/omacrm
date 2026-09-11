@@ -93,6 +93,25 @@ class EntityManagerTests(TestCase):
         groups = {str(group["title"]): group for group in navigation}
         self.assertNotIn("Custom entities", groups)
 
+    def test_sidebar_visible_for_role_users_without_entity_entry(self):
+        from omacrm.core.services.acl import AclService
+
+        role = Role.objects.create(
+            name="Accounts only", data={"Account": {"read": "all"}}
+        )
+        staff = User.objects.create_user(
+            "em-sales", "em-sales@example.com", "pw", is_staff=True
+        )
+        staff.roles.add(role)
+
+        self.assertTrue(AclService.check(staff, "Project", "read"))
+        self.assertFalse(AclService.check(staff, "Lead", "read"))
+
+        navigation = sidebar_navigation(self._request(staff))
+        groups = {str(group["title"]): group for group in navigation}
+        self.assertIn("Custom entities", groups)
+        self.assertEqual(groups["Custom entities"]["items"][0]["title"], "Projects")
+
 
 class DynamicApiTests(TestCase):
     def setUp(self):
