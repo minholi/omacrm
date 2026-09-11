@@ -1,0 +1,44 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Documents — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <h1>Documents</h1>
+
+    <div class="card">
+        {% if documents %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Folder</th>
+                        <th>Publish date</th>
+                        <th>Expiration date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                        <tr>
+                            <td>{{ document.name }}</td>
+                            <td>{{ document.get_type_display|default:"-" }}</td>
+                            <td>{{ document.folder|default:"-" }}</td>
+                            <td>{{ document.publish_date|date:"Y-m-d"|default:"-" }}</td>
+                            <td>{{ document.expiration_date|date:"Y-m-d"|default:"-" }}</td>
+                            <td>
+                                {% if document.file %}
+                                    <a class="button" href="{% url 'portal:document_download' document.pk %}">Download</a>
+                                {% else %}
+                                    <span class="muted">No file</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="muted">No documents available.</p>
+        {% endif %}
+    </div>
+{% endblock %}

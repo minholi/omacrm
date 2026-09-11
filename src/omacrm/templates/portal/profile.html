@@ -1,0 +1,18 @@
+{% extends "portal/base.html" %}
+
+{% block title %}My Profile — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <h1>My Profile</h1>
+
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <p>
+                <button class="primary" type="submit">Save</button>
+                <a class="muted" href="{% url 'portal:password_change' %}">Change password</a>
+            </p>
+        </form>
+    </div>
+{% endblock %}

@@ -1,8 +1,18 @@
-from django.test import TestCase
+import tempfile
+
+from django.core.files.base import ContentFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from omacrm.core.models import PortalRole, User
-from omacrm.crm.models import Case, Contact, KnowledgeBaseArticle
+from omacrm.crm.models import (
+    Account,
+    Case,
+    Contact,
+    Document,
+    DocumentFolder,
+    KnowledgeBaseArticle,
+)
 
 
 class PortalTests(TestCase):
@@ -130,3 +140,135 @@ class PortalTests(TestCase):
         self.login()
         self.assertEqual(self.client.get("/admin/").status_code, 302)
         self.assertEqual(self.client.get("/api/v1/case/").status_code, 403)
+
+
+MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(MEDIA_ROOT=MEDIA_ROOT)
+class PortalProfileDocumentTests(TestCase):
+    def setUp(self):
+        self.account = Account.objects.create(name="Acme")
+        self.contact = Contact.objects.create(
+            first_name="Portal",
+            last_name="User",
+            email_address="portal2@example.com",
+            account=self.account,
+        )
+        self.user = User.objects.create_user(
+            "portal2", "portal2@example.com", "pw", type=User.Type.PORTAL
+        )
+        self.contact.portal_user = self.user
+        self.contact.save(update_fields=["portal_user"])
+
+        self.other_contact = Contact.objects.create(
+            first_name="Other", last_name="Person"
+        )
+
+        self.contact_doc = self._document("Contract", contact=self.contact)
+        self.account_doc = self._document("NDA", account=self.account)
+        self.other_doc = self._document("Secret", contact=self.other_contact)
+        self.draft_doc = self._document("Draft", contact=self.contact, status="Draft")
+
+    def _document(self, name, contact=None, account=None, status="Active"):
+        document = Document.objects.create(name=name, status=status)
+        if contact is not None:
+            document.contacts.add(contact)
+        if account is not None:
+            document.accounts.add(account)
+        document.file.save(f"{name}.txt", ContentFile(f"content of {name}".encode()))
+        return document
+
+    def login(self):
+        self.client.force_login(self.user)
+
+    def test_documents_requires_login(self):
+        self.assertEqual(self.client.get(reverse("portal:documents")).status_code, 302)
+
+    def test_documents_list_scoped_to_contact_and_account(self):
+        self.login()
+        response = self.client.get(reverse("portal:documents"))
+        self.assertContains(response, "Contract")
+        self.assertContains(response, "NDA")
+        self.assertNotContains(response, "Secret")
+        self.assertNotContains(response, "Draft")
+
+    def test_document_download_permissions(self):
+        self.login()
+        response = self.client.get(
+            reverse("portal:document_download", args=[self.contact_doc.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), b"content of Contract")
+
+        self.assertEqual(
+            self.client.get(
+                reverse("portal:document_download", args=[self.other_doc.pk])
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("portal:document_download", args=[self.draft_doc.pk])
+            ).status_code,
+            403,
+        )
+
+    def test_documents_respect_portal_role(self):
+        role = PortalRole.objects.create(
+            name="No docs", data={"Document": {"read": "no"}}
+        )
+        self.user.portal_roles.add(role)
+        self.login()
+        response = self.client.get(reverse("portal:documents"))
+        self.assertNotContains(response, "Contract")
+        self.assertEqual(
+            self.client.get(
+                reverse("portal:document_download", args=[self.contact_doc.pk])
+            ).status_code,
+            403,
+        )
+
+    def test_profile_update_syncs_contact_and_user_email(self):
+        self.login()
+        response = self.client.get(reverse("portal:profile"))
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse("portal:profile"),
+            {
+                "salutation": "",
+                "first_name": "New",
+                "last_name": "Name",
+                "email_address": "new@example.com",
+                "phone_number": "+15551234567",
+                "title": "CTO",
+                "address_street": "1 Main St",
+                "address_city": "Springfield",
+                "address_state": "IL",
+                "address_postal_code": "62701",
+                "address_country": "United States",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.contact.refresh_from_db()
+        self.user.refresh_from_db()
+        self.assertEqual(self.contact.name, "New Name")
+        self.assertEqual(self.contact.title, "CTO")
+        self.assertEqual(self.contact.address_city, "Springfield")
+        self.assertEqual(self.user.email, "new@example.com")
+
+    def test_password_change(self):
+        self.login()
+        response = self.client.post(
+            reverse("portal:password_change"),
+            {
+                "old_password": "pw",
+                "new_password1": "new-pass-12345",
+                "new_password2": "new-pass-12345",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("new-pass-12345"))

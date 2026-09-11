@@ -10,6 +10,7 @@ from django.db.models import Q
 DEFAULT_LEVELS = {
     "Case": {"read": "own", "create": "yes", "edit": "own", "delete": "no"},
     "KnowledgeBaseArticle": {"read": "all"},
+    "Document": {"read": "own"},
 }
 
 LEVEL_ORDER = {"no": 0, "own": 1, "all": 2, "yes": 3}
@@ -55,6 +56,15 @@ class PortalAcl:
                 return False
             return True
 
+        if entity_type == "Document":
+            if action != "read":
+                return False
+            if obj is None:
+                return level in {"yes", "all", "own"}
+            if level in {"yes", "all"}:
+                return obj.status == "Active"
+            return cls._owns_document(user, obj)
+
         if action == "create":
             return level in {"yes", "all"}
         if obj is None:
@@ -74,9 +84,40 @@ class PortalAcl:
         return bool(contact_id and getattr(obj, "contact_id", None) == contact_id)
 
     @classmethod
+    def _owns_document(cls, user, obj) -> bool:
+        if obj.status != "Active":
+            return False
+        contact = getattr(user, "portal_contact", None)
+        if contact is None:
+            return False
+        if obj.contacts.filter(pk=contact.pk).exists():
+            return True
+        return bool(
+            contact.account_id and obj.accounts.filter(pk=contact.account_id).exists()
+        )
+
+    @classmethod
+    def _documents_for(cls, user, queryset):
+        contact = getattr(user, "portal_contact", None)
+        if contact is None:
+            return queryset.none()
+        condition = Q(contacts=contact)
+        if contact.account_id:
+            condition |= Q(accounts=contact.account_id)
+        return queryset.filter(status="Active").filter(condition).distinct()
+
+    @classmethod
     def scope(cls, user, entity_type: str, queryset, action: str = "read"):
         level = cls.levels(user).get(entity_type, {}).get(action)
         if not level or level == "no":
+            return queryset.none()
+        if entity_type == "Document":
+            if action != "read":
+                return queryset.none()
+            if level in {"yes", "all"}:
+                return queryset.filter(status="Active")
+            if level == "own":
+                return cls._documents_for(user, queryset)
             return queryset.none()
         if level in {"yes", "all"}:
             if entity_type == "KnowledgeBaseArticle" and action == "read":

@@ -49,6 +49,8 @@
             <a href="{% url 'portal:dashboard' %}">Dashboard</a>
             <a href="{% url 'portal:case_list' %}">Cases</a>
             <a href="{% url 'portal:kb_list' %}">Knowledge Base</a>
+            <a href="{% url 'portal:documents' %}">Documents</a>
+            <a href="{% url 'portal:profile' %}">My Profile</a>
         </nav>
         <form method="post" action="{% url 'portal:logout' %}">
             {% csrf_token %}

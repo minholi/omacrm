@@ -211,7 +211,9 @@ src/omacrm/
 - **Portal**: customer-portal users are `User` records with `type=portal`
   linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
   `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and
-  published Knowledge Base articles. `crm/services/portal.py::PortalAcl`
+  published Knowledge Base articles, active Documents linked to their contact
+  or account (ACL-scoped downloads) and a profile page (edit contact info,
+  change password). `crm/services/portal.py::PortalAcl`
   enforces `own`/`all`/`no` levels; the main `AclService` returns `no` for
   portal users, so they cannot use the admin or the REST API.
 - **Admin**: every model admin should inherit `unfold.admin.ModelAdmin`;

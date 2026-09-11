@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-240 tests passing; see
+246 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -59,8 +59,8 @@ agreed order is:
 | P4 | Campaign advanced: unsubscribe links, bounce classification, revenue tracking, double opt-in | Marketing completeness | ✅ done |
 | P5 | Global search page across entity types | Complements the command palette | ✅ done |
 | P6 | Duplicate merge UI | Data quality (detection already exists) | ✅ done |
-| P7 | Portal profile + documents (next) | Customer self-service | pending |
-| P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | pending |
+| P7 | Portal profile + documents | Customer self-service | ✅ done |
+| P8 | IMAP advanced: folders, threading, attachments (next) | Inbound email completeness | pending |
 | P9 | Historical currency rates | Multi-currency completeness | pending |
 | P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | pending |
 
@@ -176,11 +176,13 @@ write custom fields with `custom.<name> = value` and use string/date helpers
 `parse_date`, `date_format`); workflows gained a `send_email` action
 (record field or literal recipient, templated subject/body, stream note).
 
-**Delivered — customer portal (MVP):** `PortalRole` + `User.portal_roles`
+**Delivered — customer portal:** `PortalRole` + `User.portal_roles`
 and `Contact.portal_user`; portal users (``type=portal``) sign in at
 `/portal/`, see only their own cases (create/view) and published KB articles,
-with access driven by `crm/services/portal.py::PortalAcl`. Portal users are
-denied by the main admin/API ACL by design.
+active Documents linked to their contact or account (ACL-scoped downloads)
+and a profile page (edit contact info, change password), with access driven
+by `crm/services/portal.py::PortalAcl`. Portal users are denied by the main
+admin/API ACL by design.
 
 **Delivered — phone utilities:** `core/services/phone.py` normalizes,
 validates and formats phone numbers with `phonenumbers`;
@@ -287,7 +289,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (240 tests)
+uv run python src/omacrm/manage.py test      # must be green (246 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -303,6 +305,10 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P7: customer portal profile (edit contact info, change
+  password) and documents (active documents linked to the contact or their
+  account, ACL-scoped downloads) (246 tests).
 
 - **2026-09-11** — P6: duplicate merge (pick master + per-field values;
   notes/attachments/emails and nullable reverse FKs are re-pointed, the
