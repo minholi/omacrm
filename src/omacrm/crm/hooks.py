@@ -156,7 +156,11 @@ def opportunity_amount_converted(instance, **kwargs):
     converted = None
     if amount is not None:
         value = amount.amount if hasattr(amount, "amount") else amount
-        converted = convert(value, instance.amount_currency or base_currency())
+        converted = convert(
+            value,
+            instance.amount_currency or base_currency(),
+            date=instance.close_date or timezone.localdate(),
+        )
     if instance.amount_converted != converted:
         Opportunity.objects.filter(pk=instance.pk).update(amount_converted=converted)
         instance.amount_converted = converted

@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-254 tests passing; see
+265 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -61,8 +61,8 @@ agreed order is:
 | P6 | Duplicate merge UI | Data quality (detection already exists) | ✅ done |
 | P7 | Portal profile + documents | Customer self-service | ✅ done |
 | P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | ✅ done |
-| P9 | Historical currency rates (next) | Multi-currency completeness | pending |
-| P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | pending |
+| P9 | Historical currency rates | Multi-currency completeness | ✅ done |
+| P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections (next) | Small UX items | pending |
 
 ## What was delivered (by phase)
 
@@ -106,8 +106,11 @@ agreed order is:
   service, **Send Email** dialog action on Account/Contact/Lead, `Email`
   stream note. Dev uses the console email backend.
 - **Multi-currency**: `Currency` (rate = value of one unit in base currency,
-  `base_currency` constance setting), conversion service, `amount_converted`
-  on Opportunity/Lead, USD/EUR/BRL seeded.
+  `base_currency` constance setting) plus dated `CurrencyRate` history,
+  conversion service (`date=effective date`), `core.sync_currency_rates` job
+  fed by the constance `currency_rates_url`, `amount_converted` on
+  Opportunity/Lead with the Opportunity using its `close_date`, USD/EUR/BRL
+  seeded.
 
 ## Phase E — Marketing (implemented)
 
@@ -270,7 +273,6 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog. |
-| Multi-currency historical rate tables + rate sync job | D | Manual `Currency.rate` values; conversion uses the current rate only. Target: backlog. |
 
 ### Customization & platform (Phase G)
 
@@ -283,7 +285,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (254 tests)
+uv run python src/omacrm/manage.py test      # must be green (265 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -299,6 +301,11 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P9: `CurrencyRate` history, dated `get_rate`/`convert`
+  (Opportunity conversion uses `close_date`), admin inline + rate admin and
+  the `core.sync_currency_rates` job driven by constance
+  `currency_rates_url` (265 tests).
 
 - **2026-09-11** — P8: inbound email advanced (multiple IMAP folders,
   reply threading with `parent_email`/`thread_id`, MIME attachments as

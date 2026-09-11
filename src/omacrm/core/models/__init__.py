@@ -7,7 +7,7 @@ from omacrm.core.models.collab import (
     StreamEvent,
     UserReaction,
 )
-from omacrm.core.models.currency import Currency
+from omacrm.core.models.currency import Currency, CurrencyRate
 from omacrm.core.models.dynamic import CustomEntity, DynamicRecord
 from omacrm.core.models.email import Email, EmailAccount
 from omacrm.core.models.filters import SavedFilter
@@ -25,6 +25,7 @@ __all__ = [
     "CustomEntity",
     "CustomField",
     "Currency",
+    "CurrencyRate",
     "CustomLink",
     "DynamicRecord",
     "Email",

@@ -166,8 +166,11 @@ src/omacrm/
   (`Email.parent_email`/`thread_id`) and stores MIME attachments as
   `Attachment` rows (attachment inline on the Email admin).
 - **Multi-currency**: `Currency.rate` is the value of one unit in the base
-  currency (`base_currency` constance setting); `core/services/currency.py`
-  converts and hooks fill `amount_converted` on Opportunity/Lead.
+  currency (`base_currency` constance setting) and `CurrencyRate` rows hold
+  dated history; `core/services/currency.py` converts using the effective
+  date (Opportunity conversion uses its `close_date`) and the
+  `core.sync_currency_rates` job loads today's rates from the constance
+  `currency_rates_url`; hooks fill `amount_converted` on Opportunity/Lead.
 - **Phone numbers**: `core/services/phone.py` (libphonenumber) provides
   `normalize_phone`/`is_valid_phone`/`format_phone`; CRM hooks normalize
   Account/Contact/Lead `phone_number` to E.164 on save using the

@@ -1,5 +1,11 @@
+import json
+import logging
+from urllib.request import urlopen
+
 from omacrm.core.models import Job
 from omacrm.core.services.jobs import jobs
+
+logger = logging.getLogger(__name__)
 
 
 @jobs.register("system.noop", name="No-op / connectivity check")
@@ -84,3 +90,60 @@ def send_notification_emails(job: Job) -> int:
     if processed:
         Notification.objects.filter(pk__in=processed).update(email_is_processed=True)
     return sent
+
+
+@jobs.register("core.sync_currency_rates", name="Sync currency rates")
+def sync_currency_rates(job: Job) -> int:
+    """Fetch today's rates from a JSON endpoint (constance currency_rates_url)."""
+
+    from decimal import Decimal
+
+    from django.utils import timezone
+
+    from omacrm.core.models import Currency, CurrencyRate
+    from omacrm.core.services.currency import base_currency
+
+    try:
+        from constance import config
+
+        url = getattr(config, "currency_rates_url", "")
+    except Exception:  # noqa: BLE001 - constance may be unavailable
+        url = ""
+    if not url:
+        return 0
+
+    try:
+        with urlopen(url, timeout=15) as response:  # noqa: S310 - configured URL
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001 - network/parse failures are logged
+        logger.exception("Failed to fetch currency rates from %s", url)
+        return 0
+
+    rates = payload.get("rates") or payload.get("conversion_rates") or {}
+    base = (payload.get("base") or payload.get("base_code") or "").upper()
+    target = base_currency()
+    if base and base != target:
+        logger.warning(
+            "Currency rate payload is based on %s, expected %s; skipping", base, target
+        )
+        return 0
+
+    date = timezone.localdate()
+    updated = 0
+    for code, value in rates.items():
+        code = str(code).upper()
+        if code == target:
+            continue
+        currency = Currency.objects.filter(code=code, is_active=True).first()
+        if currency is None:
+            continue
+        rate = Decimal(str(value))
+        CurrencyRate.objects.update_or_create(
+            currency=currency, date=date, defaults={"rate": rate}
+        )
+        if currency.rate != rate:
+            currency.rate = rate
+            currency.save(update_fields=["rate", "updated_at"])
+        updated += 1
+
+    return updated

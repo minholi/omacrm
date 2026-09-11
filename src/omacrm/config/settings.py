@@ -151,6 +151,12 @@ CONSTANCE_CONFIG = {
     "records_per_page": (20, "Default number of records per page", int),
     "base_currency": ("USD", "Base currency for monetary amounts", str),
     "default_currency": ("USD", "Default currency for new records", str),
+    "currency_rates_url": (
+        "",
+        "JSON endpoint with rates relative to the base currency "
+        "(a `rates`/`conversion_rates` map); empty disables the sync job",
+        str,
+    ),
     "date_format": ("Y-m-d", "Date format (Django syntax)", str),
     "time_format": ("H:i", "Time format (Django syntax)", str),
     "phone_default_region": (
@@ -170,6 +176,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Currency & Formats": (
         "base_currency",
         "default_currency",
+        "currency_rates_url",
         "date_format",
         "time_format",
     ),

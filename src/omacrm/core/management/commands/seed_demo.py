@@ -117,6 +117,13 @@ class Command(BaseCommand):
             },
         )
         ScheduledJob.objects.get_or_create(
+            name="Sync currency rates",
+            defaults={
+                "job": "core.sync_currency_rates",
+                "scheduling": "15 2 * * *",
+            },
+        )
+        ScheduledJob.objects.get_or_create(
             name="Cleanup stream events",
             defaults={
                 "job": "core.cleanup_stream_events",
