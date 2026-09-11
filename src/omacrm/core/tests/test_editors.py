@@ -52,6 +52,26 @@ class LayoutEditorTests(TestCase):
         self.assertContains(response, 'id="layout-list-fields"')
         self.assertContains(response, 'draggable="true"')
 
+    def test_detail_sections_render_visual_editor(self):
+        Layout.objects.create(
+            entity_type="Team",
+            layout_name="detail",
+            data=[{"title": "Main", "fields": ["name"]}],
+            is_custom=True,
+        )
+        response = self.client.get(
+            reverse("layout_editor", kwargs={"entity_type": "Team"})
+        )
+        self.assertContains(response, 'id="detail-editor"')
+        self.assertContains(response, 'id="detail-fields-palette"')
+        self.assertContains(response, 'data-section')
+        self.assertContains(response, 'data-section-handle')
+        self.assertContains(response, 'data-dropzone')
+        self.assertContains(response, 'data-remove-chip')
+        self.assertContains(response, 'name="detail_layout"')
+        self.assertContains(response, 'value="Main"')
+        self.assertContains(response, 'data-field="name"')
+
     def test_invalid_field_is_rejected(self):
         self.client.post(
             reverse("layout_editor", kwargs={"entity_type": "Team"}),

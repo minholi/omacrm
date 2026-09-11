@@ -233,6 +233,7 @@ UNFOLD = {
     "COMMAND": {
         "search_models": True,
         "show_history": True,
+        "search_callback": "omacrm.core.services.command_palette.command_search",
     },
     "SCRIPTS": ["/static/core/js/notifications.js"],
     "SIDEBAR": {

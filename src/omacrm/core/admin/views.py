@@ -209,6 +209,25 @@ class LayoutEditorView(TemplateView):
 
         detail = registry.layout(entity_type, "detail") or []
         context["detail_layout_text"] = json.dumps(_jsonable(detail), indent=2)
+
+        field_map = registry.fields(entity_type)
+        sections = []
+        if isinstance(detail, list):
+            for section in detail:
+                if not isinstance(section, dict):
+                    continue
+                section_fields = []
+                for name in section.get("fields", []):
+                    field_def = field_map.get(name)
+                    if field_def is None:
+                        continue
+                    section_fields.append(
+                        {"name": name, "label": field_def.display_label}
+                    )
+                sections.append(
+                    {"title": str(section.get("title") or ""), "fields": section_fields}
+                )
+        context["detail_sections"] = sections
         return context
 
     def post(self, request, *args, **kwargs):

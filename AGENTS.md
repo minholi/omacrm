@@ -192,9 +192,11 @@ src/omacrm/
   and the `core.process_webhooks` job delivers them (HMAC signature, retries).
 - **Customization**: `Formula` scripts run before/after save through a
   sandboxed AST interpreter (`core/services/formula.py`) and can assign model
-  fields or custom fields (`custom.<name> = value`), with string/date helpers
-  (`lower`, `upper`, `substring`, `replace`, `coalesce`, `parse_date`,
-  `date_format`, ...); `Workflow` rules evaluate a condition and run actions
+  fields or custom fields (`custom.<name> = value`), with string helpers
+  (`lower`, `upper`, `substring`, `replace`, `coalesce`, `concat`, `split`,
+  `join`, `capitalize`, `is_empty`), number helpers (`number_format`, `ceil`,
+  `floor`, `sqrt`) and date helpers (`parse_date`, `date_format`, `date_add`);
+  `Workflow` rules evaluate a condition and run actions
   (`set_field`, `notify`, `create_record`, templated `send_email`, `webhook`,
   `update_related`) in `core/services/workflows.py`, wired in
   `core/services/hooks.py`. Entity
@@ -204,10 +206,14 @@ src/omacrm/
   `core/services/merge.py`): pick the master and per-field values; stream
   notes, attachments, emails and nullable reverse FKs are re-pointed and the
   duplicate is soft-deleted. `/admin/layout-editor/`
-  edits `Layout` rows (list columns, draggable for ordering, + detail sections);
+  edits `Layout` rows (list columns draggable for ordering, plus a
+  drag-and-drop detail-section editor with a JSON fallback);
   `/admin/access/role/<id>/` edits a role's scope and field-level access
   matrix. Entity changelists offer per-user **saved filters** (`SavedFilter`).
-  Caches invalidate on model saves.
+  Caches invalidate on model saves. The Unfold command palette gets custom
+  entries (`UNFOLD["COMMAND"]["search_callback"]` →
+  `core/services/command_palette.py`): static commands, permission-filtered
+  entity shortcuts (list/new) and the user's saved filters.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.

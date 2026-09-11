@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-    <form method="post" class="flex flex-col gap-6">
+    <form method="post" class="flex flex-col gap-6" id="layout-editor-form">
         {% csrf_token %}
 
         <div class="flex flex-row items-center gap-2">
@@ -39,12 +39,66 @@
             </div>
         {% endcomponent %}
 
-        {% component "unfold/components/card.html" with title=_("Detail layout") %}
-            <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-2">
-                {% translate "JSON list of sections, each with a title and a list of field names." %}
+        {% component "unfold/components/card.html" with title=_("Detail sections") %}
+            <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-3">
+                {% translate "Drag fields from the palette into a section. Drag the handle to reorder sections and use × to remove a field." %}
             </p>
-            <textarea name="detail_layout" rows="18"
-                      class="w-full font-mono text-xs bg-white border border-base-200 rounded-default p-3 dark:bg-base-900 dark:border-base-800">{{ detail_layout_text }}</textarea>
+
+            <details id="detail-json-fallback" class="mb-4">
+                <summary class="cursor-pointer text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                    {% translate "Edit as JSON" %}
+                </summary>
+                <textarea id="detail-layout-json" name="detail_layout" rows="18"
+                          class="mt-2 w-full font-mono text-xs bg-white border border-base-200 rounded-default p-3 dark:bg-base-900 dark:border-base-800">{{ detail_layout_text }}</textarea>
+            </details>
+
+            <div id="detail-editor" class="flex flex-col gap-4" hidden>
+                <div>
+                    <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-2">
+                        {% translate "Available fields" %}
+                    </p>
+                    <div id="detail-fields-palette"
+                         class="flex flex-wrap gap-1 min-h-[40px] border border-dashed border-base-200 rounded-default p-2 dark:border-base-800">
+                        {% for field in fields %}
+                            <span class="detail-chip palette-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800"
+                                  draggable="true" data-field="{{ field.name }}"
+                                  data-label="{{ field.display_label }}">{{ field.display_label }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="detail-sections" class="flex flex-col gap-3">
+                    {% for section in detail_sections %}
+                        <div class="detail-section border border-base-200 rounded-default dark:border-base-800" data-section>
+                            <div class="flex flex-row items-center gap-2 border-b border-base-200 px-2 py-1.5 dark:border-base-800">
+                                <span class="material-symbols-outlined md-18 text-base-400 cursor-move"
+                                      data-section-handle draggable="true">drag_indicator</span>
+                                <input type="text" class="section-title grow bg-transparent text-sm border-0 p-0 focus:ring-0"
+                                       value="{{ section.title }}" placeholder="{% translate 'Section title' %}">
+                                <button type="button" data-remove-section
+                                        class="text-base-400 hover:text-red-600">&times;</button>
+                            </div>
+                            <div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone>
+                                {% for field in section.fields %}
+                                    <span class="detail-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800"
+                                          draggable="true" data-field="{{ field.name }}"
+                                          data-label="{{ field.label }}">{{ field.label }}
+                                        <button type="button" data-remove-chip
+                                                class="ml-1 text-base-400 hover:text-red-600">&times;</button>
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <button type="button" id="add-detail-section"
+                            class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                        + {% translate "Add section" %}
+                    </button>
+                </div>
+            </div>
         {% endcomponent %}
 
         <div>
@@ -57,40 +111,212 @@
 
     <script>
         (function () {
-            var container = document.getElementById("layout-list-fields");
-            if (!container) {
+            var listContainer = document.getElementById("layout-list-fields");
+            if (listContainer) {
+                var dragged = null;
+
+                listContainer.querySelectorAll(".layout-field").forEach(function (row) {
+                    row.addEventListener("dragstart", function (event) {
+                        dragged = row;
+                        if (event.dataTransfer) {
+                            event.dataTransfer.effectAllowed = "move";
+                        }
+                        row.style.opacity = "0.5";
+                    });
+
+                    row.addEventListener("dragend", function () {
+                        row.style.opacity = "";
+                        dragged = null;
+                    });
+
+                    row.addEventListener("dragover", function (event) {
+                        event.preventDefault();
+                        if (!dragged || dragged === row) {
+                            return;
+                        }
+                        var rect = row.getBoundingClientRect();
+                        var after = event.clientY - rect.top > rect.height / 2;
+                        listContainer.insertBefore(dragged, after ? row.nextSibling : row);
+                    });
+                });
+            }
+
+            var editor = document.getElementById("detail-editor");
+            var fallback = document.getElementById("detail-json-fallback");
+            var textarea = document.getElementById("detail-layout-json");
+            var sectionsContainer = document.getElementById("detail-sections");
+            var palette = document.getElementById("detail-fields-palette");
+            var form = document.getElementById("layout-editor-form");
+            if (!editor || !textarea || !sectionsContainer || !palette) {
                 return;
             }
 
-            var dragged = null;
+            var draggedChip = null;
+            var draggedSection = null;
 
-            function rows() {
-                return container.querySelectorAll(".layout-field");
+            editor.hidden = false;
+            fallback.hidden = true;
+
+            function labelFor(field) {
+                var chip = palette.querySelector('[data-field="' + field + '"]');
+                return chip ? chip.dataset.label : field;
             }
 
-            rows().forEach(function (row) {
-                row.addEventListener("dragstart", function (event) {
-                    dragged = row;
+            function makeChip(field) {
+                var chip = document.createElement("span");
+                chip.className = "detail-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800";
+                chip.setAttribute("draggable", "true");
+                chip.dataset.field = field;
+                chip.dataset.label = labelFor(field);
+                chip.textContent = labelFor(field);
+
+                var remove = document.createElement("button");
+                remove.type = "button";
+                remove.setAttribute("data-remove-chip", "");
+                remove.className = "ml-1 text-base-400 hover:text-red-600";
+                remove.textContent = "\u00d7";
+                chip.appendChild(remove);
+                return chip;
+            }
+
+            function addChip(dropzone, field) {
+                if (dropzone.querySelector('.detail-chip[data-field="' + field + '"]')) {
+                    return;
+                }
+                dropzone.appendChild(makeChip(field));
+                serializeDetail();
+            }
+
+            function makeSection() {
+                var section = document.createElement("div");
+                section.className = "detail-section border border-base-200 rounded-default dark:border-base-800";
+                section.setAttribute("data-section", "");
+                section.innerHTML =
+                    '<div class="flex flex-row items-center gap-2 border-b border-base-200 px-2 py-1.5 dark:border-base-800">' +
+                    '<span class="material-symbols-outlined md-18 text-base-400 cursor-move" data-section-handle draggable="true">drag_indicator</span>' +
+                    '<input type="text" class="section-title grow bg-transparent text-sm border-0 p-0 focus:ring-0" placeholder="">' +
+                    '<button type="button" data-remove-section class="text-base-400 hover:text-red-600">&times;</button>' +
+                    "</div>" +
+                    '<div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone></div>';
+                sectionsContainer.appendChild(section);
+                serializeDetail();
+                return section;
+            }
+
+            function serializeDetail() {
+                var sections = [];
+                sectionsContainer.querySelectorAll("[data-section]").forEach(function (section) {
+                    var title = section.querySelector(".section-title");
+                    var fields = [];
+                    section.querySelectorAll(".detail-dropzone .detail-chip").forEach(function (chip) {
+                        if (fields.indexOf(chip.dataset.field) === -1) {
+                            fields.push(chip.dataset.field);
+                        }
+                    });
+                    sections.push({
+                        title: title ? title.value.trim() : "",
+                        fields: fields,
+                    });
+                });
+                textarea.value = JSON.stringify(sections);
+            }
+
+            editor.addEventListener("dragstart", function (event) {
+                var handle = event.target.closest("[data-section-handle]");
+                if (handle) {
+                    draggedSection = handle.closest("[data-section]");
                     if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = "move";
                     }
-                    row.style.opacity = "0.5";
-                });
-
-                row.addEventListener("dragend", function () {
-                    row.style.opacity = "";
-                    dragged = null;
-                });
-
-                row.addEventListener("dragover", function (event) {
-                    event.preventDefault();
-                    if (!dragged || dragged === row) {
-                        return;
+                    return;
+                }
+                var chip = event.target.closest(".detail-chip");
+                if (chip) {
+                    draggedChip = chip;
+                    if (event.dataTransfer) {
+                        event.dataTransfer.setData("text/plain", chip.dataset.field);
+                        event.dataTransfer.effectAllowed = "move";
                     }
-                    var rect = row.getBoundingClientRect();
+                }
+            });
+
+            editor.addEventListener("dragend", function () {
+                draggedChip = null;
+                draggedSection = null;
+                serializeDetail();
+            });
+
+            editor.addEventListener("dragover", function (event) {
+                var target = event.target.closest("[data-section]");
+                if (draggedSection && target && target !== draggedSection) {
+                    event.preventDefault();
+                    var rect = target.getBoundingClientRect();
                     var after = event.clientY - rect.top > rect.height / 2;
-                    container.insertBefore(dragged, after ? row.nextSibling : row);
+                    sectionsContainer.insertBefore(
+                        draggedSection,
+                        after ? target.nextSibling : target
+                    );
+                    return;
+                }
+                if (draggedChip && event.target.closest("[data-dropzone], #detail-fields-palette")) {
+                    event.preventDefault();
+                }
+            });
+
+            editor.addEventListener("drop", function (event) {
+                if (!draggedChip) {
+                    return;
+                }
+                event.preventDefault();
+                var dropzone = event.target.closest("[data-dropzone]");
+                var field = draggedChip.dataset.field;
+                var fromDropzone = draggedChip.parentElement &&
+                    draggedChip.parentElement.classList.contains("detail-dropzone");
+
+                if (dropzone) {
+                    if (fromDropzone) {
+                        addChip(dropzone, field);
+                        draggedChip.remove();
+                        serializeDetail();
+                    } else {
+                        addChip(dropzone, field);
+                    }
+                } else if (event.target.closest("#detail-fields-palette") && fromDropzone) {
+                    draggedChip.remove();
+                    serializeDetail();
+                }
+                draggedChip = null;
+            });
+
+            editor.addEventListener("click", function (event) {
+                var removeChip = event.target.closest("[data-remove-chip]");
+                if (removeChip) {
+                    removeChip.closest(".detail-chip").remove();
+                    serializeDetail();
+                    return;
+                }
+                var removeSection = event.target.closest("[data-remove-section]");
+                if (removeSection) {
+                    removeSection.closest("[data-section]").remove();
+                    serializeDetail();
+                }
+            });
+
+            editor.addEventListener("input", function (event) {
+                if (event.target.closest(".section-title")) {
+                    serializeDetail();
+                }
+            });
+
+            var addButton = document.getElementById("add-detail-section");
+            if (addButton) {
+                addButton.addEventListener("click", function () {
+                    makeSection();
                 });
+            }
+
+            form.addEventListener("submit", function () {
+                serializeDetail();
             });
         })();
     </script>

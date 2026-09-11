@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-265 tests passing; see
+272 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -62,7 +62,7 @@ agreed order is:
 | P7 | Portal profile + documents | Customer self-service | ✅ done |
 | P8 | IMAP advanced: folders, threading, attachments | Inbound email completeness | ✅ done |
 | P9 | Historical currency rates | Multi-currency completeness | ✅ done |
-| P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections (next) | Small UX items | pending |
+| P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | ✅ done |
 
 ## What was delivered (by phase)
 
@@ -136,20 +136,23 @@ revenue tracking, and web-to-lead double opt-in.
 - **Formula engine** (`core/services/formula.py`, `core/models/automation.py`):
   line-based scripts per entity/event (`before_save`/`after_save`) with a
   sandboxed AST evaluator (no imports, no private attributes, whitelisted
-  functions such as `notify`, `update`, `set`, `days`). Editable in the admin
-  under Customization → Formulas.
+  functions such as `notify`, `update`, `set`, `days`) plus string helpers
+  (`concat`, `split`, `join`, `capitalize`, `is_empty`), number helpers
+  (`number_format`, `ceil`, `floor`, `sqrt`) and date math (`date_add`).
+  Editable in the admin under Customization → Formulas.
 - **Workflow rules** (`core/services/workflows.py`, `Workflow` model):
   trigger (entity + create/update/delete) → optional condition expression →
   actions (`set_field`, `notify`, `create_record`); re-entrancy guarded.
   Editable under Customization → Workflows.
 - **Layout editor** (`/admin/layout-editor/`): server-rendered page to pick
-  list columns and edit the detail sections JSON per entity; writes `Layout`
-  rows consumed by the metadata registry and admin.
+  and drag list columns plus a visual drag-and-drop editor for detail
+  sections (with a JSON fallback); writes `Layout` rows consumed by the
+  metadata registry and admin.
 - **Role/ACL editor** (`/admin/access/role/<id>/`): scope matrix
   (read/create/edit/delete × yes/all/team/own/no) plus field-level access;
   linked from the Role changelist.
 
-## Phase G — Platform features (in progress)
+## Phase G — Platform features (implemented)
 
 **Delivered — Entity Manager (runtime custom entities):** `CustomEntity` rows
 are materialized into per-entity proxy models, admins and registry entries
@@ -239,14 +242,19 @@ record payload for a configured (active) webhook; missing/invalid webhooks are
 ignored without breaking the save.
 
 **Delivered — layout drag-and-drop:** the Layout Editor renders list
-columns as draggable rows (native HTML5 drag and drop); the saved layout
-keeps the on-screen order, which the admin list view honours.
+columns as draggable rows and has a visual detail-section editor (palette,
+drag between sections, section reordering, remove chips) with a JSON
+fallback when JavaScript is off.
 
-**Next in Phase G:**
+**Delivered — command palette entries:** `UNFOLD["COMMAND"]`
+`search_callback` (`core/services/command_palette.py`) adds static
+commands (calendar, global search, layout editor, custom entities, roles),
+entity shortcuts (list/new) filtered by admin permission and the user's
+saved filters.
 
-- Optional: more formula functions and custom command palette entries.
-The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
-authoritative list of postponed work with origins and targets.
+All planned priorities (P1–P10) are delivered. The
+[deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
+authoritative list of remaining postponed work with origins and targets.
 
 ## Deferred backlog (not yet implemented)
 
@@ -258,7 +266,6 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Custom command palette entries | C | Saved filter presets are done via `SavedFilter`. Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
 | Sales-by-month chart on the dashboard | C | dashboard has KPI cards only. Target: backlog. |
 
@@ -278,14 +285,13 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Drag-and-drop layout manager for detail sections/tabs | F | List columns can be reordered by dragging; detail sections are still JSON. Target: backlog. |
 
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (265 tests)
+uv run python src/omacrm/manage.py test      # must be green (272 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -301,6 +307,11 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — P10: command palette custom entries (static commands,
+  permission-filtered entity shortcuts, saved filters), extra formula
+  helpers (string/number/date) and a drag-and-drop detail-section editor
+  with JSON fallback (272 tests). All planned priorities P1–P10 delivered.
 
 - **2026-09-11** — P9: `CurrencyRate` history, dated `get_rate`/`convert`
   (Opportunity conversion uses `close_date`), admin inline + rate admin and

@@ -65,6 +65,29 @@ class FormulaTests(TestCase):
         interpret('account_name = replace(lower(first_name), "help", "assist")', lead)
         self.assertEqual(lead.account_name, "assisters")
 
+    def test_more_string_number_and_date_helpers(self):
+        account = Account(name="More")
+        interpret('description = concat("a", "-", 1)', account)
+        self.assertEqual(account.description, "a-1")
+        interpret('description = join(split("a,b,c", ","), "|")', account)
+        self.assertEqual(account.description, "a|b|c")
+        interpret('description = capitalize("hello")', account)
+        self.assertEqual(account.description, "Hello")
+        interpret("description = number_format(1234.5, 2)", account)
+        self.assertEqual(account.description, "1,234.50")
+        interpret(
+            "description = str(ceil(1.2)) + str(floor(1.8)) + str(round(sqrt(9)))",
+            account,
+        )
+        self.assertEqual(account.description, "213")
+        interpret(
+            'description = date_format(date_add(parse_date("2026-01-01"), days=5), "Y-m-d")',
+            account,
+        )
+        self.assertEqual(account.description, "2026-01-06")
+        interpret('description = "empty" if is_empty("") else "full"', account)
+        self.assertEqual(account.description, "empty")
+
     def test_notify_function(self):
         Formula.objects.create(
             entity_type="Task",

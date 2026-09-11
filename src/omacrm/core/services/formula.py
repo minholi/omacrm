@@ -12,6 +12,7 @@ are callable.
 
 import ast
 import logging
+import math
 import operator
 import re
 from datetime import date, datetime, timedelta
@@ -206,6 +207,45 @@ def _date_format(value, fmt="Y-m-d"):
         return str(value)
 
 
+def _concat(*values):
+    return "".join("" if value is None else str(value) for value in values)
+
+
+def _split(value, separator=None):
+    return str(value).split(separator)
+
+
+def _join(values, separator=", "):
+    return str(separator).join(str(value) for value in values)
+
+
+def _capitalize(value):
+    return str(value).capitalize()
+
+
+def _is_empty(value):
+    return value in (None, "", [], {}, ())
+
+
+def _date_add(value, days=0, hours=0, minutes=0):
+    value = _parse_date(value)
+    if value is None:
+        return None
+    return value + timedelta(
+        days=int(days or 0), hours=int(hours or 0), minutes=int(minutes or 0)
+    )
+
+
+def _number_format(
+    value, decimals=2, decimal_separator=".", thousand_separator=","
+):
+    if value in (None, ""):
+        return ""
+    formatted = f"{Decimal(str(value)):,.{int(decimals)}f}"
+    normal = formatted.replace(",", "\x00").replace(".", decimal_separator)
+    return normal.replace("\x00", thousand_separator)
+
+
 def build_context(instance, user=None) -> dict:
     def notify(message):
         from omacrm.core.models import Notification
@@ -278,6 +318,16 @@ def build_context(instance, user=None) -> dict:
         "coalesce": _coalesce,
         "parse_date": _parse_date,
         "date_format": _date_format,
+        "concat": _concat,
+        "split": _split,
+        "join": _join,
+        "capitalize": _capitalize,
+        "is_empty": _is_empty,
+        "date_add": _date_add,
+        "number_format": _number_format,
+        "ceil": math.ceil,
+        "floor": math.floor,
+        "sqrt": math.sqrt,
     }
 
     # Expose record fields as bare names so conditions like
