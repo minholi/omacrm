@@ -169,10 +169,15 @@ src/omacrm/
   `address_*`/`billing_address_*`/`shipping_address_*` blocks for display.
 - **Marketing**: `TargetList` members are generic (`TargetListMember` with
   content type + `opted_out`); `MassEmail` queue is built from target lists
-  (opted-out skipped) and processed by the `crm.process_mass_email` job;
-  campaigns log Sent/Opened/Clicked records, with public click/open endpoints
-  in `crm/views.py`. `LeadCapture` exposes a public
-  `POST /api/v1/lead-capture/<api_key>/` endpoint.
+  (opted-out skipped) and processed by the `crm.process_mass_email` job, which
+  appends a signed per-recipient unsubscribe link (`/unsubscribe/<token>/` →
+  target-list opt-out + campaign Opted Out log); campaigns log
+  Sent/Opened/Clicked/Bounced records (hard/soft bounces via
+  `record_bounce` or the queue admin actions), track revenue from Closed Won
+  opportunities automatically, and have public click/open endpoints in
+  `crm/views.py`. `LeadCapture` exposes a public
+  `POST /api/v1/lead-capture/<api_key>/` endpoint with optional double opt-in
+  (signed confirmation link before the lead joins the target list).
 - **Webhooks**: `Webhook`/`WebhookQueueItem` (`core/models/webhooks.py`);
   signals enqueue create/update/delete events (soft delete maps to `delete`)
   and the `core.process_webhooks` job delivers them (HMAC signature, retries).

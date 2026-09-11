@@ -111,6 +111,7 @@ class Campaign(BaseEntity):
     clicked_count = models.PositiveIntegerField(default=0)
     opted_out_count = models.PositiveIntegerField(default=0)
     bounced_count = models.PositiveIntegerField(default=0)
+    revenue = models.DecimalField(max_digits=16, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["-created_at"]
@@ -161,6 +162,12 @@ class CampaignLogRecord(models.Model):
         Campaign, on_delete=models.CASCADE, related_name="log_records"
     )
     action = models.CharField(max_length=20, choices=Action.choices)
+    bounced_type = models.CharField(
+        max_length=10,
+        choices=[("Hard", "Hard"), ("Soft", "Soft")],
+        blank=True,
+        default="",
+    )
     action_date = models.DateTimeField(default=timezone.now)
     entity_type = models.ForeignKey(
         ContentType, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
@@ -281,6 +288,17 @@ class LeadCapture(models.Model):
         blank=True,
         help_text='Allowed field names, e.g. ["first_name", "last_name", "email_address"].',
     )
+    opt_in_confirmation = models.BooleanField(
+        default=False, help_text="Require email confirmation before storing the lead."
+    )
+    opt_in_template = models.ForeignKey(
+        EmailTemplate,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="lead_captures",
+    )
+    opt_in_lifetime_hours = models.PositiveIntegerField(default=48)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 

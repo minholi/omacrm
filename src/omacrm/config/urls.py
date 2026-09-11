@@ -61,6 +61,16 @@ urlpatterns = [
         crm_views.lead_capture,
         name="lead_capture",
     ),
+    path(
+        "lead-capture/confirm/<str:token>/",
+        crm_views.lead_capture_confirm,
+        name="lead_capture_confirm",
+    ),
+    path(
+        "unsubscribe/<str:token>/",
+        crm_views.mass_email_unsubscribe,
+        name="mass_email_unsubscribe",
+    ),
     path("admin/", admin.site.urls),
     path("portal/", include("omacrm.crm.portal_urls")),
     path("hijack/", include("hijack.urls")),

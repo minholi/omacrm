@@ -127,6 +127,8 @@ class Lead(PersonNameMixin, AddressMixin, BaseEntity):
     description = models.TextField(blank=True, default="")
     account_name = models.CharField(max_length=255, blank=True, default="")
     converted_at = models.DateTimeField(null=True, blank=True, editable=False)
+    opt_in_confirmed = models.BooleanField(default=False)
+    opt_in_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     created_account = models.ForeignKey(
         Account,
@@ -186,6 +188,13 @@ class Opportunity(BaseEntity):
     )
     close_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True, default="")
+    campaign = models.ForeignKey(
+        "crm.Campaign",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="opportunities",
+    )
     account = models.ForeignKey(
         Account,
         null=True,

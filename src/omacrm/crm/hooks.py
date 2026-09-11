@@ -161,6 +161,11 @@ def opportunity_amount_converted(instance, **kwargs):
         Opportunity.objects.filter(pk=instance.pk).update(amount_converted=converted)
         instance.amount_converted = converted
 
+    if instance.campaign_id:
+        from omacrm.crm.services.campaigns import recalc_revenue
+
+        recalc_revenue(instance.campaign)
+
 
 @hooks.register("Lead", "before_save")
 def lead_amount_converted(instance, **kwargs):

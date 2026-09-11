@@ -39,6 +39,7 @@ from omacrm.crm.models import (
     Task,
 )
 from omacrm.crm.services import LeadConversionService, send_email, send_invitations
+from omacrm.crm.services.campaigns import record_bounce
 from omacrm.crm.services.mass_email import build_queue
 from omacrm.crm.services.target_lists import add_to_target_list
 
@@ -755,6 +756,23 @@ class EmailQueueItemAdmin(ModelAdmin):
     list_filter = ("status", "mass_email")
     search_fields = ("email_address",)
     readonly_fields = ("mass_email", "entity_type", "entity_id", "email_address", "attempt_count", "last_error", "sent_at", "created_at")
+    actions = ("mark_bounced_hard", "mark_bounced_soft")
+
+    @admin.action(description=_("Mark as bounced (hard)"))
+    def mark_bounced_hard(self, request, queryset):
+        for item in queryset:
+            record_bounce(item, "Hard")
+        self.message_user(
+            request, _("Selected items marked as hard bounces."), level=messages.SUCCESS
+        )
+
+    @admin.action(description=_("Mark as bounced (soft)"))
+    def mark_bounced_soft(self, request, queryset):
+        for item in queryset:
+            record_bounce(item, "Soft")
+        self.message_user(
+            request, _("Selected items marked as soft bounces."), level=messages.SUCCESS
+        )
 
 
 @admin.register(LeadCapture)
@@ -767,6 +785,16 @@ class LeadCaptureAdmin(ModelAdmin):
     fieldsets = (
         (None, {"fields": ("name", "is_active", "api_key")}),
         (_("Routing"), {"fields": ("campaign", "target_list", "source", "default_assigned_user")}),
-        (_("Form"), {"fields": ("field_list",)}),
+        (
+            _("Form"),
+            {
+                "fields": (
+                    "field_list",
+                    "opt_in_confirmation",
+                    "opt_in_template",
+                    "opt_in_lifetime_hours",
+                )
+            },
+        ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )

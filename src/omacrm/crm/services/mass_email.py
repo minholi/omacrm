@@ -1,8 +1,10 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.core import signing
 from django.core.mail import send_mail
 from django.db.models import F
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
 
@@ -15,6 +17,43 @@ from omacrm.crm.models import (
     MassEmail,
 )
 from omacrm.crm.services.email import render_email_template
+
+UNSUBSCRIBE_SALT = "omacrm.mass_email.unsubscribe"
+
+
+def unsubscribe_token(queue_item: EmailQueueItem) -> str:
+    return signing.dumps({"id": queue_item.pk}, salt=UNSUBSCRIBE_SALT)
+
+
+def unsubscribe_url(queue_item: EmailQueueItem, base_url: str = "") -> str:
+    path = reverse("mass_email_unsubscribe", args=[unsubscribe_token(queue_item)])
+    return f"{base_url.rstrip('/')}{path}" if base_url else path
+
+
+def unsubscribe(queue_item: EmailQueueItem) -> bool:
+    """Opt the recipient out of the mass email's target lists."""
+
+    from omacrm.crm.services.target_lists import set_opt_out
+
+    record = queue_item.entity
+    if record is None:
+        return False
+
+    for target_list in queue_item.mass_email.target_lists.all():
+        set_opt_out(record, target_list, opted_out=True)
+
+    mass_email = queue_item.mass_email
+    if mass_email.campaign_id:
+        CampaignLogRecord.objects.create(
+            campaign=mass_email.campaign,
+            action=CampaignLogRecord.Action.OPTED_OUT,
+            entity=record,
+            data={"email": queue_item.email_address},
+        )
+        Campaign.objects.filter(pk=mass_email.campaign_id).update(
+            opted_out_count=F("opted_out_count") + 1
+        )
+    return True
 
 
 def build_queue(mass_email: MassEmail) -> int:
@@ -82,6 +121,8 @@ def process_mass_email(job):
                 raise ValueError("No email template selected")
 
             subject, body = render_email_template(mass_email.email_template, record)
+            opt_out_url = unsubscribe_url(item)
+            body = f'{body}\n<p><a href="{opt_out_url}">{opt_out_url}</a></p>'
             send_mail(
                 subject,
                 strip_tags(body),
