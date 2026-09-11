@@ -6,8 +6,8 @@
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
-phone utilities, stream reactions, layout drag-and-drop and the workflow
-webhook action (156 tests passing). See the
+phone/address utilities, stream reactions, layout drag-and-drop and the
+workflow webhook action (161 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -173,6 +173,10 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — address utilities:** `core/services/address.py` formats
+`address_*`/`billing_address_*`/`shipping_address_*` blocks into display
+strings, skipping empty parts.
+
 **Delivered — workflow webhook action:** an action like
 `{"type": "webhook", "webhook_id": 1}` enqueues a `WebhookQueueItem` with the
 record payload for a configured (active) webhook; missing/invalid webhooks are
@@ -185,7 +189,7 @@ keeps the on-screen order, which the admin list view honours.
 **Next in Phase G:**
 
 - **Real-time stream/record updates** (notifications are done over SSE).
-- **IMAP fetch/import** and **address formatting utilities** (phone numbers are done).
+- **IMAP fetch/import** (last EspoCRM parity item; needs an `Email` entity first).
 - Extra workflow actions (update related records) and more formula functions.
 - Optional: saved filter presets.
 
@@ -228,7 +232,6 @@ Nothing here is required for the current feature set to be usable.
 | Bounce classification (hard/soft) and campaign revenue tracking | E | `CampaignLogRecord` supports `Bounced` but nothing sets it. Target: backlog. |
 | Web-to-lead double opt-in and hosted form page | E | Only the JSON endpoint exists. Target: backlog. |
 | Multi-currency historical rate tables + rate sync job | D | Manual `Currency.rate` values; conversion uses the current rate only. Target: backlog. |
-| Address formatting utilities | D/G | Phone numbers now normalize/validate via `phonenumbers`; address formatting is still raw fields. Target: Phase G. |
 
 ### Customization & platform (Phase G)
 
@@ -244,7 +247,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (156 tests)
+uv run python src/omacrm/manage.py test      # must be green (161 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -260,6 +263,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Address formatting utilities for record address blocks
+  (161 tests).
 
 - **2026-09-11** — Workflow webhook action enqueues webhook payloads for
   configured webhooks (156 tests).

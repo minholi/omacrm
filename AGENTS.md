@@ -144,7 +144,8 @@ src/omacrm/
 - **Phone numbers**: `core/services/phone.py` (libphonenumber) provides
   `normalize_phone`/`is_valid_phone`/`format_phone`; CRM hooks normalize
   Account/Contact/Lead `phone_number` to E.164 on save using the
-  `phone_default_region` constance setting.
+  `phone_default_region` constance setting. `core/services/address.py` formats
+  `address_*`/`billing_address_*`/`shipping_address_*` blocks for display.
 - **Marketing**: `TargetList` members are generic (`TargetListMember` with
   content type + `opted_out`); `MassEmail` queue is built from target lists
   (opted-out skipped) and processed by the `crm.process_mass_email` job;
