@@ -17,6 +17,18 @@ def cleanup_jobs(job: Job) -> None:
     Job.objects.filter(status=Job.Status.SUCCESS, finished_at__lt=cutoff).delete()
 
 
+@jobs.register("core.cleanup_stream_events", name="Cleanup old stream events")
+def cleanup_stream_events(job: Job) -> None:
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from omacrm.core.models import StreamEvent
+
+    cutoff = timezone.now() - timedelta(days=7)
+    StreamEvent.objects.filter(created_at__lt=cutoff).delete()
+
+
 @jobs.register("core.send_notification_emails", name="Email unread notifications")
 def send_notification_emails(job: Job) -> int:
     """Email unread notifications as one digest per user."""

@@ -1,6 +1,12 @@
 from omacrm.core.models.base import AuditMixin, BaseEntity, CustomDataMixin
 from omacrm.core.models.automation import Formula, Workflow
-from omacrm.core.models.collab import Attachment, Note, Notification, UserReaction
+from omacrm.core.models.collab import (
+    Attachment,
+    Note,
+    Notification,
+    StreamEvent,
+    UserReaction,
+)
 from omacrm.core.models.currency import Currency
 from omacrm.core.models.dynamic import CustomEntity, DynamicRecord
 from omacrm.core.models.email import Email, EmailAccount
@@ -32,6 +38,7 @@ __all__ = [
     "Role",
     "ScheduledJob",
     "ScheduledJobLog",
+    "StreamEvent",
     "Team",
     "TeamUser",
     "User",

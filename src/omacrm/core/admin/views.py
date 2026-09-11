@@ -357,48 +357,80 @@ class RoleAclEditorView(TemplateView):
         return redirect(url)
 
 
-def notification_stream(request):
-    """Server-sent events with the user's notification count and new items."""
-
+def _pending_notifications(user, last_id: int):
     from omacrm.core.models import Notification
+
+    return list(
+        Notification.objects.filter(user=user, id__gt=last_id, read=False)
+        .order_by("id")
+        .values("id", "message", "type")[:10]
+    )
+
+
+def _pending_stream_events(user, last_id: int):
+    from omacrm.core.models import StreamEvent
+
+    return list(
+        StreamEvent.objects.filter(user=user, id__gt=last_id)
+        .order_by("id")
+        .values("id", "message")[:10]
+    )
+
+
+def notification_stream(request):
+    """Server-sent events with notifications and live stream updates."""
+
+    from omacrm.core.models import Notification, StreamEvent
 
     user = request.user
 
     def unread_count():
         return Notification.objects.filter(user=user, read=False).count()
 
+    def latest_id(queryset):
+        return queryset.order_by("-id").values_list("id", flat=True).first() or 0
+
     def events():
-        last_id = (
-            Notification.objects.filter(user=user)
-            .order_by("-id")
-            .values_list("id", flat=True)
-            .first()
-            or 0
-        )
+        last_notification = latest_id(Notification.objects.filter(user=user))
+        last_event = latest_id(StreamEvent.objects.filter(user=user))
         yield f"data: {json.dumps({'type': 'init', 'count': unread_count()})}\n\n"
 
         # Each connection lives ~5 minutes, then EventSource reconnects.
         for _ in range(100):
             time.sleep(3)
-            new_items = list(
-                Notification.objects.filter(user=user, id__gt=last_id, read=False)
-                .order_by("id")
-                .values("id", "message", "type")[:10]
-            )
-            if not new_items:
+            emitted = False
+
+            notifications = _pending_notifications(user, last_notification)
+            if notifications:
+                last_notification = notifications[-1]["id"]
+                count = unread_count()
+                for item in notifications:
+                    emitted = True
+                    yield "data: " + json.dumps(
+                        {
+                            "type": "new",
+                            "count": count,
+                            "id": item["id"],
+                            "message": item["message"],
+                            "category": item["type"],
+                        }
+                    ) + "\n\n"
+
+            stream_events = _pending_stream_events(user, last_event)
+            if stream_events:
+                last_event = stream_events[-1]["id"]
+                for item in stream_events:
+                    emitted = True
+                    yield "data: " + json.dumps(
+                        {
+                            "type": "stream",
+                            "id": item["id"],
+                            "message": item["message"],
+                        }
+                    ) + "\n\n"
+
+            if not emitted:
                 yield ": ping\n\n"
-                continue
-            last_id = new_items[-1]["id"]
-            for item in new_items:
-                yield "data: " + json.dumps(
-                    {
-                        "type": "new",
-                        "count": unread_count(),
-                        "id": item["id"],
-                        "message": item["message"],
-                        "category": item["type"],
-                    }
-                ) + "\n\n"
 
     response = StreamingHttpResponse(events(), content_type="text/event-stream")
     response["Cache-Control"] = "no-cache"

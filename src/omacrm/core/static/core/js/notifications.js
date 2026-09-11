@@ -87,6 +87,9 @@
                 if (data.type === "new" && data.message) {
                     showToast(data.message);
                 }
+                if (data.type === "stream" && data.message) {
+                    showToast(data.message);
+                }
             };
             // EventSource reconnects automatically; errors are expected on idle.
             source.onerror = function () {};

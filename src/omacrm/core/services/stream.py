@@ -75,6 +75,24 @@ def build_changes(instance) -> dict:
     return changes
 
 
+def _emit_stream_event(instance, note) -> None:
+    """Queue a real-time event for the record's assignee."""
+
+    from omacrm.core.models import StreamEvent
+
+    user_id = getattr(instance, "assigned_user_id", None)
+    if not user_id or note.created_by_id == user_id:
+        return
+
+    entity_type = registry.entity_type_for_instance(instance)
+    label = registry.get(entity_type).display_label if entity_type else "Record"
+    StreamEvent.objects.create(
+        user_id=user_id,
+        note=note,
+        message=f"{label}: {instance} — {note.get_type_display()}",
+    )
+
+
 def on_save(instance, created: bool = False) -> None:
     from omacrm.core.models import Note
     from omacrm.core.services import notifications
@@ -91,30 +109,33 @@ def on_save(instance, created: bool = False) -> None:
     old = getattr(instance, "_omacrm_snapshot", None) or {}
 
     if created:
-        Note.objects.create(
+        note = Note.objects.create(
             type=Note.Type.CREATE,
             parent=instance,
             data={},
             created_by=user,
         )
+        _emit_stream_event(instance, note)
         return
 
     changes = build_changes(instance)
     if changes.get("deleted", {}).get("became"):
-        Note.objects.create(
+        note = Note.objects.create(
             type=Note.Type.DELETE,
             parent=instance,
             created_by=user,
         )
+        _emit_stream_event(instance, note)
         return
 
     if changes:
-        Note.objects.create(
+        note = Note.objects.create(
             type=Note.Type.UPDATE,
             parent=instance,
             data=changes,
             created_by=user,
         )
+        _emit_stream_event(instance, note)
 
     if "assigned_user" in changes and instance.assigned_user_id:
         if instance.assigned_user_id != old.get("assigned_user"):

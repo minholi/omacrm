@@ -132,6 +132,10 @@ src/omacrm/
   `/admin/notifications/stream/` is an SSE endpoint consumed by
   `core/static/core/js/notifications.js` (loaded via `UNFOLD["SCRIPTS"]`) for
   live badge updates and toasts. Admins can mark notifications read in bulk.
+- **Live stream updates**: changing a stream-enabled record assigned to
+  someone else queues a `StreamEvent`; the same SSE endpoint delivers it and
+  the admin shows a toast (`core/services/stream.py`,
+  `core.cleanup_stream_events` prunes old events).
 - **Cases/KB/Documents**: `Case` gets an auto number; `KnowledgeBaseArticle`
   derives `bodyPlain` and a scheduled job publishes/archives by date;
   `Document`/`DocumentFolder` support file uploads and related records.

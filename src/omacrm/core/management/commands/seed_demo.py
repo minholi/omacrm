@@ -116,6 +116,13 @@ class Command(BaseCommand):
                 "scheduling": "*/5 * * * *",
             },
         )
+        ScheduledJob.objects.get_or_create(
+            name="Cleanup stream events",
+            defaults={
+                "job": "core.cleanup_stream_events",
+                "scheduling": "30 3 * * *",
+            },
+        )
 
         for code, name, symbol, rate in (
             ("USD", "US Dollar", "$", "1"),

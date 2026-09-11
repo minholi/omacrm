@@ -138,6 +138,25 @@ class UserReaction(models.Model):
         return f"{self.emoji} by {self.user}"
 
 
+class StreamEvent(models.Model):
+    """A pending real-time stream update for one user (consumed over SSE)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="stream_events",
+    )
+    note = models.ForeignKey(Note, on_delete=models.CASCADE, related_name="events")
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.message
+
+
 class Notification(models.Model):
     class Type(models.TextChoices):
         ASSIGNMENT = "Assignment", "Assignment"

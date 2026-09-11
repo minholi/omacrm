@@ -7,7 +7,8 @@
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
 notifications, mass update, the customer portal, automation extras and
 phone/address utilities, stream reactions, layout drag-and-drop, the
-workflow webhook action and inbound email (172 tests passing). See the
+workflow webhook action, inbound email and live stream updates
+(177 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -43,7 +44,7 @@ built as admin pages, actions, datasets and custom Unfold views).
 | D — Productivity | Cases, Knowledge Base, Documents, Email templates/send, multi-currency | ✅ done |
 | E — Marketing | Target lists, campaigns, mass email, lead capture, webhooks | ✅ done |
 | F — Customization | Formula engine, workflow rules, layout editor, role/ACL editor | ✅ done |
-| G — Platform | Entity Manager, notifications, portal, utilities, inbound email done; real-time stream updates and saved filters next | 🚧 in progress |
+| G — Platform | Entity Manager, notifications, portal, utilities, inbound email and live stream updates done; saved filters next | 🚧 in progress |
 
 ## What was delivered (by phase)
 
@@ -173,6 +174,11 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — live stream updates:** `StreamEvent` rows are queued when a
+stream note is created on a record assigned to someone other than the actor;
+the `/admin/notifications/stream/` SSE endpoint emits them and the admin JS
+shows a toast. Old events are pruned by `core.cleanup_stream_events`.
+
 **Delivered — inbound email:** `Email` + `EmailAccount` models; IMAP
 accounts store passwords encrypted (Fernet key derived from `SECRET_KEY`).
 `core/services/inbound_email.py` parses RFC822 messages (plain/HTML bodies,
@@ -197,10 +203,8 @@ keeps the on-screen order, which the admin list view honours.
 
 **Next in Phase G:**
 
-- **Real-time stream/record updates** (notifications are done over SSE).
 - Extra workflow actions (update related records) and more formula functions.
 - Optional: saved filter presets.
-
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
 authoritative list of postponed work with origins and targets.
 
@@ -247,7 +251,6 @@ Nothing here is required for the current feature set to be usable.
 | --- | --- | --- |
 | Drag-and-drop layout manager for detail sections/tabs | F | List columns can be reordered by dragging; detail sections are still JSON. Target: backlog. |
 | Workflow actions: update related records | F | Rules support `set_field`, `notify`, `create_record`, `send_email` and `webhook`. Target: backlog. |
-| Real-time stream/record updates | F | Notifications already stream over SSE; stream/record updates do not. Target: Phase G. |
 | Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
 ## Resume checklist
@@ -255,7 +258,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (172 tests)
+uv run python src/omacrm/manage.py test      # must be green (177 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -271,6 +274,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Live stream updates: `StreamEvent` queue, SSE delivery
+  and admin toasts for changes on assigned records (177 tests).
 
 - **2026-09-11** — Inbound email: `Email`/`EmailAccount`, encrypted IMAP
   credentials, message import with dedup and CRM parent linking, and the
