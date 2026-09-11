@@ -23,6 +23,17 @@ CUSTOM_FIELDS = (
     ("Account", "is_strategic", "Strategic Account", "bool", {}),
     ("Contact", "linkedin_url", "LinkedIn", "url", {}),
     ("Lead", "lead_score", "Lead Score", "int", {}),
+    ("Project", "code", "Code", "number", {"prefix": "PRJ-", "padding": 4}),
+    ("Project", "site_address", "Site Address", "address", {}),
+    ("Project", "contact_phone", "Contact Phone", "phone", {}),
+    (
+        "Project",
+        "account_name",
+        "Account Name",
+        "foreign",
+        {"link": "account", "field": "name"},
+    ),
+    ("Project", "files", "Files", "attachmentMultiple", {}),
 )
 
 LAYOUTS = (
@@ -256,7 +267,61 @@ def seed_customization(context):
     all_projects = list(proxy.objects.all())
     accounts = list(context["accounts"].values())
     contacts = list(context["contacts"].values())
+    from omacrm.core.models import Attachment
+    from omacrm.core.services.custom_fields import next_number
+
+    from .common import text_file
+
+    addresses = (
+        {
+            "street": "1 Main St",
+            "city": "Springfield",
+            "state": "IL",
+            "postal_code": "62701",
+            "country": "United States",
+        },
+        {
+            "street": "Av. Paulista 1000",
+            "city": "São Paulo",
+            "state": "SP",
+            "postal_code": "01310-100",
+            "country": "Brazil",
+        },
+        {
+            "street": "Königsallee 12",
+            "city": "Düsseldorf",
+            "state": "NRW",
+            "postal_code": "40212",
+            "country": "Germany",
+        },
+    )
+    phones = ("+14155552671", "+551155502020", "+492115550103")
+
     for index, project in enumerate(all_projects):
+        data = dict(project.custom_data or {})
+        if not data.get("code"):
+            data["code"] = next_number(
+                "Project", "code", {"prefix": "PRJ-", "padding": 4}
+            )
+        if not data.get("site_address"):
+            data["site_address"] = addresses[index % len(addresses)]
+        if not data.get("contact_phone"):
+            data["contact_phone"] = phones[index % len(phones)]
+        if not data.get("files"):
+            attachments = []
+            for filename in (f"{project.name.lower().replace(' ', '-')}.txt",):
+                attachment = Attachment(
+                    name=filename,
+                    file=text_file(filename, f"Notes for {project.name}\n"),
+                    related=project,
+                )
+                attachment.save()
+                attachments.append(attachment.pk)
+            data["files"] = attachments
+        if data != (project.custom_data or {}):
+            project.custom_data = data
+            project.save(update_fields=["custom_data"])
+
         relations.set_related(project, "account", [accounts[index % len(accounts)]])
         if len(contacts) >= 2:
             relations.set_related(

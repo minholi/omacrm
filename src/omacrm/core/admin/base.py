@@ -21,11 +21,11 @@ from omacrm.core.metadata.fields import (
     build_form_field,
     build_link_form_field,
     build_list_filter,
-    display_custom_value,
     form_field_name,
     link_form_field_name,
 )
 from omacrm.core.metadata.registry import registry
+from omacrm.core.services import custom_fields as custom_field_service
 from omacrm.core.services import relations
 from omacrm.core.services.acl import AclService
 from omacrm.core.services.duplicates import DuplicateConflict, check_duplicates
@@ -367,9 +367,7 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
 
     def _custom_display(self, field_def):
         def display(obj):
-            return display_custom_value(
-                field_def, (obj.custom_data or {}).get(field_def.name)
-            )
+            return custom_field_service.display_value(obj, field_def)
 
         display.short_description = field_def.display_label
         display.admin_order_field = f"custom_data__{field_def.name}"
@@ -444,7 +442,7 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         if not fields:
             fields = list(self.metadata_entity().search_fields)
         for field_def in registry.custom_fields(self.entity_type):
-            if field_def.type in {"varchar", "text", "email"}:
+            if field_def.type in {"varchar", "text", "email", "phone", "url"}:
                 fields.append(f"custom_data__{field_def.name}")
         return fields
 
@@ -469,34 +467,56 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
             def __init__(self, *args, **form_kwargs):
                 super().__init__(*args, **form_kwargs)
                 instance = getattr(self, "instance", None)
+                has_instance = instance is not None and instance.pk is not None
                 for field_def in custom_fields:
                     name = form_field_name(field_def)
-                    if name in self.fields and instance is not None and instance.pk:
-                        self.fields[name].initial = (instance.custom_data or {}).get(
-                            field_def.name
+                    if name not in self.fields:
+                        continue
+                    value = (
+                        (instance.custom_data or {}).get(field_def.name)
+                        if has_instance
+                        else None
+                    )
+                    if field_def.type == "foreign":
+                        self.fields[name].initial = (
+                            custom_field_service.foreign_value(instance, field_def)
+                            if has_instance
+                            else ""
                         )
+                    elif field_def.type in custom_field_service.FILE_TYPES:
+                        self.fields[name].widget.attrs["current_files"] = [
+                            {"name": row.name, "url": row.file.url}
+                            for row in custom_field_service.attachments_for(value)
+                            if row.file
+                        ]
+                    elif has_instance:
+                        self.fields[name].initial = value
                 for field_def in link_fields:
                     name = link_form_field_name(field_def)
-                    if name in self.fields and instance is not None and instance.pk:
+                    if name in self.fields and has_instance:
                         self.fields[name].initial = relations.linked_ids(
                             entity_type, instance.pk, field_def.name
                         )
-                if not instance or not instance.pk:
-                    for field_def in link_fields:
-                        name = link_form_field_name(field_def)
-                        if name in self.fields and field_def.type == "linkMultiple":
-                            self.fields[name].initial = []
+                    elif name in self.fields and field_def.type == "linkMultiple":
+                        self.fields[name].initial = []
 
             def clean(self):
                 cleaned = super().clean()
                 data = dict(getattr(self.instance, "custom_data", {}) or {})
                 for field_def in custom_fields:
                     name = form_field_name(field_def)
+                    if field_def.type in custom_field_service.HIDDEN_TYPES:
+                        continue
                     if name in cleaned and cleaned[name] not in (None, ""):
                         data[field_def.name] = cleaned[name]
                     else:
                         data.pop(field_def.name, None)
-                self._custom_data = data
+                self._custom_data = custom_field_service.normalize_custom_data(
+                    self.instance,
+                    custom_fields,
+                    data,
+                    create=not (self.instance is not None and self.instance.pk),
+                )
                 return cleaned
 
             def _post_clean(self):
@@ -555,6 +575,19 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         if hasattr(obj, "modified_by_id"):
             obj.modified_by = request.user
         super().save_model(request, obj, form, change)
+
+        custom_field_defs = registry.custom_fields(self.entity_type)
+        if custom_field_defs:
+            updated = custom_field_service.apply_attachment_fields(
+                obj,
+                custom_field_defs,
+                getattr(form, "cleaned_data", {}) or {},
+                request,
+                obj.custom_data,
+            )
+            if updated != (obj.custom_data or {}):
+                obj.custom_data = updated
+                obj.save(update_fields=["custom_data"])
         self._save_links(obj, form)
 
     # -- mass update --------------------------------------------------------

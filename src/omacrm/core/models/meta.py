@@ -21,11 +21,19 @@ class CustomField(models.Model):
         BOOL = "bool", "Bool"
         INT = "int", "Int"
         FLOAT = "float", "Float"
+        DECIMAL = "decimal", "Decimal"
+        NUMBER = "number", "Number (auto)"
         DATE = "date", "Date"
         DATETIME = "datetime", "Datetime"
         EMAIL = "email", "Email"
+        PHONE = "phone", "Phone"
         URL = "url", "URL"
         CURRENCY = "currency", "Currency"
+        ADDRESS = "address", "Address"
+        FILE = "file", "File"
+        IMAGE = "image", "Image"
+        ATTACHMENT_MULTIPLE = "attachmentMultiple", "Attachments"
+        FOREIGN = "foreign", "Foreign"
 
     entity_type = models.CharField(max_length=64)
     name = models.CharField(max_length=64)
@@ -50,21 +58,54 @@ class CustomField(models.Model):
         super().clean()
         from omacrm.core.metadata.registry import registry
 
+        errors = {}
         if not CUSTOM_FIELD_NAME_RE.match(self.name or ""):
-            raise ValidationError(
-                {
-                    "name": "Use snake_case: lowercase letters, digits and underscores, starting with a letter."
-                }
+            errors["name"] = (
+                "Use snake_case: lowercase letters, digits and underscores, "
+                "starting with a letter."
             )
         if self.entity_type and registry.has(self.entity_type):
             if self.name in registry.get(self.entity_type).fields:
-                raise ValidationError(
-                    {"name": "This name is already used by a built-in field."}
+                errors["name"] = "This name is already used by a built-in field."
+
+        if self.field_type == self.FieldType.FOREIGN:
+            params = self.params or {}
+            link = params.get("link")
+            target_field = params.get("field")
+            definitions = registry.link_definitions(self.entity_type)
+            if not link or link not in definitions:
+                errors["params"] = (
+                    "A foreign field needs params.link with an existing link name."
                 )
+            elif not target_field:
+                errors["params"] = "A foreign field needs params.field."
+            else:
+                target_entity = definitions[link].target_entity
+                target_fields = registry.fields(target_entity)
+                if target_field not in target_fields:
+                    errors["params"] = (
+                        f"Unknown field '{target_field}' on {target_entity}."
+                    )
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def display_label(self):
         return self.label or self.name.replace("_", " ").title()
+
+
+class NextNumber(models.Model):
+    """Sequence backing ``number`` custom fields (per entity + field)."""
+
+    entity_type = models.CharField(max_length=64)
+    field_name = models.CharField(max_length=64)
+    value = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        unique_together = [("entity_type", "field_name")]
+
+    def __str__(self):
+        return f"{self.entity_type}.{self.field_name}: {self.value}"
 
 
 class Layout(models.Model):

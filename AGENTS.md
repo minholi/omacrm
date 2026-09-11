@@ -63,7 +63,7 @@ src/omacrm/
                      # context, builtin_jobs, currency, webhooks, formula,
                      # workflows, custom_entities, phone, reactions, address,
                      # crypto, inbound_email, navigation, relations,
-                     # demo/ (seed_demo)
+                     # custom_fields, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, views.py
@@ -109,7 +109,12 @@ src/omacrm/
   clears registry and API serializer caches.
 - **Custom fields** live in `custom_data`; `MetadataModelAdmin` renders them in
   forms/lists/filters/searches from metadata (Enum/Bool get list filters).
-  A model must have `custom_data` to support them.
+  Types: varchar, text, enum, multiEnum, bool, int, float, decimal, number
+  (per-entity sequence via `NextNumber`), date, datetime, email, phone
+  (normalized to E.164), url, currency, address (composite), file, image,
+  attachmentMultiple (stored as `Attachment` ids) and foreign (read-only value
+  through a custom link); `core/services/custom_fields.py` keeps decimals
+  JSON-safe. A model must have `custom_data` to support them.
 - **ACL** (`core/services/acl.py`): `Role.data = {EntityType: {read|create|
   edit|delete: yes|all|team|own|no}}`, `field_data` for field level; roles come
   from users and their teams, highest wins. Users without roles get the

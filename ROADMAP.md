@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-294 tests passing; see
+302 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -285,7 +285,6 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Entity Manager field types (phone, number/autoincrement, decimal, address, file/image/attachmentMultiple, foreign) | E | E1 delivered entity properties/menu/runtime; advanced field types still pending. |
 | Entity templates (Person/Company/Event) and entity-type Event on the calendar | E | Event template deferred; calendar currently reads Call/Meeting/Task only. |
 | Kanban view by status field | E | Unfold has no native Kanban; would be a custom page. |
 
@@ -294,7 +293,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (294 tests)
+uv run python src/omacrm/manage.py test      # must be green (302 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -310,6 +309,13 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — E2 (advanced field types): custom fields gained phone
+  (E.164), decimal (JSON-safe; also fixes float/currency Decimal crashes),
+  number/autoincrement (`NextNumber` sequences with prefix/padding),
+  composite address, file/image/attachmentMultiple (stored as
+  `Attachment` ids with upload/clear) and read-only foreign values through
+  custom links; the demo Project showcases them (302 tests).
 
 - **2026-09-11** — E3 (relationships): `CustomLink` now describes
   belongsTo/hasMany/manyToMany links with an automatic reverse side, stored

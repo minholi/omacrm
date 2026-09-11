@@ -21,6 +21,88 @@ from unfold.widgets import (
 
 SIMPLE_TEXT_TYPES = {"varchar", "enum"}
 
+ADDRESS_KEYS = ("street", "city", "state", "postal_code", "country")
+ADDRESS_LABELS = {
+    "street": "Street",
+    "city": "City",
+    "state": "State",
+    "postal_code": "Postal Code",
+    "country": "Country",
+}
+
+
+class CustomAttachmentWidget(forms.Widget):
+    """File input that also lists the files already stored on the record."""
+
+    template_name = "admin/widgets/custom_attachment_input.html"
+
+    def __init__(self, attrs=None, multiple=False, clearable=False):
+        super().__init__(attrs)
+        self.multiple = multiple
+        self.clearable = clearable
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["multiple"] = self.multiple
+        context["clearable"] = self.clearable
+        context["current_files"] = (self.attrs or {}).get("current_files", [])
+        return context
+
+    def value_from_datadict(self, data, files, name):
+        if self.multiple:
+            return files.getlist(name)
+        return files.get(name)
+
+    def value_omitted_from_data(self, data, files, name):
+        return name not in files and f"{name}-clear" not in data
+
+
+class MultipleAttachmentField(forms.Field):
+    """Accepts several uploaded files for an attachmentMultiple field."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", CustomAttachmentWidget(multiple=True))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, value):
+        if not value:
+            return []
+        if not isinstance(value, (list, tuple)):
+            value = [value]
+        return [upload for upload in value if upload]
+
+
+class AddressWidget(forms.MultiWidget):
+    def __init__(self, attrs=None):
+        widgets = [
+            UnfoldAdminTextInputWidget(
+                attrs={"placeholder": ADDRESS_LABELS[key]}
+            )
+            for key in ADDRESS_KEYS
+        ]
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if isinstance(value, dict):
+            return [value.get(key, "") for key in ADDRESS_KEYS]
+        return ["" for _key in ADDRESS_KEYS]
+
+
+class AddressField(forms.MultiValueField):
+    def __init__(self, **kwargs):
+        fields = [forms.CharField(required=False) for _key in ADDRESS_KEYS]
+        kwargs.setdefault("require_all_fields", False)
+        kwargs.setdefault("widget", AddressWidget)
+        super().__init__(fields=fields, **kwargs)
+
+    def compress(self, values):
+        if not values:
+            return None
+        data = {
+            key: value for key, value in zip(ADDRESS_KEYS, values) if value
+        }
+        return data or None
+
 
 def build_form_field(field_def: FieldDef) -> forms.Field:
     """Build an admin form field for a custom metadata field."""
@@ -64,14 +146,51 @@ def build_form_field(field_def: FieldDef) -> forms.Field:
             widget=UnfoldAdminDecimalFieldWidget,
             **common,
         )
+    if field_type == "decimal":
+        return forms.DecimalField(
+            max_digits=params.get("max_digits", 18),
+            decimal_places=params.get("decimal_places", 6),
+            widget=UnfoldAdminDecimalFieldWidget,
+            **common,
+        )
+    if field_type == "number":
+        return forms.CharField(
+            widget=UnfoldAdminTextInputWidget,
+            **{**common, "required": False, "disabled": True},
+        )
     if field_type == "date":
         return forms.DateField(widget=UnfoldAdminSingleDateWidget, **common)
     if field_type == "datetime":
         return forms.DateTimeField(widget=UnfoldAdminSplitDateTimeWidget, **common)
     if field_type == "email":
         return forms.EmailField(widget=UnfoldAdminEmailInputWidget, **common)
+    if field_type == "phone":
+        return forms.CharField(
+            max_length=50, widget=UnfoldAdminTextInputWidget, **common
+        )
     if field_type == "url":
         return forms.URLField(widget=UnfoldAdminURLInputWidget, **common)
+    if field_type == "address":
+        return AddressField(**common)
+    if field_type == "foreign":
+        return forms.CharField(
+            widget=UnfoldAdminTextInputWidget,
+            **{**common, "required": False, "disabled": True, "initial": ""},
+        )
+    if field_type == "file":
+        return forms.FileField(
+            widget=CustomAttachmentWidget(clearable=True),
+            **{**common, "initial": ""},
+        )
+    if field_type == "image":
+        return forms.ImageField(
+            widget=CustomAttachmentWidget(clearable=True),
+            **{**common, "initial": ""},
+        )
+    if field_type == "attachmentMultiple":
+        return MultipleAttachmentField(
+            **{**common, "required": False, "initial": ""}
+        )
     return forms.CharField(
         max_length=params.get("max_length", 255),
         widget=UnfoldAdminTextInputWidget,
