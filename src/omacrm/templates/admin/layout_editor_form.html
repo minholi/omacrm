@@ -10,26 +10,22 @@
         {% csrf_token %}
 
         <div class="flex flex-row items-center gap-2">
-            <a href="{% url 'layout_editor_index' %}"
-               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                &larr; {% translate "Layout Editor" %}
-            </a>
+            {% url 'layout_editor_index' as back_url %}
+            {% component "unfold/components/button.html" with href=back_url variant="default" size="sm" %}&larr; {% translate "Layout Editor" %}{% endcomponent %}
             <span class="font-semibold ml-2 text-important">{{ entity.label }}</span>
-            <button type="submit"
-                    class="ml-auto bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                {% translate "Save layout" %}
-            </button>
+            {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" class="ml-auto" %}{% translate "Save layout" %}{% endcomponent %}
         </div>
 
         {% component "unfold/components/card.html" with title=_("List columns") %}
             <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-3">
                 {% translate "Check the columns to show and drag rows to reorder them; the order is saved with the layout." %}
             </p>
-            <div id="layout-list-fields" class="flex flex-col gap-1">
+            <div id="layout-list-fields" class="flex flex-col gap-1" x-sort.ghost>
                 {% for field in fields %}
                     <div class="layout-field flex flex-row items-center gap-2 border border-base-200 rounded-default px-2 py-1.5 text-sm dark:border-base-800"
-                         draggable="true" data-field="{{ field.name }}">
-                        <span class="material-symbols-outlined md-18 text-base-400 cursor-move">drag_indicator</span>
+                         data-field="{{ field.name }}">
+                        <span class="material-symbols-outlined md-18 text-base-400 cursor-move"
+                              x-sort:handle>drag_indicator</span>
                         <input type="checkbox" name="list_fields" value="{{ field.name }}"
                                {% if field.name in list_layout %}checked{% endif %}>
                         <span class="grow">{{ field.display_label }}</span>
@@ -41,7 +37,7 @@
 
         {% component "unfold/components/card.html" with title=_("Detail sections") %}
             <p class="text-xs text-font-subtle-light dark:text-font-subtle-dark mb-3">
-                {% translate "Drag fields from the palette into a section. Drag the handle to reorder sections and use × to remove a field." %}
+                {% translate "Click a field in the palette to add it to the last section. Drag chips between sections and drag section handles to reorder; the JSON is updated as you go." %}
             </p>
 
             <details id="detail-json-fallback" class="mb-4">
@@ -60,28 +56,33 @@
                     <div id="detail-fields-palette"
                          class="flex flex-wrap gap-1 min-h-[40px] border border-dashed border-base-200 rounded-default p-2 dark:border-base-800">
                         {% for field in fields %}
-                            <span class="detail-chip palette-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800"
-                                  draggable="true" data-field="{{ field.name }}"
-                                  data-label="{{ field.display_label }}">{{ field.display_label }}</span>
+                            <span class="detail-chip palette-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-pointer hover:border-primary-500 dark:border-base-800"
+                                  data-field="{{ field.name }}"
+                                  data-label="{{ field.display_label }}"
+                                  x-on:click="window.layoutEditorAddChip($el.dataset.field)">{{ field.display_label }}</span>
                         {% endfor %}
                     </div>
                 </div>
 
-                <div id="detail-sections" class="flex flex-col gap-3">
+                <div id="detail-sections" class="flex flex-col gap-3"
+                     x-sort.ghost x-sort:group="detail-sections"
+                     x-on:end="window.layoutEditorSerializeDetail()">
                     {% for section in detail_sections %}
                         <div class="detail-section border border-base-200 rounded-default dark:border-base-800" data-section>
                             <div class="flex flex-row items-center gap-2 border-b border-base-200 px-2 py-1.5 dark:border-base-800">
                                 <span class="material-symbols-outlined md-18 text-base-400 cursor-move"
-                                      data-section-handle draggable="true">drag_indicator</span>
+                                      data-section-handle x-sort:handle>drag_indicator</span>
                                 <input type="text" class="section-title grow bg-transparent text-sm border-0 p-0 focus:ring-0"
                                        value="{{ section.title }}" placeholder="{% translate 'Section title' %}">
                                 <button type="button" data-remove-section
                                         class="text-base-400 hover:text-red-600">&times;</button>
                             </div>
-                            <div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone>
+                            <div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone
+                                 x-sort.ghost x-sort:group="detail-chips"
+                                 x-on:end="window.layoutEditorSerializeDetail()">
                                 {% for field in section.fields %}
                                     <span class="detail-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800"
-                                          draggable="true" data-field="{{ field.name }}"
+                                          data-field="{{ field.name }}"
                                           data-label="{{ field.label }}">{{ field.label }}
                                         <button type="button" data-remove-chip
                                                 class="ml-1 text-base-400 hover:text-red-600">&times;</button>
@@ -102,45 +103,12 @@
         {% endcomponent %}
 
         <div>
-            <button type="submit"
-                    class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                {% translate "Save layout" %}
-            </button>
+            {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" %}{% translate "Save layout" %}{% endcomponent %}
         </div>
     </form>
 
     <script>
         (function () {
-            var listContainer = document.getElementById("layout-list-fields");
-            if (listContainer) {
-                var dragged = null;
-
-                listContainer.querySelectorAll(".layout-field").forEach(function (row) {
-                    row.addEventListener("dragstart", function (event) {
-                        dragged = row;
-                        if (event.dataTransfer) {
-                            event.dataTransfer.effectAllowed = "move";
-                        }
-                        row.style.opacity = "0.5";
-                    });
-
-                    row.addEventListener("dragend", function () {
-                        row.style.opacity = "";
-                        dragged = null;
-                    });
-
-                    row.addEventListener("dragover", function (event) {
-                        event.preventDefault();
-                        if (!dragged || dragged === row) {
-                            return;
-                        }
-                        var rect = row.getBoundingClientRect();
-                        var after = event.clientY - rect.top > rect.height / 2;
-                        listContainer.insertBefore(dragged, after ? row.nextSibling : row);
-                    });
-                });
-            }
-
             var editor = document.getElementById("detail-editor");
             var fallback = document.getElementById("detail-json-fallback");
             var textarea = document.getElementById("detail-layout-json");
@@ -150,9 +118,6 @@
             if (!editor || !textarea || !sectionsContainer || !palette) {
                 return;
             }
-
-            var draggedChip = null;
-            var draggedSection = null;
 
             editor.hidden = false;
             fallback.hidden = true;
@@ -165,7 +130,6 @@
             function makeChip(field) {
                 var chip = document.createElement("span");
                 chip.className = "detail-chip border border-base-200 rounded-default px-2 py-0.5 text-xs cursor-move dark:border-base-800";
-                chip.setAttribute("draggable", "true");
                 chip.dataset.field = field;
                 chip.dataset.label = labelFor(field);
                 chip.textContent = labelFor(field);
@@ -193,11 +157,11 @@
                 section.setAttribute("data-section", "");
                 section.innerHTML =
                     '<div class="flex flex-row items-center gap-2 border-b border-base-200 px-2 py-1.5 dark:border-base-800">' +
-                    '<span class="material-symbols-outlined md-18 text-base-400 cursor-move" data-section-handle draggable="true">drag_indicator</span>' +
+                    '<span class="material-symbols-outlined md-18 text-base-400 cursor-move" data-section-handle x-sort:handle>drag_indicator</span>' +
                     '<input type="text" class="section-title grow bg-transparent text-sm border-0 p-0 focus:ring-0" placeholder="">' +
                     '<button type="button" data-remove-section class="text-base-400 hover:text-red-600">&times;</button>' +
                     "</div>" +
-                    '<div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone></div>';
+                    '<div class="detail-dropzone flex flex-wrap gap-1 min-h-[40px] p-2" data-dropzone x-sort.ghost x-sort:group="detail-chips" x-on:end="window.layoutEditorSerializeDetail()"></div>';
                 sectionsContainer.appendChild(section);
                 serializeDetail();
                 return section;
@@ -221,72 +185,14 @@
                 textarea.value = JSON.stringify(sections);
             }
 
-            editor.addEventListener("dragstart", function (event) {
-                var handle = event.target.closest("[data-section-handle]");
-                if (handle) {
-                    draggedSection = handle.closest("[data-section]");
-                    if (event.dataTransfer) {
-                        event.dataTransfer.effectAllowed = "move";
-                    }
-                    return;
-                }
-                var chip = event.target.closest(".detail-chip");
-                if (chip) {
-                    draggedChip = chip;
-                    if (event.dataTransfer) {
-                        event.dataTransfer.setData("text/plain", chip.dataset.field);
-                        event.dataTransfer.effectAllowed = "move";
-                    }
-                }
-            });
-
-            editor.addEventListener("dragend", function () {
-                draggedChip = null;
-                draggedSection = null;
-                serializeDetail();
-            });
-
-            editor.addEventListener("dragover", function (event) {
-                var target = event.target.closest("[data-section]");
-                if (draggedSection && target && target !== draggedSection) {
-                    event.preventDefault();
-                    var rect = target.getBoundingClientRect();
-                    var after = event.clientY - rect.top > rect.height / 2;
-                    sectionsContainer.insertBefore(
-                        draggedSection,
-                        after ? target.nextSibling : target
-                    );
-                    return;
-                }
-                if (draggedChip && event.target.closest("[data-dropzone], #detail-fields-palette")) {
-                    event.preventDefault();
-                }
-            });
-
-            editor.addEventListener("drop", function (event) {
-                if (!draggedChip) {
-                    return;
-                }
-                event.preventDefault();
-                var dropzone = event.target.closest("[data-dropzone]");
-                var field = draggedChip.dataset.field;
-                var fromDropzone = draggedChip.parentElement &&
-                    draggedChip.parentElement.classList.contains("detail-dropzone");
-
-                if (dropzone) {
-                    if (fromDropzone) {
-                        addChip(dropzone, field);
-                        draggedChip.remove();
-                        serializeDetail();
-                    } else {
-                        addChip(dropzone, field);
-                    }
-                } else if (event.target.closest("#detail-fields-palette") && fromDropzone) {
-                    draggedChip.remove();
-                    serializeDetail();
-                }
-                draggedChip = null;
-            });
+            window.layoutEditorSerializeDetail = serializeDetail;
+            window.layoutEditorAddChip = function (field) {
+                var sections = sectionsContainer.querySelectorAll("[data-section]");
+                var dropzone = sections.length
+                    ? sections[sections.length - 1].querySelector("[data-dropzone]")
+                    : makeSection().querySelector("[data-dropzone]");
+                addChip(dropzone, field);
+            };
 
             editor.addEventListener("click", function (event) {
                 var removeChip = event.target.closest("[data-remove-chip]");

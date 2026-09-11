@@ -7,7 +7,7 @@
 _Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore).
-320 tests passing; see
+327 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -291,7 +291,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (320 tests)
+uv run python src/omacrm/manage.py test      # must be green (327 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -307,6 +307,17 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Unfold adoption pass (R1–R9): link/linkMultiple pickers
+  now use Unfold select2 autocomplete over a new ACL-scoped
+  `/admin/link-autocomplete/` endpoint; enum/bool custom filters use
+  `unfold.contrib.filters`; dialog forms and the attachment widget use Unfold
+  widgets; custom admin templates use Unfold button components; site views
+  use `UnfoldSiteViewMixin`; saved filters moved to `list_before_template`;
+  Kanban and Layout Editor drag-and-drop migrated to Alpine `x-sort`;
+  `MetadataModelAdmin` now inherits the import/export mixin (the duplicate
+  `export_as_csv` action was removed) and the KB body uses the Trix WYSIWYG
+  (327 tests).
 
 - **2026-09-11** — E5 (Kanban): generic status-field boards for custom
   entities (`status_field`) and built-ins (Opportunity stage, Task status)

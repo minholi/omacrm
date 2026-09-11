@@ -11,15 +11,10 @@
         <input type="hidden" name="selected_entity" value="{{ selected_entity }}">
 
         <div class="flex flex-row items-center gap-2">
-            <a href="{% url 'admin:core_role_changelist' %}"
-               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                &larr; {% translate "Roles" %}
-            </a>
+            {% url 'admin:core_role_changelist' as back_url %}
+            {% component "unfold/components/button.html" with href=back_url variant="default" size="sm" %}&larr; {% translate "Roles" %}{% endcomponent %}
             <span class="font-semibold ml-2 text-important">{{ role.name }}</span>
-            <button type="submit"
-                    class="ml-auto bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                {% translate "Save access matrix" %}
-            </button>
+            {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" class="ml-auto" %}{% translate "Save access matrix" %}{% endcomponent %}
         </div>
 
         {% component "unfold/components/card.html" with title=_("Scope access") %}

@@ -114,7 +114,8 @@ src/omacrm/
   (normalized to E.164), url, currency, address (composite), file, image,
   attachmentMultiple (stored as `Attachment` ids) and foreign (read-only value
   through a custom link); `core/services/custom_fields.py` keeps decimals
-  JSON-safe. A model must have `custom_data` to support them.
+  JSON-safe. Enum/bool custom fields get Unfold dropdown filters
+  (`unfold.contrib.filters`). A model must have `custom_data` to support them.
 - **ACL** (`core/services/acl.py`): `Role.data = {EntityType: {read|create|
   edit|delete: yes|all|team|own|no}}`, `field_data` for field level; roles come
   from users and their teams, highest wins. Unset scopes deny access once a
@@ -135,9 +136,10 @@ src/omacrm/
   search, ordering, limit/offset pagination and an Espo-style `where` JSON
   filter (`core/api/filters.py`, e.g. `?where=[{"type":"equals","attribute":
   "stage","value":"Proposal"}]`, with `and`/`or`/`not` groups).
-- **Import/export**: `MetadataImportExportMixin`
-  (`core/admin/import_export.py`) gives entity admins CSV/XLSX import and
-  export from metadata; `MetadataModelAdmin` also provides a CSV export action.
+- **Import/export**: `MetadataModelAdmin` inherits
+  `MetadataImportExportMixin` (`core/admin/import_export.py`), so every
+  metadata-driven admin (including runtime custom entities) gets CSV/XLSX
+  import and export from metadata via Unfold's import/export forms.
 - **CRM**: lead conversion via `LeadConversionService` and the Unfold detail
   dialog action `Convert Lead`; opportunity stage rules (probability,
   last stage, weighted amount) run in `crm/hooks.py`.
@@ -173,7 +175,8 @@ src/omacrm/
   `search_fields` + custom text fields of every registered entity, ACL-scoped,
   and groups results per entity with links to the change pages.
 - **Cases/KB/Documents**: `Case` gets an auto number; `KnowledgeBaseArticle`
-  derives `bodyPlain` and a scheduled job publishes/archives by date;
+  derives `bodyPlain` (its `body` uses Unfold's Trix WYSIWYG widget) and a
+  scheduled job publishes/archives by date;
   `Document`/`DocumentFolder` support file uploads and related records.
 - **Email**: `EmailTemplate` bodies use Django template syntax; the
   `Send Email` dialog action on Account/Contact/Lead renders a template,
@@ -253,7 +256,9 @@ src/omacrm/
   to another (`belongsTo`/`hasMany`/`manyToMany`) and the reverse side is
   derived automatically; both directions are stored as mirrored `RecordLink`
   rows by `core/services/relations.py`. Admin forms render link/linkMultiple
-  pickers (in the detail layout or a Relationships section), changelist columns
+  pickers as Unfold select2 autocompletes backed by
+  `/admin/link-autocomplete/` (ACL-scoped, `unfold.views.BaseAutocompleteView`),
+  changelist columns
   show related names when the list layout includes the link, and the API
   reads/writes links by target ids (e.g. `{"account": 3}` / `{"contacts": [1,2]}`).
 - **Kanban**: entities with a `kanban_field` (built-ins Opportunity → stage,

@@ -12,10 +12,7 @@
                 {% translate "This merge selection is invalid or has expired." %}
             </div>
             <div>
-                <a href="{{ changelist_url }}"
-                   class="border border-base-200 rounded-default px-3 py-2 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                    &larr; {% translate "Back" %}
-                </a>
+                {% component "unfold/components/button.html" with href=changelist_url variant="default" size="sm" %}&larr; {% translate "Back" %}{% endcomponent %}
             </div>
         </div>
     {% else %}
@@ -24,15 +21,9 @@
             <input type="hidden" name="token" value="{{ token }}">
 
             <div class="flex flex-row items-center gap-2">
-                <a href="{{ changelist_url }}"
-                   class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                    &larr; {% translate "Back" %}
-                </a>
+                {% component "unfold/components/button.html" with href=changelist_url variant="default" size="sm" %}&larr; {% translate "Back" %}{% endcomponent %}
                 <span class="font-semibold ml-2 text-important">{{ title }}</span>
-                <button type="submit"
-                        class="ml-auto bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                    {% translate "Merge records" %}
-                </button>
+                {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" class="ml-auto" %}{% translate "Merge records" %}{% endcomponent %}
             </div>
 
             <div class="bg-orange-100 text-orange-700 px-3 py-2.5 rounded-default text-sm dark:bg-orange-500/20 dark:text-orange-400">
@@ -82,10 +73,7 @@
             {% endcomponent %}
 
             <div>
-                <button type="submit"
-                        class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                    {% translate "Merge records" %}
-                </button>
+                {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" %}{% translate "Merge records" %}{% endcomponent %}
             </div>
         </form>
     {% endif %}

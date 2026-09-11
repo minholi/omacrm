@@ -1,15 +1,21 @@
 from django import forms
 from django.contrib import admin, messages
+from django.db import models
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import GenericTabularInline, ModelAdmin, TabularInline
 from unfold.decorators import action, display
 from unfold.forms import BaseDialogForm
-from unfold.widgets import UnfoldAdminTextareaWidget
+from unfold.contrib.forms.widgets import WysiwygWidget
+from unfold.widgets import (
+    UnfoldAdminSelect2Widget,
+    UnfoldAdminSelectWidget,
+    UnfoldAdminTextareaWidget,
+    UnfoldBooleanSwitchWidget,
+)
 
 from omacrm.core.admin.base import MetadataModelAdmin
-from omacrm.core.admin.import_export import MetadataImportExportMixin
 from omacrm.core.services.duplicates import DuplicateConflict
 from omacrm.core.services.jobs import schedule
 from omacrm.crm.models import (
@@ -108,7 +114,9 @@ DOCUMENT_STATUS_LABELS = {
 
 class SendEmailForm(BaseDialogForm):
     template = forms.ModelChoiceField(
-        queryset=EmailTemplate.objects.none(), label=_("Template")
+        queryset=EmailTemplate.objects.none(),
+        label=_("Template"),
+        widget=UnfoldAdminSelect2Widget,
     )
     to_email = forms.EmailField(
         required=False,
@@ -168,9 +176,13 @@ class EmailActionMixin:
 
 class TargetListMembershipForm(BaseDialogForm):
     target_list = forms.ModelChoiceField(
-        queryset=TargetList.objects.none(), label=_("Target List")
+        queryset=TargetList.objects.none(),
+        label=_("Target List"),
+        widget=UnfoldAdminSelect2Widget,
     )
-    opted_out = forms.BooleanField(required=False, label=_("Opted out"))
+    opted_out = forms.BooleanField(
+        required=False, label=_("Opted out"), widget=UnfoldBooleanSwitchWidget
+    )
 
     def __init__(self, request, object_id=None, *args, **kwargs):
         super().__init__(request, object_id=object_id, *args, **kwargs)
@@ -235,7 +247,7 @@ class OpportunityContactInline(TabularInline):
 
 
 @admin.register(Account)
-class AccountAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExportMixin, MetadataModelAdmin):
+class AccountAdmin(EmailActionMixin, TargetListActionMixin, MetadataModelAdmin):
     entity_type = "Account"
     actions_detail = ("add_note", "send_email_action", "add_to_target_list_action")
     list_display = ("display_name", "type", "industry", "phone_number", "display_assigned")
@@ -254,7 +266,7 @@ class AccountAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExport
 
 
 @admin.register(Contact)
-class ContactAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExportMixin, MetadataModelAdmin):
+class ContactAdmin(EmailActionMixin, TargetListActionMixin, MetadataModelAdmin):
     entity_type = "Contact"
     actions_detail = ("add_note", "send_email_action", "add_to_target_list_action")
     list_display = (
@@ -281,18 +293,27 @@ class ContactAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExport
 
 class LeadConvertForm(BaseDialogForm):
     create_account = forms.BooleanField(
-        required=False, initial=True, label=_("Create Account")
+        required=False,
+        initial=True,
+        label=_("Create Account"),
+        widget=UnfoldBooleanSwitchWidget,
     )
     create_contact = forms.BooleanField(
-        required=False, initial=True, label=_("Create Contact")
+        required=False,
+        initial=True,
+        label=_("Create Contact"),
+        widget=UnfoldBooleanSwitchWidget,
     )
     create_opportunity = forms.BooleanField(
-        required=False, initial=True, label=_("Create Opportunity")
+        required=False,
+        initial=True,
+        label=_("Create Opportunity"),
+        widget=UnfoldBooleanSwitchWidget,
     )
 
 
 @admin.register(Lead)
-class LeadAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExportMixin, MetadataModelAdmin):
+class LeadAdmin(EmailActionMixin, TargetListActionMixin, MetadataModelAdmin):
     entity_type = "Lead"
     list_display = (
         "display_name",
@@ -386,7 +407,7 @@ class LeadAdmin(EmailActionMixin, TargetListActionMixin, MetadataImportExportMix
 
 
 @admin.register(Opportunity)
-class OpportunityAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class OpportunityAdmin(MetadataModelAdmin):
     entity_type = "Opportunity"
     list_display = (
         "name",
@@ -418,7 +439,7 @@ class OpportunityAdmin(MetadataImportExportMixin, MetadataModelAdmin):
 
 
 @admin.register(Task)
-class TaskAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class TaskAdmin(MetadataModelAdmin):
     entity_type = "Task"
     list_display = (
         "name",
@@ -470,7 +491,7 @@ class EventInvitationMixin:
 
 
 @admin.register(Call)
-class CallAdmin(EventInvitationMixin, MetadataImportExportMixin, MetadataModelAdmin):
+class CallAdmin(EventInvitationMixin, MetadataModelAdmin):
     entity_type = "Call"
     list_display = (
         "name",
@@ -494,7 +515,7 @@ class CallAdmin(EventInvitationMixin, MetadataImportExportMixin, MetadataModelAd
 
 @admin.register(Meeting)
 class MeetingAdmin(
-    EventInvitationMixin, MetadataImportExportMixin, MetadataModelAdmin
+    EventInvitationMixin, MetadataModelAdmin
 ):
     entity_type = "Meeting"
     list_display = (
@@ -532,7 +553,7 @@ class CaseAdminMixin:
 
 
 @admin.register(Case)
-class CaseAdmin(CaseAdminMixin, MetadataImportExportMixin, MetadataModelAdmin):
+class CaseAdmin(CaseAdminMixin, MetadataModelAdmin):
     entity_type = "Case"
     list_display = (
         "number",
@@ -555,8 +576,9 @@ class KnowledgeBaseCategoryAdmin(ModelAdmin):
 
 
 @admin.register(KnowledgeBaseArticle)
-class KnowledgeBaseArticleAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class KnowledgeBaseArticleAdmin(MetadataModelAdmin):
     entity_type = "KnowledgeBaseArticle"
+    formfield_overrides = {models.TextField: {"widget": WysiwygWidget}}
     list_display = (
         "name",
         "display_status",
@@ -583,7 +605,7 @@ class DocumentFolderAdmin(ModelAdmin):
 
 
 @admin.register(Document)
-class DocumentAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class DocumentAdmin(MetadataModelAdmin):
     entity_type = "Document"
     list_display = (
         "name",
@@ -646,7 +668,7 @@ class TargetListCategoryAdmin(ModelAdmin):
 
 
 @admin.register(TargetList)
-class TargetListAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class TargetListAdmin(MetadataModelAdmin):
     entity_type = "TargetList"
     list_display = ("name", "category", "display_entry_count", "display_opted_out")
     list_filter = ("category", "assigned_user")
@@ -669,7 +691,7 @@ class CampaignTrackingUrlInline(TabularInline):
 
 
 @admin.register(Campaign)
-class CampaignAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class CampaignAdmin(MetadataModelAdmin):
     entity_type = "Campaign"
     list_display = ("name", "display_status", "type", "start_date", "end_date")
     list_filter = ("status", "type", "assigned_user")
@@ -699,7 +721,7 @@ class CampaignLogRecordAdmin(ModelAdmin):
 
 
 @admin.register(MassEmail)
-class MassEmailAdmin(MetadataImportExportMixin, MetadataModelAdmin):
+class MassEmailAdmin(MetadataModelAdmin):
     entity_type = "MassEmail"
     list_display = ("name", "display_status", "campaign", "start_at")
     list_filter = ("status", "campaign", "assigned_user")

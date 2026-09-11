@@ -7,6 +7,7 @@ from omacrm.core.models import (
     CustomLink,
     Layout,
     RecordLink,
+    Role,
     User,
 )
 from omacrm.core.services import custom_entities, relations
@@ -292,6 +293,91 @@ class RelationApiTests(TestCase):
 
         response = self.client.get(detail_url)
         self.assertEqual(response.json()["account"], self.other_account.pk)
+
+
+class LinkAutocompleteTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            "link-auto", "link-auto@example.com", "pw"
+        )
+        self.client.force_login(self.admin)
+        self.entity = CustomEntity.objects.create(
+            name="Project", label="Project", label_plural="Projects"
+        )
+        CustomLink.objects.create(
+            entity_type="Project",
+            name="account",
+            link_type="belongsTo",
+            link_entity="Account",
+            label="Account",
+        )
+        registry.invalidate()
+        self.acme = Account.objects.create(name="Acme")
+        self.globex = Account.objects.create(name="Globex")
+        Account.objects.create(name="Initech")
+        self.addCleanup(registry.invalidate)
+        self.addCleanup(self._cleanup)
+
+    def _cleanup(self):
+        from omacrm.core.models import DynamicRecord
+
+        DynamicRecord.objects.filter(entity_type="Project").delete()
+        CustomLink.objects.filter(entity_type="Project").delete()
+        custom_entities.unregister(self.entity)
+        if self.entity.pk:
+            self.entity.delete()
+        registry.invalidate()
+
+    def test_autocomplete_filters_by_term(self):
+        response = self.client.get(
+            reverse("link_autocomplete"),
+            {"entity_type": "Account", "term": "glo"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            [item["text"] for item in payload["results"]], ["Globex"]
+        )
+        self.assertEqual(payload["results"][0]["id"], str(self.globex.pk))
+
+    def test_autocomplete_requires_read_access(self):
+        role = Role.objects.create(
+            name="No accounts", data={"Account": {"read": "no"}}
+        )
+        staff = User.objects.create_user(
+            "link-staff", "link-staff@example.com", "pw", is_staff=True
+        )
+        staff.roles.add(role)
+        self.client.force_login(staff)
+        response = self.client.get(
+            reverse("link_autocomplete"), {"entity_type": "Account"}
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_autocomplete_unknown_entity_returns_404(self):
+        self.assertEqual(
+            self.client.get(
+                reverse("link_autocomplete"), {"entity_type": "Nope"}
+            ).status_code,
+            404,
+        )
+
+    def test_link_picker_only_renders_linked_options(self):
+        record = custom_entities.get_proxy("Project").objects.create(
+            entity_type="Project", name="Apollo"
+        )
+        relations.add_related(record, "account", self.acme)
+
+        response = self.client.get(
+            reverse("admin:core_project_change", args=[record.pk])
+        )
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("data-ajax--url", content)
+        self.assertIn("entity_type=Account", content)
+        self.assertIn("Acme", content)
+        self.assertNotIn("Globex", content)
+        self.assertNotIn("Initech", content)
 
 
 class CustomLinkValidationTests(TestCase):

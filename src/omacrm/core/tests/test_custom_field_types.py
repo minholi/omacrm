@@ -245,6 +245,23 @@ class CustomFieldTypeTests(TestCase):
         response = self.client.get(reverse("admin:core_project_changelist"))
         self.assertContains(response, "Acme")
 
+    def test_enum_filter_uses_custom_data(self):
+        self._field(
+            "tier",
+            "enum",
+            params={"choices": [["Gold", "Gold"], ["Silver", "Silver"]]},
+        )
+        proxy = self._records()
+        proxy.create(entity_type="Project", name="Gold project", custom_data={"tier": "Gold"})
+        proxy.create(entity_type="Project", name="Silver project", custom_data={"tier": "Silver"})
+
+        response = self.client.get(
+            reverse("admin:core_project_changelist"), {"cf_tier": "Gold"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gold project")
+        self.assertNotContains(response, "Silver project")
+
     def test_foreign_field_validation(self):
         from django.core.exceptions import ValidationError
 

@@ -1,4 +1,3 @@
-import csv
 import uuid
 from urllib.parse import urlencode
 
@@ -16,6 +15,7 @@ from unfold.forms import BaseDialogForm
 from unfold.widgets import UnfoldAdminTextareaWidget
 
 from omacrm.core.admin.datasets import note_dataset_for
+from omacrm.core.admin.import_export import MetadataImportExportMixin
 from omacrm.core.admin.inlines import AttachmentInline
 from omacrm.core.metadata.fields import (
     build_form_field,
@@ -96,18 +96,20 @@ class AclAdminMixin:
         )
 
 
-class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
+class MetadataModelAdmin(
+    AclAdminMixin, SimpleHistoryAdmin, MetadataImportExportMixin, ModelAdmin
+):
     """ModelAdmin driven by the metadata registry.
 
     Renders layouts, merges custom fields into forms/lists/filters and
     enforces ACL. Business entities should set ``entity_type``.
     """
 
-    actions = ("export_as_csv", "mass_update", "restore_selected", "merge_selected")
+    actions = ("mass_update", "restore_selected", "merge_selected")
     actions_detail = ("add_note",)
     actions_row = ("restore_record",)
 
-    change_list_template = "admin/saved_filters_change_list.html"
+    list_before_template = "admin/saved_filters_before.html"
 
     # -- soft delete --------------------------------------------------------
 
@@ -500,11 +502,22 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
                         self.fields[name].initial = value
                 for field_def in link_fields:
                     name = link_form_field_name(field_def)
-                    if name in self.fields and has_instance:
-                        self.fields[name].initial = relations.linked_ids(
-                            entity_type, instance.pk, field_def.name
-                        )
-                    elif name in self.fields and field_def.type == "linkMultiple":
+                    if name not in self.fields:
+                        continue
+                    if has_instance:
+                        records = relations.get_related(instance, field_def.name)
+                        self.fields[name].widget.choices = [
+                            (record.pk, str(record)) for record in records
+                        ]
+                        if field_def.type == "linkMultiple":
+                            self.fields[name].initial = [
+                                record.pk for record in records
+                            ]
+                        else:
+                            self.fields[name].initial = (
+                                records[0].pk if records else None
+                            )
+                    elif field_def.type == "linkMultiple":
                         self.fields[name].initial = []
 
             def clean(self):
@@ -706,21 +719,3 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
         return redirect(f"{url}?token={token}")
 
     # -- actions ------------------------------------------------------------
-
-    @admin.action(description=_("Export selected records as CSV"))
-    def export_as_csv(self, request, queryset):
-        fields = [
-            name
-            for name, field_def in self.get_metadata_fields().items()
-            if not field_def.custom
-            and name not in {"custom_data"}
-        ]
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            f'attachment; filename="{self.entity_type or "records"}.csv"'
-        )
-        writer = csv.writer(response)
-        writer.writerow(fields)
-        for obj in queryset:
-            writer.writerow([getattr(obj, name, "") for name in fields])
-        return response

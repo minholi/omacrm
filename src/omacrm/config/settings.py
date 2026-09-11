@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "unfold.contrib.simple_history",
     "unfold.contrib.constance",
     "unfold.contrib.hijack",
+    "unfold.contrib.filters",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

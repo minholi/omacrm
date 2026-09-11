@@ -6,15 +6,70 @@
 {% endblock %}
 
 {% block content %}
-    <div class="flex flex-col gap-6" id="kanban-root"
-         data-move-url="{{ move_url }}">
+    <div class="flex flex-col gap-6" id="kanban-root" data-move-url="{{ move_url }}"
+         x-data="{
+            kanbanDrop(event) {
+                const item = event.item;
+                const dropzone = event.to;
+                const from = event.from;
+                if (!item || !dropzone) return;
+
+                const column = dropzone.closest('[data-column]');
+                const value = column ? column.dataset.column : '';
+                const root = document.getElementById('kanban-root');
+                const tokenField = root.querySelector('[name=csrfmiddlewaretoken]');
+                const status = document.getElementById('kanban-status');
+
+                function updateCounts() {
+                    root.querySelectorAll('[data-column]').forEach(function (el) {
+                        const badge = el.querySelector('[data-count]');
+                        if (badge) badge.textContent = el.querySelectorAll('.kanban-card').length;
+                    });
+                }
+                function setStatus(message, isError) {
+                    if (!status) return;
+                    status.textContent = message;
+                    status.style.color = isError ? '#dc2626' : '';
+                }
+
+                updateCounts();
+                fetch(root.dataset.moveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': tokenField ? tokenField.value : '',
+                    },
+                    body: JSON.stringify({pk: item.dataset.pk, value: value}),
+                })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return {ok: response.ok, data: data};
+                        });
+                    })
+                    .then(function (result) {
+                        if (result.ok) {
+                            setStatus('{% translate "Saved." %}', false);
+                        } else {
+                            if (from) from.appendChild(item);
+                            updateCounts();
+                            setStatus(
+                                (result.data && result.data.error) ||
+                                    '{% translate "Could not move the card." %}',
+                                true
+                            );
+                        }
+                    })
+                    .catch(function () {
+                        if (from) from.appendChild(item);
+                        updateCounts();
+                        setStatus('{% translate "Could not move the card." %}', true);
+                    });
+            }
+         }">
         {% csrf_token %}
 
         <div class="flex flex-row items-center gap-2">
-            <a href="{{ change_list_url }}"
-               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                &larr; {{ entity.display_label_plural }}
-            </a>
+            {% component "unfold/components/button.html" with href=change_list_url variant="default" size="sm" %}&larr; {{ entity.display_label_plural }}{% endcomponent %}
             <span class="font-semibold ml-2 text-important">{{ title }}</span>
             <span class="ml-auto text-xs text-font-subtle-light dark:text-font-subtle-dark"
                   id="kanban-status"></span>
@@ -30,10 +85,11 @@
                               data-count>{{ column.records|length }}</span>
                     </div>
                     <div class="flex flex-col gap-2 border border-dashed border-base-200 rounded-default p-2 min-h-[120px] dark:border-base-800"
-                         data-dropzone>
+                         data-dropzone x-sort.ghost x-sort:group="kanban"
+                         x-on:end="kanbanDrop($event)">
                         {% for record in column.records %}
                             <div class="kanban-card bg-white border border-base-200 rounded-default p-2 text-sm shadow-xs dark:bg-base-900 dark:border-base-800"
-                                 draggable="true" data-pk="{{ record.pk }}">
+                                 data-pk="{{ record.pk }}">
                                 <a href="{{ record.change_url }}"
                                    class="font-medium hover:text-primary-600 dark:hover:text-primary-500">{{ record.label }}</a>
                                 {% if record.assigned %}
@@ -48,116 +104,4 @@
             {% endfor %}
         </div>
     </div>
-
-    <script>
-        (function () {
-            var root = document.getElementById("kanban-root");
-            if (!root) {
-                return;
-            }
-
-            var moveUrl = root.dataset.moveUrl;
-            var csrfToken = root.querySelector("[name=csrfmiddlewaretoken]");
-            csrfToken = csrfToken ? csrfToken.value : "";
-            var status = document.getElementById("kanban-status");
-            var dragged = null;
-            var previousColumn = null;
-
-            function updateCounts() {
-                root.querySelectorAll("[data-column]").forEach(function (column) {
-                    var count = column.querySelectorAll(".kanban-card").length;
-                    var badge = column.querySelector("[data-count]");
-                    if (badge) {
-                        badge.textContent = count;
-                    }
-                });
-            }
-
-            function setStatus(message, isError) {
-                if (!status) {
-                    return;
-                }
-                status.textContent = message;
-                status.style.color = isError ? "#dc2626" : "";
-            }
-
-            root.addEventListener("dragstart", function (event) {
-                var card = event.target.closest(".kanban-card");
-                if (!card) {
-                    return;
-                }
-                dragged = card;
-                previousColumn = card.closest("[data-column]");
-                if (event.dataTransfer) {
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", card.dataset.pk);
-                }
-                card.style.opacity = "0.5";
-            });
-
-            root.addEventListener("dragend", function () {
-                if (dragged) {
-                    dragged.style.opacity = "";
-                }
-                dragged = null;
-                previousColumn = null;
-            });
-
-            root.addEventListener("dragover", function (event) {
-                if (dragged && event.target.closest("[data-dropzone]")) {
-                    event.preventDefault();
-                }
-            });
-
-            root.addEventListener("drop", function (event) {
-                var dropzone = event.target.closest("[data-dropzone]");
-                if (!dragged || !dropzone) {
-                    return;
-                }
-                event.preventDefault();
-
-                var card = dragged;
-                var column = dropzone.closest("[data-column]");
-                var value = column.dataset.column;
-                var originalParent = card.parentElement;
-                dropzone.appendChild(card);
-                updateCounts();
-
-                fetch(moveUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": csrfToken,
-                    },
-                    body: JSON.stringify({pk: card.dataset.pk, value: value}),
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return {ok: response.ok, data: data};
-                        });
-                    })
-                    .then(function (result) {
-                        if (result.ok) {
-                            setStatus("{% translate 'Saved.' %}", false);
-                        } else {
-                            originalParent.appendChild(card);
-                            updateCounts();
-                            setStatus(
-                                (result.data && result.data.error) ||
-                                    "{% translate 'Could not move the card.' %}",
-                                true
-                            );
-                        }
-                    })
-                    .catch(function () {
-                        originalParent.appendChild(card);
-                        updateCounts();
-                        setStatus("{% translate 'Could not move the card.' %}", true);
-                    });
-
-                dragged = null;
-                previousColumn = null;
-            });
-        })();
-    </script>
 {% endblock %}

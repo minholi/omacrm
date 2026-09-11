@@ -1,15 +1,17 @@
 """Mapping of metadata field types to Django forms, widgets and filters."""
 
 from django import forms
-from django.contrib import admin
+from django.urls import reverse
 from django.utils.text import slugify
 
 from omacrm.core.metadata.defs import FieldDef
 from unfold.widgets import (
+    UnfoldAdminAutocompleteModelChoiceFieldWidget,
     UnfoldAdminCheckboxSelectMultipleWidget,
     UnfoldAdminDecimalFieldWidget,
     UnfoldAdminEmailInputWidget,
     UnfoldAdminIntegerFieldWidget,
+    UnfoldAdminMultipleAutocompleteModelChoiceFieldWidget,
     UnfoldAdminSelectWidget,
     UnfoldAdminSingleDateWidget,
     UnfoldAdminSplitDateTimeWidget,
@@ -210,6 +212,22 @@ def link_form_field_name(field_def: FieldDef) -> str:
     return f"link__{field_def.name}"
 
 
+class LinkChoiceField(forms.ModelChoiceField):
+    """Single link picker that only renders the currently linked records."""
+
+    def __init__(self, *args, current=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.widget.choices = [(obj.pk, str(obj)) for obj in current]
+
+
+class LinkMultipleChoiceField(forms.ModelMultipleChoiceField):
+    """Multiple link picker that only renders the currently linked records."""
+
+    def __init__(self, *args, current=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.widget.choices = [(obj.pk, str(obj)) for obj in current]
+
+
 def build_link_form_field(field_def: FieldDef, user=None) -> forms.Field:
     """Build an admin form field for a custom relationship."""
 
@@ -225,12 +243,25 @@ def build_link_form_field(field_def: FieldDef, user=None) -> forms.Field:
     ordering = registry.get(target_entity).ordering or ["pk"]
     queryset = queryset.order_by(*ordering)
 
+    ajax_url = f"{reverse('link_autocomplete')}?entity_type={target_entity}"
     if field_def.type == "link":
-        return forms.ModelChoiceField(
-            queryset=queryset, required=False, label=field_def.display_label
+        widget = UnfoldAdminAutocompleteModelChoiceFieldWidget(
+            attrs={"data-ajax--url": ajax_url}
         )
-    return forms.ModelMultipleChoiceField(
-        queryset=queryset, required=False, label=field_def.display_label
+        return LinkChoiceField(
+            queryset=queryset,
+            widget=widget,
+            required=False,
+            label=field_def.display_label,
+        )
+    widget = UnfoldAdminMultipleAutocompleteModelChoiceFieldWidget(
+        attrs={"data-ajax--url": ajax_url}
+    )
+    return LinkMultipleChoiceField(
+        queryset=queryset,
+        widget=widget,
+        required=False,
+        label=field_def.display_label,
     )
 
 
@@ -239,10 +270,12 @@ def custom_field_names(custom_fields) -> list[str]:
 
 
 def build_list_filter(field_def: FieldDef):
-    """Create a SimpleListFilter class for an enum/bool custom field."""
+    """Create an Unfold dropdown filter for an enum/bool custom field."""
+
+    from unfold.contrib.filters.admin import DropdownFilter
 
     if field_def.type in {"enum", "multi_enum"} and field_def.options:
-        class _ChoicesFilter(admin.SimpleListFilter):
+        class _ChoicesFilter(DropdownFilter):
             title = field_def.display_label
             parameter_name = f"cf_{field_def.name}"
 
@@ -258,7 +291,7 @@ def build_list_filter(field_def: FieldDef):
         return _ChoicesFilter
 
     if field_def.type == "bool":
-        class _BoolFilter(admin.SimpleListFilter):
+        class _BoolFilter(DropdownFilter):
             title = field_def.display_label
             parameter_name = f"cf_{field_def.name}"
 

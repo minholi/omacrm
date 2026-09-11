@@ -10,6 +10,7 @@ from omacrm.core.admin.views import (
     KanbanView,
     LayoutEditorIndexView,
     LayoutEditorView,
+    LinkAutocompleteView,
     RoleAclEditorView,
     kanban_move,
     notification_stream,
@@ -22,22 +23,22 @@ urlpatterns = [
     path("", RedirectView.as_view(url="/admin/", permanent=False)),
     path(
         "admin/calendar/",
-        admin.site.admin_view(CalendarView.as_view()),
+        admin.site.admin_view(CalendarView.as_view(admin_site=admin.site)),
         name="crm_calendar",
     ),
     path(
         "admin/layout-editor/",
-        admin.site.admin_view(LayoutEditorIndexView.as_view()),
+        admin.site.admin_view(LayoutEditorIndexView.as_view(admin_site=admin.site)),
         name="layout_editor_index",
     ),
     path(
         "admin/layout-editor/<str:entity_type>/",
-        admin.site.admin_view(LayoutEditorView.as_view()),
+        admin.site.admin_view(LayoutEditorView.as_view(admin_site=admin.site)),
         name="layout_editor",
     ),
     path(
         "admin/access/role/<int:pk>/",
-        admin.site.admin_view(RoleAclEditorView.as_view()),
+        admin.site.admin_view(RoleAclEditorView.as_view(admin_site=admin.site)),
         name="role_acl_editor",
     ),
     path(
@@ -47,13 +48,18 @@ urlpatterns = [
     ),
     path(
         "admin/global-search/",
-        admin.site.admin_view(GlobalSearchView.as_view()),
+        admin.site.admin_view(GlobalSearchView.as_view(admin_site=admin.site)),
         name="global_search",
     ),
     path(
         "admin/kanban/<str:entity_type>/",
-        admin.site.admin_view(KanbanView.as_view()),
+        admin.site.admin_view(KanbanView.as_view(admin_site=admin.site)),
         name="kanban_board",
+    ),
+    path(
+        "admin/link-autocomplete/",
+        admin.site.admin_view(LinkAutocompleteView.as_view()),
+        name="link_autocomplete",
     ),
     path(
         "admin/kanban/<str:entity_type>/move/",

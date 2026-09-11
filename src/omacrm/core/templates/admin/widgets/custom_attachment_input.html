@@ -1,18 +1,33 @@
 {% load i18n %}
 <div class="flex flex-col gap-2">
     {% if current_files %}
-        <ul class="text-sm text-font-important-light dark:text-font-important-dark">
+        <ul class="flex flex-col gap-1">
             {% for file in current_files %}
-                <li>
+                <li class="flex flex-row items-center gap-2 text-sm">
+                    <span class="material-symbols-outlined text-base-400 text-sm">description</span>
                     <a href="{{ file.url }}" target="_blank"
                        class="text-primary-600 hover:underline dark:text-primary-500">{{ file.name }}</a>
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
-    <input type="file" name="{{ widget.name }}"{% if multiple %} multiple{% endif %}
-           class="block w-full text-sm text-font-default-light dark:text-font-default-dark"
-           {% for name, value in widget.attrs.items %}{% if value != None and value != False %} {{ name }}="{{ value }}"{% endif %}{% endfor %}>
+
+    <div class="bg-white border border-base-200 rounded-default flex items-center dark:bg-base-900 dark:border-base-800">
+        <label for="{{ widget.attrs.id }}" class="flex grow relative cursor-pointer">
+            <input type="text" disabled
+                   value="{% if current_files %}{% translate 'Replace or add files' %}{% else %}{% translate 'Choose file to upload' %}{% endif %}"
+                   class="grow font-medium min-w-0 px-3 py-2 text-ellipsis">
+            <span class="absolute opacity-0 inset-0 z-10 cursor-pointer">
+                <input type="file" name="{{ widget.name }}"{% if multiple %} multiple{% endif %}
+                       {% for name, value in widget.attrs.items %}{% if value != None and value != False %} {{ name }}="{{ value }}"{% endif %}{% endfor %}>
+            </span>
+        </label>
+        <label for="{{ widget.attrs.id }}"
+               class="cursor-pointer text-base-400 px-3 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200">
+            <span class="block material-symbols-outlined">upload</span>
+        </label>
+    </div>
+
     {% if clearable and current_files %}
         <label class="flex flex-row items-center gap-2 text-sm">
             <input type="checkbox" name="{{ widget.name }}-clear">

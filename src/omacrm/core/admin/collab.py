@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.decorators import action, display
 from unfold.forms import BaseDialogForm
+from unfold.widgets import UnfoldAdminSelectWidget
 
 from omacrm.core.models import Attachment, Note, Notification
 from omacrm.core.services.reactions import SUPPORTED_EMOJIS, toggle_reaction
@@ -15,6 +16,7 @@ class ReactionForm(BaseDialogForm):
     emoji = forms.ChoiceField(
         choices=[(emoji, emoji) for emoji in SUPPORTED_EMOJIS],
         label=_("Reaction"),
+        widget=UnfoldAdminSelectWidget,
     )
 
 

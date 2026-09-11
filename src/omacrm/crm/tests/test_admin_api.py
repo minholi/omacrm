@@ -41,6 +41,16 @@ class CrmAdminTests(TestCase):
         self.assertContains(response, "Duplicate")
         self.assertEqual(Account.objects.filter(name="Duplicate Co").count(), 1)
 
+    def test_kb_wysiwyg_and_import_export(self):
+        response = self.client.get(reverse("admin:crm_knowledgebasearticle_add"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "trix")
+
+        changelist = self.client.get(
+            reverse("admin:crm_knowledgebasearticle_changelist")
+        )
+        self.assertContains(changelist, "Import")
+
 
 class CrmApiTests(TestCase):
     def setUp(self):

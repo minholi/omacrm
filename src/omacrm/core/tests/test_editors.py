@@ -50,7 +50,8 @@ class LayoutEditorTests(TestCase):
             reverse("layout_editor", kwargs={"entity_type": "Team"})
         )
         self.assertContains(response, 'id="layout-list-fields"')
-        self.assertContains(response, 'draggable="true"')
+        self.assertContains(response, "x-sort")
+        self.assertContains(response, "x-sort:handle")
 
     def test_detail_sections_render_visual_editor(self):
         Layout.objects.create(
@@ -68,6 +69,7 @@ class LayoutEditorTests(TestCase):
         self.assertContains(response, 'data-section-handle')
         self.assertContains(response, 'data-dropzone')
         self.assertContains(response, 'data-remove-chip')
+        self.assertContains(response, 'x-sort:group="detail-chips"')
         self.assertContains(response, 'name="detail_layout"')
         self.assertContains(response, 'value="Main"')
         self.assertContains(response, 'data-field="name"')

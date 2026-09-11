@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import TemplateView
+from unfold.views import BaseAutocompleteView, UnfoldSiteViewMixin
 
 from omacrm.core.metadata.registry import registry
 from omacrm.core.models import Layout
@@ -35,12 +36,15 @@ EVENT_TYPES = [
 ]
 
 
-class CalendarView(TemplateView):
+class CalendarView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = _("Calendar")
+
     template_name = "admin/crm/calendar.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
 
         today = timezone.localdate()
         try:
@@ -79,6 +83,14 @@ class CalendarView(TemplateView):
         previous_month = first_day - timedelta(days=1)
         next_month = last_day + timedelta(days=1)
 
+        from urllib.parse import urlencode
+
+        def month_url(day, assigned_value):
+            query = urlencode(
+                {"year": day.year, "month": day.month, "assigned": assigned_value}
+            )
+            return f"{reverse('crm_calendar')}?{query}"
+
         context.update(
             {
                 "title": _("Calendar"),
@@ -89,6 +101,9 @@ class CalendarView(TemplateView):
                 "prev_month": previous_month.month,
                 "next_year": next_month.year,
                 "next_month": next_month.month,
+                "prev_url": month_url(previous_month, assigned),
+                "today_url": month_url(today, assigned),
+                "next_url": month_url(next_month, assigned),
                 "year": year,
                 "month": month,
                 "assigned": assigned,
@@ -183,7 +198,43 @@ class CalendarView(TemplateView):
         return events
 
 
-class KanbanView(TemplateView):
+class LinkAutocompleteView(BaseAutocompleteView):
+    """Select2 JSON results for custom link pickers (ACL-scoped)."""
+
+    paginate_by = 20
+
+    def get_queryset(self):
+        entity_type = self.request.GET.get("entity_type", "")
+        if not registry.has(entity_type):
+            raise Http404("Unknown entity type.")
+        if not AclService.check(self.request.user, entity_type, "read"):
+            raise PermissionDenied("You cannot read this entity.")
+
+        model = registry.model_for(entity_type)
+        queryset = model.objects.all()
+        if registry.is_dynamic(entity_type):
+            queryset = queryset.filter(entity_type=entity_type)
+        queryset = AclService.scope_queryset(
+            self.request.user, entity_type, queryset, "read"
+        )
+
+        term = (self.request.GET.get("term") or "").strip()
+        if term:
+            condition = Q()
+            for name in registry.get(entity_type).search_fields or ["name"]:
+                condition |= Q(**{f"{name}__icontains": term})
+            if condition:
+                queryset = queryset.filter(condition)
+
+        ordering = registry.get(entity_type).ordering or ["pk"]
+        return queryset.order_by(*ordering)
+
+
+class KanbanView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = ""
+
     """Kanban board over an entity status field."""
 
     template_name = "admin/kanban.html"
@@ -192,7 +243,6 @@ class KanbanView(TemplateView):
         from omacrm.core.services import kanban
 
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
         entity_type = kwargs["entity_type"]
         config = kanban.kanban_config(entity_type)
         if config is None:
@@ -309,12 +359,15 @@ def _jsonable(value):
     return str(value)
 
 
-class LayoutEditorIndexView(TemplateView):
+class LayoutEditorIndexView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = _("Layout Editor")
+
     template_name = "admin/layout_editor_index.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
         context["title"] = _("Layout Editor")
 
         rows = []
@@ -340,14 +393,17 @@ class LayoutEditorIndexView(TemplateView):
         return context
 
 
-class LayoutEditorView(TemplateView):
+class LayoutEditorView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = ""
+
     template_name = "admin/layout_editor_form.html"
 
     def get_context_data(self, **kwargs):
         import json
 
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
         entity_type = kwargs["entity_type"]
         if not registry.has(entity_type):
             raise Http404(f"Unknown entity type: {entity_type}")
@@ -454,7 +510,11 @@ class LayoutEditorView(TemplateView):
         return redirect("layout_editor", entity_type=entity_type)
 
 
-class RoleAclEditorView(TemplateView):
+class RoleAclEditorView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = ""
+
     template_name = "admin/role_acl_editor.html"
 
     ACTIONS = ["read", "create", "edit", "delete"]
@@ -466,7 +526,6 @@ class RoleAclEditorView(TemplateView):
         from omacrm.core.models import Role
 
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
         role = get_object_or_404(Role, pk=kwargs["pk"])
         context["title"] = _("Access Matrix: %(role)s") % {"role": role.name}
         context["role"] = role
@@ -623,7 +682,11 @@ def notification_stream(request):
     return response
 
 
-class GlobalSearchView(TemplateView):
+class GlobalSearchView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = _("Global Search")
+
     """Cross-entity text search for staff users (ACL-scoped)."""
 
     template_name = "admin/global_search.html"
@@ -656,7 +719,6 @@ class GlobalSearchView(TemplateView):
         from django.urls import NoReverseMatch
 
         context = super().get_context_data(**kwargs)
-        context.update(admin.site.each_context(self.request))
         context["title"] = _("Global search")
 
         query = (self.request.GET.get("q") or "").strip()

@@ -11,10 +11,7 @@
         <input type="hidden" name="token" value="{{ token }}">
 
         <div class="flex flex-row items-center gap-2">
-            <a href="{{ changelist_url }}"
-               class="border border-base-200 rounded-default px-3 py-1.5 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                &larr; {% translate "Back" %}
-            </a>
+            {% component "unfold/components/button.html" with href=changelist_url variant="default" size="sm" %}&larr; {% translate "Back" %}{% endcomponent %}
             <span class="font-semibold ml-2 text-important">{{ title }}</span>
         </div>
 
@@ -41,14 +38,8 @@
                 </div>
 
                 <div class="flex flex-row gap-2 mt-4">
-                    <button type="submit"
-                            class="bg-primary-600 text-white rounded-default px-4 py-2 text-sm hover:bg-primary-700">
-                        {% translate "Apply" %}
-                    </button>
-                    <a href="{{ changelist_url }}"
-                       class="border border-base-200 rounded-default px-4 py-2 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
-                        {% translate "Cancel" %}
-                    </a>
+                    {% component "unfold/components/button.html" with submit=True variant="primary" size="sm" %}{% translate "Apply" %}{% endcomponent %}
+                    {% component "unfold/components/button.html" with href=changelist_url variant="default" size="sm" %}{% translate "Cancel" %}{% endcomponent %}
                 </div>
             {% else %}
                 <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark">

@@ -64,6 +64,11 @@ class EntityManagerTests(TestCase):
             entity.delete()
             registry.invalidate()
 
+    def test_dynamic_changelist_has_import_export(self):
+        response = self.client.get(reverse("admin:core_project_changelist"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import")
+
     def test_sidebar_lists_custom_entity(self):
         navigation = sidebar_navigation(self._request())
         groups = {str(group["title"]): group for group in navigation}
