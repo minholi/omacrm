@@ -176,7 +176,8 @@ src/omacrm/
   user) through an intermediate page (`MassUpdateView`). `/admin/layout-editor/`
   edits `Layout` rows (list columns, draggable for ordering, + detail sections);
   `/admin/access/role/<id>/` edits a role's scope and field-level access
-  matrix. Caches invalidate on model saves.
+  matrix. Entity changelists offer per-user **saved filters** (`SavedFilter`).
+  Caches invalidate on model saves.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.

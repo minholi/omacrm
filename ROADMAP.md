@@ -4,12 +4,11 @@
 > be resumed at any time by any developer/agent. Architecture conventions live
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
-_Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
-notifications, mass update, the customer portal, automation extras and
-phone/address utilities, stream reactions, layout drag-and-drop, the
-workflow webhook action, inbound email, live stream updates and the
-update-related workflow action (179 tests passing). See the
-[deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
+_Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
+collaboration, productivity, marketing, customization, entity manager, portal,
+notifications, utilities, inbound email, saved filters). 184 tests passing; see
+the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
+gaps._
 
 ## Vision
 
@@ -174,6 +173,10 @@ as typed).
 with a toggle service, a per-note **React** row action in the admin (dialog
 emoji picker) and reaction summaries in the Notes list and Stream tab.
 
+**Delivered — saved filters:** entity changelists render per-user filter
+chips with a "save current filters" box (`SavedFilter` model); applying a chip
+redirects with the stored query parameters. Filters are private per user.
+
 **Delivered — update-related workflow action:** an action like
 `{"type": "update_related", "relation": "opportunities", "fields": {"stage":
 "Closed Lost"}}` updates the related records of the triggering record;
@@ -208,7 +211,7 @@ keeps the on-screen order, which the admin list view honours.
 
 **Next in Phase G:**
 
-- Optional: more formula functions and saved filter presets.
+- Optional: more formula functions and custom command palette entries.
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
 authoritative list of postponed work with origins and targets.
 
@@ -226,7 +229,7 @@ Nothing here is required for the current feature set to be usable.
 | API key authentication (`X-Api-Key`) | A | `User.api_key` exists, but DRF only offers session/token auth. Target: backlog. |
 | Soft-delete restore UI | A/B | `deleted` flag + `all_objects` exist; no admin action/filter to view and restore deleted records. Target: backlog. |
 | Global search page across entity types | B | Unfold command palette searches registered models; no cross-entity results page. Target: backlog. |
-| Saved filter presets; custom command palette entries | C | — Target: backlog. |
+| Custom command palette entries | C | Saved filter presets are done via `SavedFilter`. Target: backlog. |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
 | Sales-by-month chart on the dashboard | C | dashboard has KPI cards only. Target: backlog. |
 
@@ -261,7 +264,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (179 tests)
+uv run python src/omacrm/manage.py test      # must be green (184 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -277,6 +280,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Saved filters: per-user changelist filter presets with
+  save/apply/delete chips (184 tests).
 
 - **2026-09-11** — Workflow `update_related` action (with relation/field
   validation) (179 tests).

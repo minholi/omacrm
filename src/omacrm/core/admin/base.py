@@ -1,5 +1,6 @@
 import csv
 import uuid
+from urllib.parse import urlencode
 
 from django import forms
 from django.contrib import admin, messages
@@ -93,6 +94,63 @@ class MetadataModelAdmin(AclAdminMixin, SimpleHistoryAdmin, ModelAdmin):
 
     actions = ("export_as_csv", "mass_update")
     actions_detail = ("add_note",)
+
+    change_list_template = "admin/saved_filters_change_list.html"
+
+    # -- saved filters ------------------------------------------------------
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        entity_type = self.entity_type
+        user = request.user
+
+        if entity_type and user.is_authenticated:
+            from omacrm.core.models import SavedFilter
+
+            reserved = {"save_filter", "apply_filter", "delete_filter"}
+
+            name = request.GET.get("save_filter")
+            if name and name.strip():
+                params = {
+                    key: values if len(values) > 1 else values[0]
+                    for key, values in request.GET.lists()
+                    if key not in reserved
+                }
+                SavedFilter.objects.update_or_create(
+                    user=user,
+                    entity_type=entity_type,
+                    name=name.strip()[:100],
+                    defaults={"params": params},
+                )
+                self.message_user(request, _("Filter saved."), level=messages.SUCCESS)
+                query = urlencode(params, doseq=True)
+                return redirect(f"{request.path}?{query}" if query else request.path)
+
+            apply_id = request.GET.get("apply_filter")
+            if apply_id:
+                saved = SavedFilter.objects.filter(
+                    pk=apply_id, user=user, entity_type=entity_type
+                ).first()
+                if saved:
+                    query = urlencode(saved.params, doseq=True)
+                    return redirect(f"{request.path}?{query}" if query else request.path)
+                return redirect(request.path)
+
+            delete_id = request.GET.get("delete_filter")
+            if delete_id:
+                SavedFilter.objects.filter(
+                    pk=delete_id, user=user, entity_type=entity_type
+                ).delete()
+                self.message_user(
+                    request, _("Filter removed."), level=messages.SUCCESS
+                )
+                return redirect(request.path)
+
+            extra_context["saved_filters"] = SavedFilter.objects.filter(
+                user=user, entity_type=entity_type
+            ).order_by("name")
+
+        return super().changelist_view(request, extra_context=extra_context)
 
     # -- stream / attachments ----------------------------------------------
 
