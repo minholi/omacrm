@@ -5,8 +5,8 @@
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
-notifications, mass update, the customer portal and automation extras
-(138 tests passing). See the
+notifications, mass update, the customer portal, automation extras and
+phone utilities (146 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -162,10 +162,16 @@ and `Contact.portal_user`; portal users (``type=portal``) sign in at
 with access driven by `crm/services/portal.py::PortalAcl`. Portal users are
 denied by the main admin/API ACL by design.
 
+**Delivered — phone utilities:** `core/services/phone.py` normalizes,
+validates and formats phone numbers with `phonenumbers`;
+Account/Contact/Lead `phone_number` values are normalized to E.164 on save
+using the `phone_default_region` constance setting (invalid values are kept
+as typed).
+
 **Next in Phase G:**
 
 - **Real-time stream/record updates** (notifications are done over SSE).
-- **IMAP fetch/import** and **phone/address utilities** (Espo parity).
+- **IMAP fetch/import** and **address formatting utilities** (phone numbers are done).
 - **Layout Manager drag-and-drop** (current editor is form/JSON based).
 - Extra workflow actions (call webhook, update related records) and more formula functions.
 - Optional: stream reactions, saved filter presets.
@@ -210,7 +216,7 @@ Nothing here is required for the current feature set to be usable.
 | Bounce classification (hard/soft) and campaign revenue tracking | E | `CampaignLogRecord` supports `Bounced` but nothing sets it. Target: backlog. |
 | Web-to-lead double opt-in and hosted form page | E | Only the JSON endpoint exists. Target: backlog. |
 | Multi-currency historical rate tables + rate sync job | D | Manual `Currency.rate` values; conversion uses the current rate only. Target: backlog. |
-| Phone number normalization / address formatting | D/G | Structured address fields and raw phone strings only. Target: Phase G. |
+| Address formatting utilities | D/G | Phone numbers now normalize/validate via `phonenumbers`; address formatting is still raw fields. Target: Phase G. |
 
 ### Customization & platform (Phase G)
 
@@ -226,7 +232,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (138 tests)
+uv run python src/omacrm/manage.py test      # must be green (146 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -242,6 +248,11 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Phone utilities: `phonenumbers`-based
+  normalize/validate/format service and automatic E.164 normalization for
+  Account/Contact/Lead phone numbers (`phone_default_region` setting)
+  (146 tests).
 
 - **2026-09-11** — Automation extras: workflow `send_email` action and
   formula string/date helpers (138 tests).

@@ -140,6 +140,10 @@ src/omacrm/
 - **Multi-currency**: `Currency.rate` is the value of one unit in the base
   currency (`base_currency` constance setting); `core/services/currency.py`
   converts and hooks fill `amount_converted` on Opportunity/Lead.
+- **Phone numbers**: `core/services/phone.py` (libphonenumber) provides
+  `normalize_phone`/`is_valid_phone`/`format_phone`; CRM hooks normalize
+  Account/Contact/Lead `phone_number` to E.164 on save using the
+  `phone_default_region` constance setting.
 - **Marketing**: `TargetList` members are generic (`TargetListMember` with
   content type + `opted_out`); `MassEmail` queue is built from target lists
   (opted-out skipped) and processed by the `crm.process_mass_email` job;

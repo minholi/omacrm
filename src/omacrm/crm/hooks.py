@@ -6,6 +6,7 @@ from django.utils.html import strip_tags
 
 from omacrm.core.services.currency import base_currency, convert
 from omacrm.core.services.hooks import hooks
+from omacrm.core.services.phone import normalize_phone
 from omacrm.crm.models import (
     OPPORTUNITY_NON_CLOSED_STAGES,
     OPPORTUNITY_PROBABILITY_MAP,
@@ -171,3 +172,27 @@ def lead_amount_converted(instance, **kwargs):
         instance.opportunity_amount_converted = convert(
             value, instance.opportunity_amount_currency or base_currency()
         )
+
+
+def _normalize_phone_number(instance):
+    value = getattr(instance, "phone_number", None)
+    if not value:
+        return
+    normalized = normalize_phone(value)
+    if normalized:
+        instance.phone_number = normalized
+
+
+@hooks.register("Account", "before_save")
+def account_phone_number(instance, **kwargs):
+    _normalize_phone_number(instance)
+
+
+@hooks.register("Contact", "before_save")
+def contact_phone_number(instance, **kwargs):
+    _normalize_phone_number(instance)
+
+
+@hooks.register("Lead", "before_save")
+def lead_phone_number(instance, **kwargs):
+    _normalize_phone_number(instance)

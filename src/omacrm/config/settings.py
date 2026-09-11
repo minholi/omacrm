@@ -153,6 +153,11 @@ CONSTANCE_CONFIG = {
     "default_currency": ("USD", "Default currency for new records", str),
     "date_format": ("Y-m-d", "Date format (Django syntax)", str),
     "time_format": ("H:i", "Time format (Django syntax)", str),
+    "phone_default_region": (
+        "US",
+        "Default region (ISO country code) used to parse phone numbers",
+        str,
+    ),
     "notification_email_enabled": (
         True,
         "Email unread notifications as a digest",
@@ -168,6 +173,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "date_format",
         "time_format",
     ),
+    "Localization": ("phone_default_region",),
     "Notifications": ("notification_email_enabled",),
 }
 
