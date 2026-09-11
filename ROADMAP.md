@@ -5,7 +5,7 @@
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
-notifications and mass update (125 tests passing). See the
+notifications, mass update and the customer portal (134 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -41,7 +41,7 @@ built as admin pages, actions, datasets and custom Unfold views).
 | D — Productivity | Cases, Knowledge Base, Documents, Email templates/send, multi-currency | ✅ done |
 | E — Marketing | Target lists, campaigns, mass email, lead capture, webhooks | ✅ done |
 | F — Customization | Formula engine, workflow rules, layout editor, role/ACL editor | ✅ done |
-| G — Platform | Entity Manager + real-time/email notifications done; portal, IMAP/phone/address, drag-drop layouts next | 🚧 in progress |
+| G — Platform | Entity Manager, notifications, customer portal done; IMAP/phone/address, drag-drop layouts next | 🚧 in progress |
 
 ## What was delivered (by phase)
 
@@ -152,9 +152,14 @@ setting and the per-user `Preferences.notifications_config.email` flag.
 ACL-checked, session-backed selection) with an intermediate page; formulas can
 now write custom fields with `custom.<name> = value`.
 
+**Delivered — customer portal (MVP):** `PortalRole` + `User.portal_roles`
+and `Contact.portal_user`; portal users (``type=portal``) sign in at
+`/portal/`, see only their own cases (create/view) and published KB articles,
+with access driven by `crm/services/portal.py::PortalAcl`. Portal users are
+denied by the main admin/API ACL by design.
+
 **Next in Phase G:**
 
-- **Portal**: customer-facing app with portal roles/ACL.
 - **Real-time stream/record updates** (notifications are done over SSE).
 - **IMAP fetch/import** and **phone/address utilities** (Espo parity).
 - **Layout Manager drag-and-drop** (current editor is form/JSON based).
@@ -209,15 +214,15 @@ Nothing here is required for the current feature set to be usable.
 | --- | --- | --- |
 | Drag-and-drop layout manager (tabs, add/remove fieldsets) | F | Current editor handles list columns + detail sections JSON. Target: Phase G. |
 | Workflow actions: send email, call webhook, update related records | F | Rules currently support `set_field`, `notify`, `create_record`. Target: backlog. |
-| Portal (customer-facing app, portal roles/ACL, KB publishing) | F | — Target: Phase G. |
 | Real-time stream/record updates | F | Notifications already stream over SSE; stream/record updates do not. Target: Phase G. |
+| Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (125 tests)
+uv run python src/omacrm/manage.py test      # must be green (134 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -233,6 +238,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Customer portal MVP: portal users/roles, own-case list,
+  create and detail, published knowledge base, portal ACL (134 tests).
 
 - **2026-09-11** — Mass update action (enum/bool/assigned user, ACL-checked)
   and formula custom-field support (`custom.<name> = value`) (125 tests).

@@ -1,0 +1,24 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Knowledge Base — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <h1>Knowledge Base</h1>
+
+    <div class="card">
+        {% if articles %}
+            <ul>
+                {% for article in articles %}
+                    <li>
+                        <a href="{% url 'portal:kb_detail' article.pk %}">{{ article.name }}</a>
+                        {% if article.description %}
+                            <div class="muted">{{ article.description|truncatechars:120 }}</div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">No published articles yet.</p>
+        {% endif %}
+    </div>
+{% endblock %}

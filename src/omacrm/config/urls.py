@@ -57,6 +57,7 @@ urlpatterns = [
         name="lead_capture",
     ),
     path("admin/", admin.site.urls),
+    path("portal/", include("omacrm.crm.portal_urls")),
     path("hijack/", include("hijack.urls")),
     path("api/v1/", include(router.urls)),
 ]

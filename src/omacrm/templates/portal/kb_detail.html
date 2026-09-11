@@ -1,0 +1,15 @@
+{% extends "portal/base.html" %}
+
+{% block title %}{{ article.name }} — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <p class="muted"><a href="{% url 'portal:kb_list' %}">&larr; Back to knowledge base</a></p>
+
+    <div class="card">
+        <h1>{{ article.name }}</h1>
+        {% if article.description %}
+            <p class="muted">{{ article.description }}</p>
+        {% endif %}
+        <div>{{ article.body|safe }}</div>
+    </div>
+{% endblock %}

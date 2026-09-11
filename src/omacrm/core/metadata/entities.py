@@ -40,7 +40,7 @@ registry.register(
         list_layout=["user_name", "email", "type", "is_active", "last_access"],
         detail_layout=[
             {"title": _("Profile"), "fields": ["user_name", "first_name", "last_name", "email", "title", "phone_number"]},
-            {"title": _("Access"), "fields": ["type", "is_active", "is_staff", "default_team", "teams", "roles", "api_key", "last_access"]},
+            {"title": _("Access"), "fields": ["type", "is_active", "is_staff", "default_team", "teams", "roles", "portal_roles", "api_key", "last_access"]},
             {"title": _("System"), "fields": ["created_at", "modified_at"]},
         ],
         icon="person",
@@ -57,7 +57,8 @@ registry.register(
         fields={
             "name": FieldDef("name", "varchar", _("Name"), required=True, model_field="name"),
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
-            "roles": FieldDef("roles", "linkMultiple", _("Roles"), model_field="roles"),
+    "roles": FieldDef("roles", "linkMultiple", _("Roles"), model_field="roles"),
+    "portal_roles": FieldDef("portal_roles", "linkMultiple", _("Portal Roles"), model_field="portal_roles"),
             "created_at": FieldDef("created_at", "datetime", _("Created At"), read_only=True, model_field="created_at"),
         },
         ordering=["name"],

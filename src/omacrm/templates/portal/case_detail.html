@@ -1,0 +1,19 @@
+{% extends "portal/base.html" %}
+
+{% block title %}{{ case.name }} — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <p class="muted"><a href="{% url 'portal:case_list' %}">&larr; Back to cases</a></p>
+
+    <div class="card">
+        <h1>{{ case.name }}</h1>
+        <p>
+            <span class="badge">{{ case.get_status_display }}</span>
+            &nbsp;{{ case.get_priority_display }}
+            {% if case.number %}&nbsp;· #{{ case.number }}{% endif %}
+        </p>
+        <p class="muted">Created {{ case.created_at|date:"Y-m-d H:i" }}</p>
+        <h2>Description</h2>
+        <p>{{ case.description|default:"No description."|linebreaksbr }}</p>
+    </div>
+{% endblock %}

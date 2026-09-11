@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Customer Portal{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+               background: #f5f6f8; color: #111827; margin: 0; }
+        header { background: #7c3aed; color: #fff; padding: 14px 24px;
+                 display: flex; align-items: center; gap: 20px; }
+        header .brand { font-weight: 700; }
+        header nav { display: flex; gap: 14px; align-items: center; }
+        header a { color: #ede9fe; text-decoration: none; font-size: 14px; }
+        header a:hover { color: #fff; }
+        header form { margin: 0 0 0 auto; }
+        header button { background: rgba(255,255,255,.15); border: 0; color: #fff;
+                        padding: 6px 12px; border-radius: 6px; cursor: pointer;
+                        font-size: 13px; }
+        main { max-width: 880px; margin: 24px auto; padding: 0 16px; }
+        .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+                padding: 20px; margin-bottom: 16px;
+                box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+        h1 { font-size: 20px; margin: 0 0 16px; }
+        h2 { font-size: 15px; margin: 0 0 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eef0f3; }
+        th { color: #6b7280; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px;
+                 font-size: 11px; font-weight: 600; background: #ede9fe; color: #5b21b6; }
+        .muted { color: #6b7280; font-size: 13px; }
+        .button, button.primary { background: #7c3aed; color: #fff; border: 0;
+                padding: 8px 14px; border-radius: 6px; text-decoration: none;
+                font-size: 14px; cursor: pointer; display: inline-block; }
+        form p { margin: 0 0 12px; }
+        input[type=text], textarea, select { width: 100%; padding: 8px 10px;
+                border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .messages { list-style: none; padding: 0; }
+        .messages li { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+                       padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;
+                       font-size: 14px; }
+    </style>
+</head>
+<body>
+    <header>
+        <span class="brand">OmaCRM Portal</span>
+        <nav>
+            <a href="{% url 'portal:dashboard' %}">Dashboard</a>
+            <a href="{% url 'portal:case_list' %}">Cases</a>
+            <a href="{% url 'portal:kb_list' %}">Knowledge Base</a>
+        </nav>
+        <form method="post" action="{% url 'portal:logout' %}">
+            {% csrf_token %}
+            <button type="submit">Sign out</button>
+        </form>
+    </header>
+    <main>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% extends "portal/base.html" %}
+
+{% block title %}New case — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <p class="muted"><a href="{% url 'portal:case_list' %}">&larr; Back to cases</a></p>
+
+    <div class="card">
+        <h1>New case</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="primary" type="submit">Submit case</button>
+        </form>
+    </div>
+{% endblock %}

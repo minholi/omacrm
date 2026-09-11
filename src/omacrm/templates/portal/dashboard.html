@@ -1,0 +1,43 @@
+{% extends "portal/base.html" %}
+
+{% block title %}Dashboard — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <h1>Dashboard</h1>
+
+    <div class="card">
+        <h2>My open cases ({{ case_count }} total)</h2>
+        {% if open_cases %}
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Subject</th><th>Status</th><th>Priority</th></tr>
+                </thead>
+                <tbody>
+                    {% for case in open_cases %}
+                        <tr>
+                            <td>{{ case.number|default:"-" }}</td>
+                            <td><a href="{% url 'portal:case_detail' case.pk %}">{{ case.name }}</a></td>
+                            <td><span class="badge">{{ case.get_status_display }}</span></td>
+                            <td>{{ case.get_priority_display }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="muted">You have no open cases. <a href="{% url 'portal:case_create' %}">Open one</a>.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Knowledge base</h2>
+        {% if articles %}
+            <ul>
+                {% for article in articles %}
+                    <li><a href="{% url 'portal:kb_detail' article.pk %}">{{ article.name }}</a></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">No published articles yet.</p>
+        {% endif %}
+    </div>
+{% endblock %}

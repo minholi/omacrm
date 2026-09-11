@@ -73,8 +73,9 @@ src/omacrm/
                      # base-currency converted amounts
     services/        # lead_convert.py, reminders.py (crm.send_reminders),
                      # knowledge.py (crm.control_kb_article_status), email.py,
-                     # target_lists.py, mass_email.py
+                     # target_lists.py, mass_email.py, portal.py (PortalAcl)
     views.py         # public campaign tracking + lead capture endpoints
+    portal_views.py, portal_urls.py   # customer portal (/portal/)
     admin.py, tests/
   templates/admin/
     index.html       # dashboard (KPIs, activity, notifications)
@@ -163,6 +164,12 @@ src/omacrm/
   Create/edit them under Customization → Custom Entities; custom fields,
   layouts, formulas, workflows, stream and webhooks work on them. New entities
   need a server restart (admin URLs/API router are built at startup).
+- **Portal**: customer-portal users are `User` records with `type=portal`
+  linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
+  `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and
+  published Knowledge Base articles. `crm/services/portal.py::PortalAcl`
+  enforces `own`/`all`/`no` levels; the main `AclService` returns `no` for
+  portal users, so they cannot use the admin or the REST API.
 - **Admin**: every model admin should inherit `unfold.admin.ModelAdmin`;
   business entities use `MetadataModelAdmin` with `entity_type` set. Unfold
   integrations must be listed in `INSTALLED_APPS` before

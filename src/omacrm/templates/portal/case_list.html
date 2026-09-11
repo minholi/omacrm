@@ -1,0 +1,34 @@
+{% extends "portal/base.html" %}
+
+{% block title %}My cases — OmaCRM Portal{% endblock %}
+
+{% block content %}
+    <h1>My cases</h1>
+
+    <div class="card">
+        <a class="button" href="{% url 'portal:case_create' %}">New case</a>
+    </div>
+
+    <div class="card">
+        {% if cases %}
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Subject</th><th>Status</th><th>Priority</th><th>Created</th></tr>
+                </thead>
+                <tbody>
+                    {% for case in cases %}
+                        <tr>
+                            <td>{{ case.number|default:"-" }}</td>
+                            <td><a href="{% url 'portal:case_detail' case.pk %}">{{ case.name }}</a></td>
+                            <td><span class="badge">{{ case.get_status_display }}</span></td>
+                            <td>{{ case.get_priority_display }}</td>
+                            <td class="muted">{{ case.created_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="muted">No cases yet.</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -56,6 +56,9 @@ class AclService:
             return AccessLevel.NO
         if user.is_superuser:
             return AccessLevel.YES
+        # Portal users only use the customer portal, never the admin/API ACL.
+        if getattr(user, "type", None) == "portal":
+            return AccessLevel.NO
 
         roles = cls.user_roles(user)
         if not roles:

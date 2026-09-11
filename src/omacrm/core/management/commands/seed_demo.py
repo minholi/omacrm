@@ -3,8 +3,16 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
-from omacrm.core.models import Currency, Preferences, Role, ScheduledJob, Team, TeamUser
-from omacrm.crm.models import EmailTemplate
+from omacrm.core.models import (
+    Currency,
+    PortalRole,
+    Preferences,
+    Role,
+    ScheduledJob,
+    Team,
+    TeamUser,
+)
+from omacrm.crm.models import Contact, EmailTemplate
 
 DEFAULT_ROLE_DATA = {
     entity: {
@@ -126,4 +134,36 @@ class Command(BaseCommand):
                 ),
             },
         )
+
+        portal_role, _ = PortalRole.objects.get_or_create(
+            name="Customer",
+            defaults={
+                "description": "Default customer-portal access",
+                "data": {
+                    "Case": {"read": "own", "create": "yes", "edit": "own"},
+                    "KnowledgeBaseArticle": {"read": "all"},
+                },
+            },
+        )
+        portal_contact, _ = Contact.objects.get_or_create(
+            first_name="Portal",
+            last_name="Customer",
+            defaults={"email_address": "portal@example.com"},
+        )
+        portal_user = User.objects.filter(user_name="portal").first()
+        if portal_user is None:
+            portal_user = User.objects.create_user(
+                "portal", "portal@example.com", "portal12345"
+            )
+            portal_user.first_name = "Portal"
+            portal_user.last_name = "Customer"
+            portal_user.type = User.Type.PORTAL
+            portal_user.save()
+            self.stdout.write(
+                self.style.SUCCESS("Created portal user (portal / portal12345)")
+            )
+        portal_user.portal_roles.add(portal_role)
+        portal_contact.portal_user = portal_user
+        portal_contact.save(update_fields=["portal_user"])
+
         self.stdout.write(self.style.SUCCESS("Demo data ready."))

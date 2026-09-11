@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from djmoney.models.fields import MoneyField
@@ -59,6 +60,13 @@ class Contact(PersonNameMixin, AddressMixin, BaseEntity):
     phone_number = models.CharField(max_length=50, blank=True, default="")
     do_not_call = models.BooleanField(default=False)
     description = models.TextField(blank=True, default="")
+    portal_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="portal_contact",
+    )
 
     class Meta:
         ordering = ["name"]

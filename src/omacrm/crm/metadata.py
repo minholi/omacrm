@@ -94,6 +94,7 @@ registry.register(
             "name": FieldDef("name", "varchar", _("Name"), model_field="name"),
             "title": FieldDef("title", "varchar", _("Title"), model_field="title"),
             "account": FieldDef("account", "link", _("Account"), model_field="account"),
+            "portal_user": FieldDef("portal_user", "link", _("Portal User"), model_field="portal_user"),
             "email_address": FieldDef("email_address", "email", _("Email"), model_field="email_address"),
             "phone_number": FieldDef("phone_number", "varchar", _("Phone"), model_field="phone_number"),
             **ADDRESS_FIELDS,
@@ -106,7 +107,7 @@ registry.register(
         list_layout=["name", "account", "email_address", "phone_number", "assigned_user"],
         list_filter=["account", "do_not_call", "assigned_user"],
         detail_layout=[
-            {"title": _("Overview"), "fields": ["salutation", "first_name", "last_name", "title", "account", "email_address", "phone_number", "do_not_call", "description"]},
+            {"title": _("Overview"), "fields": ["salutation", "first_name", "last_name", "title", "account", "email_address", "phone_number", "do_not_call", "portal_user", "description"]},
             {"title": _("Address"), "fields": ["address_street", "address_city", "address_state", "address_country", "address_postal_code"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],

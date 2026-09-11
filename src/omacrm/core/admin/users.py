@@ -7,7 +7,14 @@ from unfold.forms import AdminPasswordChangeForm
 
 from omacrm.core.admin.base import AclAdminMixin, MetadataModelAdmin
 from omacrm.core.forms import CoreUserChangeForm, CoreUserCreationForm
-from omacrm.core.models import Preferences, Role, Team, TeamUser, User
+from omacrm.core.models import (
+    PortalRole,
+    Preferences,
+    Role,
+    Team,
+    TeamUser,
+    User,
+)
 
 
 @admin.register(User)
@@ -28,7 +35,7 @@ class UserAdmin(HijackUserAdminMixin, AclAdminMixin, BaseUserAdmin, ModelAdmin):
     list_filter = ("type", "is_active", "is_staff")
     search_fields = ("user_name", "first_name", "last_name", "email")
     ordering = ("user_name",)
-    filter_horizontal = ("roles", "user_permissions")
+    filter_horizontal = ("roles", "portal_roles", "user_permissions")
     readonly_fields = ("last_access",)
     fieldsets = (
         (None, {"fields": ("user_name", "password")}),
@@ -55,6 +62,7 @@ class UserAdmin(HijackUserAdminMixin, AclAdminMixin, BaseUserAdmin, ModelAdmin):
                     "is_superuser",
                     "default_team",
                     "roles",
+                    "portal_roles",
                 )
             },
         ),
@@ -131,3 +139,11 @@ class PreferencesAdmin(ModelAdmin):
     list_display = ("user", "language", "time_zone", "default_currency")
     search_fields = ("user__user_name",)
     autocomplete_fields = ("user",)
+
+
+@admin.register(PortalRole)
+class PortalRoleAdmin(ModelAdmin):
+    list_display = ("name", "is_active", "modified_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "description")
+    readonly_fields = ("created_at", "modified_at")

@@ -103,6 +103,9 @@ class User(CustomDataMixin, AbstractBaseUser, PermissionsMixin):
         related_name="users",
     )
     roles = models.ManyToManyField(Role, blank=True, related_name="users")
+    portal_roles = models.ManyToManyField(
+        "core.PortalRole", blank=True, related_name="users"
+    )
     api_key = models.CharField(max_length=64, blank=True, default="", db_index=True)
     last_access = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
