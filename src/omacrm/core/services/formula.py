@@ -19,6 +19,8 @@ from decimal import Decimal
 
 from django.db import OperationalError, ProgrammingError
 from django.utils import timezone
+from django.utils.dateparse import parse_date as django_parse_date
+from django.utils.dateparse import parse_datetime as django_parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +162,50 @@ class SafeEvaluator(ast.NodeVisitor):
         raise FormulaError(f"Unsupported expression: {type(node).__name__}")
 
 
+def _substring(value, start, end=None):
+    text = str(value)
+    return text[start:end] if end is not None else text[start:]
+
+
+def _coalesce(*values):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _parse_date(value):
+    if isinstance(value, str):
+        return django_parse_datetime(value) or django_parse_date(value)
+    return value
+
+
+_DATE_TOKENS = {
+    "D": "%d",
+    "d": "%d",
+    "M": "%m",
+    "m": "%m",
+    "Y": "%Y",
+    "y": "%y",
+    "H": "%H",
+    "h": "%I",
+    "i": "%M",
+    "s": "%S",
+}
+
+
+def _date_format(value, fmt="Y-m-d"):
+    if value is None:
+        return ""
+    value = _parse_date(value)
+    if "%" not in fmt:
+        fmt = re.sub(r"[DdMmYyHhis]", lambda match: _DATE_TOKENS[match.group(0)], fmt)
+    try:
+        return value.strftime(fmt)
+    except AttributeError:
+        return str(value)
+
+
 def build_context(instance, user=None) -> dict:
     def notify(message):
         from omacrm.core.models import Notification
@@ -218,6 +264,20 @@ def build_context(instance, user=None) -> dict:
         "min": min,
         "max": max,
         "sum": sum,
+        "lower": lambda value: str(value).lower(),
+        "upper": lambda value: str(value).upper(),
+        "title": lambda value: str(value).title(),
+        "strip": lambda value: str(value).strip(),
+        "replace": lambda value, old, new: str(value).replace(old, new),
+        "startswith": lambda value, prefix: str(value).startswith(prefix),
+        "endswith": lambda value, suffix: str(value).endswith(suffix),
+        "contains": lambda value, needle: (
+            needle in value if value is not None else False
+        ),
+        "substring": _substring,
+        "coalesce": _coalesce,
+        "parse_date": _parse_date,
+        "date_format": _date_format,
     }
 
     # Expose record fields as bare names so conditions like

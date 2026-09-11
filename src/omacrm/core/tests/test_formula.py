@@ -1,7 +1,8 @@
+from django.core import mail
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-from omacrm.core.models import Formula, Notification, User, Workflow
+from omacrm.core.models import Formula, Note, Notification, User, Workflow
 from omacrm.core.services import formula as formula_service
 from omacrm.core.services.formula import FormulaError, interpret
 from omacrm.crm.models import Account, Lead, Task
@@ -42,6 +43,19 @@ class FormulaTests(TestCase):
         lead.refresh_from_db()
         self.assertEqual(lead.custom_data["score"], 40)
         self.assertEqual(lead.custom_data["label"], "hot")
+
+    def test_string_and_date_helpers(self):
+        lead = Lead(first_name="Helpers")
+        interpret('account_name = upper("abc") + "-" + substring("hello", 1, 3)', lead)
+        self.assertEqual(lead.account_name, "ABC-el")
+        interpret('account_name = coalesce("", None, "fallback")', lead)
+        self.assertEqual(lead.account_name, "fallback")
+        interpret(
+            'account_name = date_format(parse_date("2026-01-02"), "d/m/Y")', lead
+        )
+        self.assertEqual(lead.account_name, "02/01/2026")
+        interpret('account_name = replace(lower(first_name), "help", "assist")', lead)
+        self.assertEqual(lead.account_name, "assisters")
 
     def test_notify_function(self):
         Formula.objects.create(
@@ -151,3 +165,57 @@ class WorkflowTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             workflow.full_clean()
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class WorkflowEmailTests(TestCase):
+    def test_send_email_to_record_address(self):
+        Workflow.objects.create(
+            name="Welcome lead",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[
+                {
+                    "type": "send_email",
+                    "to": "email_address",
+                    "subject": "Hi {{ name }}",
+                    "body": "<p>Hello {{ first_name }}</p>",
+                }
+            ],
+        )
+        lead = Lead.objects.create(
+            first_name="Mail", last_name="Target", email_address="target@example.com"
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["target@example.com"])
+        self.assertEqual(mail.outbox[0].subject, "Hi Mail Target")
+        self.assertTrue(
+            Note.objects.filter(parent_id=lead.pk, type=Note.Type.EMAIL).exists()
+        )
+
+    def test_send_email_to_literal_address(self):
+        Workflow.objects.create(
+            name="Notify ops",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[
+                {
+                    "type": "send_email",
+                    "to": "ops@example.com",
+                    "subject": "New lead",
+                }
+            ],
+        )
+        Lead.objects.create(first_name="No", last_name="Address")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["ops@example.com"])
+
+    def test_send_email_without_recipient_is_ignored(self):
+        Workflow.objects.create(
+            name="No recipient",
+            entity_type="Lead",
+            event=Workflow.Event.CREATE,
+            actions=[{"type": "send_email", "subject": "x"}],
+        )
+        Lead.objects.create(first_name="No", last_name="Email")
+        self.assertEqual(len(mail.outbox), 0)

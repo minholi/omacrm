@@ -65,6 +65,7 @@ class Workflow(models.Model):
         SET_FIELD = "set_field", _("Set field")
         NOTIFY = "notify", _("Notify assigned user")
         CREATE_RECORD = "create_record", _("Create record")
+        SEND_EMAIL = "send_email", _("Send email")
 
     name = models.CharField(max_length=255, unique=True)
     entity_type = models.CharField(max_length=64, db_index=True)

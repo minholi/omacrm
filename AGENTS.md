@@ -151,13 +151,16 @@ src/omacrm/
   and the `core.process_webhooks` job delivers them (HMAC signature, retries).
 - **Customization**: `Formula` scripts run before/after save through a
   sandboxed AST interpreter (`core/services/formula.py`) and can assign model
-  fields or custom fields (`custom.<name> = value`); `Workflow` rules
-  evaluate a condition and run actions (`core/services/workflows.py`), wired
-  in `core/services/hooks.py`. Entity admins also provide a **Mass update**
-  action (enum/bool fields + assigned user) through an intermediate page
-  (`MassUpdateView`). `/admin/layout-editor/` edits `Layout` rows (list
-  columns + detail sections); `/admin/access/role/<id>/` edits a role's scope
-  and field-level access matrix. Caches invalidate on model saves.
+  fields or custom fields (`custom.<name> = value`), with string/date helpers
+  (`lower`, `upper`, `substring`, `replace`, `coalesce`, `parse_date`,
+  `date_format`, ...); `Workflow` rules evaluate a condition and run actions
+  (`set_field`, `notify`, `create_record`, templated `send_email`) in
+  `core/services/workflows.py`, wired in `core/services/hooks.py`. Entity
+  admins also provide a **Mass update** action (enum/bool fields + assigned
+  user) through an intermediate page (`MassUpdateView`). `/admin/layout-editor/`
+  edits `Layout` rows (list columns + detail sections);
+  `/admin/access/role/<id>/` edits a role's scope and field-level access
+  matrix. Caches invalidate on model saves.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.

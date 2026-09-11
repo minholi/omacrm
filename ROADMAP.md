@@ -5,7 +5,8 @@
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
 _Last updated: 2026-09-11 — Phases A–F complete plus the Entity Manager,
-notifications, mass update and the customer portal (134 tests passing). See the
+notifications, mass update, the customer portal and automation extras
+(138 tests passing). See the
 [deferred backlog](#deferred-backlog-not-yet-implemented) for known gaps._
 
 ## Vision
@@ -147,10 +148,13 @@ updates the sidebar badge live and shows toasts. The
 notifications — controlled by the `notification_email_enabled` constance
 setting and the per-user `Preferences.notifications_config.email` flag.
 
-**Delivered — mass update + formula custom fields:** entity admins expose a
+**Delivered — mass update + automation extras:** entity admins expose a
 "Mass update selected records" action (enum/bool fields and assigned user,
 ACL-checked, session-backed selection) with an intermediate page; formulas can
-now write custom fields with `custom.<name> = value`.
+write custom fields with `custom.<name> = value` and use string/date helpers
+(`lower`, `upper`, `substring`, `replace`, `contains`, `coalesce`,
+`parse_date`, `date_format`); workflows gained a `send_email` action
+(record field or literal recipient, templated subject/body, stream note).
 
 **Delivered — customer portal (MVP):** `PortalRole` + `User.portal_roles`
 and `Contact.portal_user`; portal users (``type=portal``) sign in at
@@ -163,7 +167,7 @@ denied by the main admin/API ACL by design.
 - **Real-time stream/record updates** (notifications are done over SSE).
 - **IMAP fetch/import** and **phone/address utilities** (Espo parity).
 - **Layout Manager drag-and-drop** (current editor is form/JSON based).
-- Extra workflow actions (send email, webhook) and more formula functions.
+- Extra workflow actions (call webhook, update related records) and more formula functions.
 - Optional: stream reactions, saved filter presets.
 
 The [deferred backlog](#deferred-backlog-not-yet-implemented) below is the full,
@@ -213,7 +217,7 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Drag-and-drop layout manager (tabs, add/remove fieldsets) | F | Current editor handles list columns + detail sections JSON. Target: Phase G. |
-| Workflow actions: send email, call webhook, update related records | F | Rules currently support `set_field`, `notify`, `create_record`. Target: backlog. |
+| Workflow actions: call webhook, update related records | F | Rules support `set_field`, `notify`, `create_record` and `send_email`. Target: backlog. |
 | Real-time stream/record updates | F | Notifications already stream over SSE; stream/record updates do not. Target: Phase G. |
 | Portal beyond Cases/KB (documents, mass-update of profile) | G | Current portal exposes own cases + published KB only. Target: backlog. |
 
@@ -222,7 +226,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (134 tests)
+uv run python src/omacrm/manage.py test      # must be green (138 tests)
 uv run python src/omacrm/manage.py seed_demo # admin/admin12345, demo/demo12345
 uv run python src/omacrm/manage.py runserver
 ```
@@ -238,6 +242,9 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-11** — Automation extras: workflow `send_email` action and
+  formula string/date helpers (138 tests).
 
 - **2026-09-11** — Customer portal MVP: portal users/roles, own-case list,
   create and detail, published knowledge base, portal ACL (134 tests).

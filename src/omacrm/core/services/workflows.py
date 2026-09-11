@@ -36,6 +36,50 @@ def _run_action(action: dict, instance) -> None:
                 related=instance,
             )
 
+    elif action_type == "send_email":
+        from django.conf import settings as django_settings
+        from django.core.mail import send_mail
+        from django.template import Context, Template
+        from django.utils.html import strip_tags
+
+        from omacrm.core.models import Note
+
+        recipient = action.get("to") or "email_address"
+        if hasattr(instance, recipient):
+            recipient = getattr(instance, recipient)
+        if not recipient:
+            raise ValueError("No recipient email address")
+
+        context = Context(
+            {
+                "record": instance,
+                "object": instance,
+                **{
+                    field.name: getattr(instance, field.attname, "")
+                    for field in instance._meta.fields
+                },
+            }
+        )
+        subject = Template(
+            action.get("subject") or "Workflow notification"
+        ).render(context)
+        body = Template(action.get("body") or "").render(context)
+
+        send_mail(
+            subject,
+            strip_tags(body),
+            django_settings.DEFAULT_FROM_EMAIL,
+            [recipient],
+            html_message=body or None,
+            fail_silently=False,
+        )
+        Note.objects.create(
+            type=Note.Type.EMAIL,
+            parent=instance,
+            post=subject,
+            data={"to": recipient, "workflow": True},
+        )
+
     elif action_type == "create_record":
         entity_type = action.get("entity_type")
         if not entity_type or not registry.has(entity_type):
