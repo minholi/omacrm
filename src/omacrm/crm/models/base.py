@@ -214,6 +214,10 @@ class Event(BaseEntity):
     duration = models.PositiveIntegerField(null=True, blank=True, help_text="Seconds")
     reminders = models.JSONField(default=list, blank=True)
     description = models.TextField(blank=True, default="")
+    recurrence_rule = models.JSONField(default=dict, blank=True)
+    recurrence_uid = models.CharField(
+        max_length=36, blank=True, default="", db_index=True
+    )
 
     parent_type = models.ForeignKey(
         ContentType, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
@@ -227,3 +231,10 @@ class Event(BaseEntity):
     class Meta:
         abstract = True
         ordering = ["-date_start", "name"]
+
+    def clean(self):
+        super().clean()
+        if self.recurrence_rule:
+            from omacrm.crm.services.recurrence import validate_rule
+
+            validate_rule(self.recurrence_rule)

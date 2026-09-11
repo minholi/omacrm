@@ -196,3 +196,29 @@ def contact_phone_number(instance, **kwargs):
 @hooks.register("Lead", "before_save")
 def lead_phone_number(instance, **kwargs):
     _normalize_phone_number(instance)
+
+
+def _sync_event_recurrence(instance) -> None:
+    from omacrm.crm.services.recurrence import sync_occurrences
+
+    if getattr(instance, "_recurrence_syncing", False):
+        return
+
+    instance._recurrence_syncing = True
+    try:
+        if getattr(instance, "deleted", False):
+            sync_occurrences(instance, remove_only=True)
+        elif instance.recurrence_rule:
+            sync_occurrences(instance)
+    finally:
+        instance._recurrence_syncing = False
+
+
+@hooks.register("Call", "after_save")
+def call_recurrence(instance, **kwargs):
+    _sync_event_recurrence(instance)
+
+
+@hooks.register("Meeting", "after_save")
+def meeting_recurrence(instance, **kwargs):
+    _sync_event_recurrence(instance)

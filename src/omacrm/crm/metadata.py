@@ -244,6 +244,8 @@ registry.register(
             "direction": FieldDef("direction", "enum", _("Direction"), options=list(CallDirection.choices), model_field="direction"),
             "account": FieldDef("account", "link", _("Account"), model_field="account"),
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
+            "recurrence_rule": FieldDef("recurrence_rule", "json", _("Recurrence Rule"), model_field="recurrence_rule"),
+            "recurrence_uid": FieldDef("recurrence_uid", "varchar", _("Series"), read_only=True, model_field="recurrence_uid"),
             **AUDIT_FIELDS,
         },
         ordering=["-date_start"],
@@ -252,6 +254,7 @@ registry.register(
         list_filter=["status", "direction", "assigned_user"],
         detail_layout=[
             {"title": _("Overview"), "fields": ["name", "status", "date_start", "date_end", "duration", "direction", "account", "description"]},
+            {"title": _("Recurrence"), "fields": ["recurrence_rule", "recurrence_uid"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,
@@ -276,6 +279,8 @@ registry.register(
             "external_service": FieldDef("external_service", "varchar", _("External Service"), model_field="external_service"),
             "account": FieldDef("account", "link", _("Account"), model_field="account"),
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
+            "recurrence_rule": FieldDef("recurrence_rule", "json", _("Recurrence Rule"), model_field="recurrence_rule"),
+            "recurrence_uid": FieldDef("recurrence_uid", "varchar", _("Series"), read_only=True, model_field="recurrence_uid"),
             **AUDIT_FIELDS,
         },
         ordering=["-date_start"],
@@ -284,6 +289,7 @@ registry.register(
         list_filter=["status", "is_all_day", "assigned_user"],
         detail_layout=[
             {"title": _("Overview"), "fields": ["name", "status", "date_start", "date_end", "duration", "is_all_day", "join_url", "external_service", "account", "description"]},
+            {"title": _("Recurrence"), "fields": ["recurrence_rule", "recurrence_uid"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,
