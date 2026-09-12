@@ -352,34 +352,50 @@ Not from the EspoCRM survey (its open-source core has **no** workflow at all; th
 lives in the paid Advanced Pack). Motivated instead by Kestra/N8N/Mautic-style
 automation.
 
-**Scope decision (2026-09-12):** the project builds what belongs to a CRM —
-automation driven by the data the CRM itself holds. The capabilities that *define*
-a marketing platform stay with the dedicated tool (Mautic), which the project
-integrates with rather than reimplements. So lead scoring, behaviour-based
-segments, landing pages, website tracking, SMS/social and A/B tests are **out of
-scope**, and only the workflow capabilities below are wanted.
+**Scope decision (2026-09-12, revised):** the test is not "does Mautic do this
+too?" but "does this CRM need it to work on its own?". The CRM already owns email
+templates (with its own code editor), mass sending with scheduling and a queue,
+per-recipient open/click/bounce tracking, campaigns, target lists, lead capture
+and opt-out — so it must be able to *act* on that data without a second system.
+Integration with Mautic stays available for installs that already run it, but it
+is not a dependency: two-way contact sync has no clean owner for email, opt-out
+or "do not contact", and getting that wrong means mailing someone who opted out.
+
+The reason to build it here is not symmetry with Mautic. It is that this side also
+holds what Mautic cannot see — the deal stage, the open case, the history — so a
+rule like "opened the proposal twice *and* the deal has been idle for ten days" is
+something only the CRM can run at all.
 
 Today `Workflow` is trigger (`create`/`update`/`delete`) → condition → a
 **linear** list of actions. There are no steps, waits, branching or execution
 history, and the trigger is always a record write — never an engagement event.
 
-**In scope**
+**In scope — the engine, plus the automation this data enables**
 
 | # | Item | Notes |
 | --- | --- | --- |
 | W1 | Steps with waits | "wait 3 days", "wait until a date", "wait until a condition" — needs a scheduler |
 | W2 | Branching / decision steps | route by condition instead of running one linear list |
-| W3 | Engagement triggers — only for what the CRM already records | email opened / clicked / bounced on our own campaigns. The data exists today (`Campaign` counters and per-recipient tracking); only the trigger is missing |
+| W3 | Engagement triggers | email opened / clicked / bounced, per recipient, on our own campaigns — the data already exists (`Campaign` counters and per-recipient tracking); only the trigger is missing |
 | W4 | Execution history | per-run state, logs and retry; today a failed action is simply lost |
 | W5 | Target lists that recompute | `TargetList` holds a static member list today; derive its members from a saved filter, reusing the existing filter infrastructure |
+| W6 | Scoring | explainable and rule-based (field values plus engagement) so segments and routing can use it — not a black box |
+| W7 | Email A/B tests | the send is ours (target list plus counters), so splitting and comparing is cheap |
+| W8 | Page tracking | a tracked endpoint plus a small JS snippet, so "came back to the site" becomes an event. Needs a privacy decision on cookies and consent |
+| W9 | SMS | already Tier 3 of the parity backlog; a notification channel for the CRM as much as for marketing |
 
-**Out of scope — belongs to the marketing platform and reached through the
-integration below:** W6 lead scoring by engagement, behaviour-based dynamic
-segments, landing-page builder, website/page tracking, SMS and social channels,
-A/B tests. W7 (hosted form pages) stays in the deferred backlog as a capture
-feature of this project.
+**Deliberately left open — a different product, with a standing maintenance
+commitment, to be decided on its own merits:** a landing-page builder and social
+publishing. Hosted form pages (capture) stay in the deferred backlog.
 
-Suggested order: **W1 + W2 + W4** (the engine itself), then **W3**, then **W5**.
+Cost note: the expensive part of these is not the first version but keeping them
+alive afterwards. Every external channel — SMS providers, social APIs that change
+policy, tracking rules under cookie and consent law — is a permanent obligation.
+That argues for ordering by maintenance cost, not for avoiding the work.
+
+Suggested order: **W1 + W2 + W3 + W4** first — the engine together with the
+engagement triggers is what actually removes the dependency — then **W5 + W6**,
+then **W7 + W8**.
 
 ### Integrations (desired, not scheduled)
 
@@ -389,7 +405,7 @@ new front-end dependency.
 
 | Platform | Owns | Notes |
 | --- | --- | --- |
-| **Mautic** | marketing automation | sync contacts and segments, enrol contacts in campaigns, and feed engagement events back as workflow triggers. Journeys, scoring, landing pages and multi-channel stay on its side |
+| **Mautic** | marketing automation, for installs that already run it | keep contacts and segments in step and hand campaigns over. Optional by design — the CRM must not need it to send, track or automate (see the scope decision above), because two-way contact sync has no clean owner for email, opt-out or "do not contact" |
 | **Chatwoot** | conversations / support inbox | sync contacts and conversations so a case carries its conversation history. A WhatsApp campaign script already drives Chatwoot for the Artmed Experience event, so there is practical ground here |
 
 ## Resume checklist
