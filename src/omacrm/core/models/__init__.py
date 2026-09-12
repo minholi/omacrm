@@ -1,5 +1,5 @@
 from omacrm.core.models.base import AuditMixin, BaseEntity, CustomDataMixin
-from omacrm.core.models.automation import Formula, Workflow
+from omacrm.core.models.automation import DynamicLogic, Formula, Workflow
 from omacrm.core.models.collab import (
     Attachment,
     Note,
@@ -35,6 +35,7 @@ __all__ = [
     "CurrencyRate",
     "CustomLink",
     "DynamicRecord",
+    "DynamicLogic",
     "RecordLink",
     "Email",
     "EmailAccount",

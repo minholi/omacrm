@@ -15,11 +15,12 @@ class CoreConfig(AppConfig):
             CustomEntity,
             CustomField,
             CustomLink,
+            DynamicLogic,
             Formula,
             Layout,
             Workflow,
         )
-        from omacrm.core.services import custom_entities, formula
+        from omacrm.core.services import custom_entities, dynamic_logic, formula
         from omacrm.core.services.hooks import hooks
 
         def _invalidate_metadata(sender, instance, **kwargs):
@@ -57,6 +58,22 @@ class CoreConfig(AppConfig):
                 dispatch_uid=f"omacrm.formula.invalidate.delete.{label}",
                 weak=False,
             )
+
+        def _invalidate_dynamic_logic(sender, instance, **kwargs):
+            dynamic_logic.invalidate_dynamic_logic_cache()
+
+        post_save.connect(
+            _invalidate_dynamic_logic,
+            sender=DynamicLogic,
+            dispatch_uid="omacrm.dynamic_logic.invalidate.save",
+            weak=False,
+        )
+        post_delete.connect(
+            _invalidate_dynamic_logic,
+            sender=DynamicLogic,
+            dispatch_uid="omacrm.dynamic_logic.invalidate.delete",
+            weak=False,
+        )
 
         def _sync_custom_entity(sender, instance, created=False, **kwargs):
             custom_entities.sync(instance, created=created)

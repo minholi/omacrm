@@ -53,6 +53,71 @@ class Formula(models.Model):
                 raise ValidationError({"script": str(exc)}) from exc
 
 
+class DynamicLogic(models.Model):
+    """Condition-driven field state (visible / required / read-only).
+
+    The condition tree mirrors EspoCRM's vocabulary: a node is either a leaf
+    (``{"type": "equals", "attribute": "status", "value": "Open"}``) or a
+    group (``and``/``or`` with a list ``value``, ``not`` with a single child).
+    """
+
+    class Action(models.TextChoices):
+        VISIBLE = "visible", _("Visible")
+        REQUIRED = "required", _("Required")
+        READONLY = "readonly", _("Read-only")
+
+    entity_type = models.CharField(max_length=64, db_index=True)
+    field_name = models.CharField(max_length=64)
+    action = models.CharField(max_length=20, choices=Action.choices)
+    condition = models.JSONField(
+        default=dict,
+        help_text=_(
+            "Condition tree, e.g. "
+            '{"type": "equals", "attribute": "status", "value": "Open"}. '
+            "Group nodes: "
+            '{"type": "and", "value": [node, node]}, '
+            '{"type": "or", "value": [node, node]}, '
+            '{"type": "not", "value": node}. '
+            "Operators: equals, notEquals, isTrue, isFalse, isEmpty, "
+            "isNotEmpty, contains, notContains, startsWith, endsWith, "
+            "matches (regex), has, notHas, in, notIn, greaterThan, lessThan, "
+            "greaterThanOrEquals, lessThanOrEquals, isToday, inFuture, inPast."
+        )
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["entity_type", "field_name", "action", "id"]
+        verbose_name_plural = "dynamic logic rules"
+
+    def __str__(self):
+        return f"{self.entity_type}.{self.field_name} ({self.action})"
+
+    def clean(self):
+        super().clean()
+        from omacrm.core.metadata.registry import registry
+        from omacrm.core.services.dynamic_logic import condition_errors
+
+        errors = {}
+        if self.entity_type and not registry.has(self.entity_type):
+            errors["entity_type"] = _("Unknown entity type.")
+        elif self.entity_type:
+            field_names = set(registry.fields(self.entity_type))
+            field_names.update(registry.link_fields(self.entity_type))
+            if self.field_name and self.field_name not in field_names:
+                errors["field_name"] = _("Unknown field for this entity.")
+        if not isinstance(self.condition, dict):
+            errors["condition"] = _("Condition must be a JSON object.")
+        else:
+            problems = condition_errors(self.condition)
+            if problems:
+                errors["condition"] = " ".join(problems)
+        if errors:
+            raise ValidationError(errors)
+
+
 class Workflow(models.Model):
     """Trigger → condition → actions automation rule."""
 

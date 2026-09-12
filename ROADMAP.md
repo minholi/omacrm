@@ -7,8 +7,8 @@
 _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
-email template code editor with MJML source).
-408 tests passing; see the
+email template code editor with MJML source, dynamic logic server side).
+441 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -305,7 +305,7 @@ not treated as gaps.
 
 | # | Item | EspoCRM source | Notes |
 | --- | --- | --- | --- |
-| 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | Fits `FieldDef`; the highest-value customisation gap |
+| 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | **✅ delivered 2026-09-12** (rules + server-side enforcement + JSON for the follow-up client-side show/hide) |
 | 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | Stream and notifications already exist |
 | 3 | Persisted kanban order | `KanbanOrder` | The board exists; only the ordering is not stored |
 | 4 | Captcha on public forms | `Tools/Captcha` | Lead capture is public and currently unprotected |
@@ -342,9 +342,9 @@ not treated as gaps.
 | 25 | External accounts hub | `Tools/ExternalAccount` |
 | 26 | Pluggable file storage (S3) | `Core/FileStorage` |
 
-Execution order agreed on 2026-09-12: work **Tier 1 top-down**, starting with
-**Dynamic logic**, then **follow/favourites**, then **persisted kanban order**.
-Tiers 2 and 3 are recorded here but not scheduled.
+Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
+(#1) is delivered; the next items are **follow/favourites**, then
+**persisted kanban order**. Tiers 2 and 3 are recorded here but not scheduled.
 
 ## Resume checklist
 
@@ -367,6 +367,18 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Dynamic logic (Tier 1 #1): `DynamicLogic` rules
+  (`core/services/dynamic_logic.py`, managed under Customization → Dynamic
+  Logic) make a field visible/required/read-only while a JSON condition over
+  other field values holds. The pure evaluator mirrors EspoCRM's vocabulary
+  (nested `and`/`or`/`not`, equality, string, collection, number and date
+  operators) with type-aware comparison and never raises on a malformed
+  condition. `MetadataModelAdmin` applies the states against the submitted
+  values — hidden/read-only values are ignored, a conditionally required
+  field only blocks while its condition holds — and exposes the active rules
+  plus metadata defaults to the change form as `json_script`
+  `dynamic-logic-config` for the follow-up client-side show/hide (441 tests).
 
 - **2026-09-12** — Email template code editor: the GrapesJS visual designer
   and its assets/endpoints were removed; `EmailTemplate.source` is now the

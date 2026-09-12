@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
+from unfold.widgets import UnfoldAdminTextareaWidget
 
-from omacrm.core.models import Formula, Workflow
+from omacrm.core.models import DynamicLogic, Formula, Workflow
 
 
 @admin.register(Formula)
@@ -29,6 +31,28 @@ class FormulaAdmin(ModelAdmin):
                 ),
             },
         ),
+        (_("System"), {"fields": ("created_at", "modified_at")}),
+    )
+
+
+@admin.register(DynamicLogic)
+class DynamicLogicAdmin(ModelAdmin):
+    formfield_overrides = {
+        models.JSONField: {
+            "widget": UnfoldAdminTextareaWidget(attrs={"rows": 10})
+        }
+    }
+    list_display = ("entity_type", "field_name", "action", "is_active")
+    list_filter = ("action", "entity_type", "is_active")
+    search_fields = ("entity_type", "field_name")
+    ordering = ("entity_type", "field_name", "action")
+    readonly_fields = ("created_at", "modified_at")
+    fieldsets = (
+        (
+            None,
+            {"fields": ("entity_type", "field_name", "action", "is_active")},
+        ),
+        (_("Condition"), {"fields": ("condition",)}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
 

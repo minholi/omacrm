@@ -159,6 +159,11 @@ def sidebar_navigation(request=None):
                 ),
                 _item(_("Formulas"), "function", "admin:core_formula_changelist"),
                 _item(
+                    _("Dynamic Logic"),
+                    "visibility",
+                    "admin:core_dynamiclogic_changelist",
+                ),
+                _item(
                     _("Workflows"), "account_tree", "admin:core_workflow_changelist"
                 ),
             ],

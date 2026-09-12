@@ -258,6 +258,22 @@ src/omacrm/
   entries (`UNFOLD["COMMAND"]["search_callback"]` →
   `core/services/command_palette.py`): static commands, permission-filtered
   entity shortcuts (list/new) and the user's saved filters.
+- **Dynamic logic** (`core/models/automation.py::DynamicLogic`,
+  `core/services/dynamic_logic.py`): per-entity rules make a field `visible`,
+  `required` or `readonly` while a JSON condition over other field values
+  holds. Conditions use EspoCRM's vocabulary — nested `and`/`or`/`not` groups
+  plus leaf operators (`equals`, `notEquals`, `isTrue`, `isFalse`, `isEmpty`,
+  `isNotEmpty`, `contains`, `notContains`, `startsWith`, `endsWith`,
+  `matches`, `has`, `notHas`, `in`, `notIn`, `greaterThan`, `lessThan`,
+  `greaterThanOrEquals`, `lessThanOrEquals`, `isToday`, `inFuture`, `inPast`)
+  with type-aware comparison. `evaluate` is pure and never raises (a malformed
+  rule does not match); `field_states` merges metadata defaults with the
+  active rules and `MetadataModelAdmin` applies them server-side against the
+  submitted values, so hidden/read-only values are ignored and conditional
+  `required` only fires while its condition holds. The change form carries
+  the rules and defaults as `json_script` `dynamic-logic-config` for the
+  follow-up client-side show/hide. Manage rules under Customization → Dynamic
+  Logic.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.

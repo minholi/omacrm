@@ -110,6 +110,7 @@ class MetadataModelAdmin(
     actions_row = ("restore_record",)
 
     list_before_template = "admin/saved_filters_before.html"
+    change_form_before_template = "admin/core/dynamic_logic_config.html"
 
     # -- soft delete --------------------------------------------------------
 
@@ -457,6 +458,19 @@ class MetadataModelAdmin(
 
     # -- dynamic form (custom fields + duplicate checks) --------------------
 
+    def render_change_form(
+        self, request, context, add=False, change=False, form_url="", obj=None
+    ):
+        if self.entity_type:
+            from omacrm.core.services import dynamic_logic
+
+            context["dynamic_logic_config"] = dynamic_logic.frontend_config(
+                self.entity_type
+            )
+        return super().render_change_form(
+            request, context, add=add, change=change, form_url=form_url, obj=obj
+        )
+
     def get_form(self, request, obj=None, change=False, **kwargs):
         custom_fields = registry.custom_fields(self.entity_type)
         link_fields = list(registry.link_fields(self.entity_type).values())
@@ -471,10 +485,25 @@ class MetadataModelAdmin(
         base_form = super().get_form(request, obj, change=change, **kwargs)
         entity = self.metadata_entity()
         entity_type = self.entity_type
+        custom_map = {field_def.name: field_def for field_def in custom_fields}
+        link_map = {field_def.name: field_def for field_def in link_fields}
+        metadata_fields = dict(registry.fields(self.entity_type))
+        metadata_fields.update(link_map)
+        name_map = {
+            field_def.name: form_field_name(field_def) for field_def in custom_fields
+        }
+        name_map.update(
+            {
+                field_def.name: link_form_field_name(field_def)
+                for field_def in link_fields
+            }
+        )
 
         class _MetadataForm(base_form):
             def __init__(self, *args, **form_kwargs):
                 super().__init__(*args, **form_kwargs)
+                self._dynamic_hidden: set[str] = set()
+                self._dynamic_inactive: set[str] = set()
                 instance = getattr(self, "instance", None)
                 has_instance = instance is not None and instance.pk is not None
                 for field_def in custom_fields:
@@ -520,8 +549,80 @@ class MetadataModelAdmin(
                     elif field_def.type == "linkMultiple":
                         self.fields[name].initial = []
 
+            def _dynamic_values(self):
+                values = {}
+                instance = getattr(self, "instance", None)
+                has_instance = instance is not None and instance.pk is not None
+                for name in metadata_fields:
+                    form_name = name_map.get(name, name)
+                    field = self.fields.get(form_name)
+                    if field is None:
+                        continue
+                    if self.is_bound:
+                        raw = field.widget.value_from_datadict(
+                            self.data, self.files, form_name
+                        )
+                        try:
+                            values[name] = field.to_python(raw)
+                        except Exception:  # noqa: BLE001 - keep the raw value
+                            values[name] = raw
+                    elif has_instance:
+                        if name in custom_map:
+                            values[name] = (instance.custom_data or {}).get(name)
+                        elif name in link_map:
+                            continue
+                        else:
+                            values[name] = getattr(instance, name, None)
+                return values
+
+            def _apply_dynamic_logic(self):
+                if not entity_type:
+                    return
+                from omacrm.core.services import dynamic_logic
+
+                rules = dynamic_logic.active_rules(entity_type)
+                if not rules:
+                    return
+                actions_by_field: dict[str, set] = {}
+                for rule in rules:
+                    actions_by_field.setdefault(rule.field_name, set()).add(
+                        rule.action
+                    )
+                states = dynamic_logic.field_states(
+                    entity_type, self._dynamic_values()
+                )
+                for name, actions in actions_by_field.items():
+                    state = states.get(name)
+                    field = self.fields.get(name_map.get(name, name))
+                    if state is None or field is None:
+                        continue
+                    if "visible" in actions and not state["visible"]:
+                        field.required = False
+                        field.disabled = True
+                        self._dynamic_hidden.add(name)
+                        self._dynamic_inactive.add(name)
+                    if "required" in actions:
+                        field.required = state["required"] and state["visible"]
+                    if "readonly" in actions and state["visible"]:
+                        field.disabled = field.disabled or state["readonly"]
+                        if state["readonly"]:
+                            self._dynamic_inactive.add(name)
+
+            def full_clean(self):
+                self._apply_dynamic_logic()
+                return super().full_clean()
+
+            def _get_validation_exclusions(self):
+                exclude = super()._get_validation_exclusions()
+                exclude.update(self._dynamic_hidden)
+                return exclude
+
             def clean(self):
                 cleaned = super().clean()
+                for name in self._dynamic_inactive:
+                    form_name = name_map.get(name, name)
+                    if cleaned.get(form_name) is None:
+                        cleaned.pop(form_name, None)
                 data = dict(getattr(self.instance, "custom_data", {}) or {})
                 for field_def in custom_fields:
                     name = form_field_name(field_def)
