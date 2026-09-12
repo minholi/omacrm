@@ -13,6 +13,7 @@ from constance.test import override_config
 from PIL import Image
 
 from omacrm.core.models import User
+from omacrm.crm.admin import EmailTemplateAdmin
 from omacrm.crm.models import Contact, EmailTemplate
 from omacrm.crm.services.email import (
     MERGE_TAGS,
@@ -251,6 +252,78 @@ class EmailDesignerViewTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["qa@example.com"])
         self.assertIn("Hello Jane Mail", mail.outbox[0].body)
+
+
+class EmailTemplateAdminReadOnlyTests(TestCase):
+    original_body = "<p>Original body</p>"
+    original_source = "<p>Original source</p>"
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            "template-admin", "template@example.com", "pw"
+        )
+        self.client.force_login(self.admin)
+        self.template = EmailTemplate.objects.create(
+            name="Locked",
+            subject="Original subject",
+            body=self.original_body,
+            source=self.original_source,
+            source_format="html",
+            design={"pages": [{"id": "original"}]},
+        )
+        self.template.refresh_from_db()
+        self.change_url = reverse(
+            "admin:crm_emailtemplate_change", args=[self.template.pk]
+        )
+
+    def test_change_form_renders_body_and_design_read_only(self):
+        response = self.client.get(self.change_url)
+        self.assertEqual(response.status_code, 200)
+        for name in ("body", "design", "source", "source_format"):
+            self.assertNotContains(response, f'name="{name}"')
+        self.assertContains(response, "Original source")
+        self.assertContains(response, "pages")
+
+    def test_tampered_compiled_values_are_not_saved(self):
+        stored_body = self.template.body
+        stored_source = self.template.source
+        response = self.client.post(
+            self.change_url,
+            {
+                "name": self.template.name,
+                "subject": self.template.subject,
+                "is_active": "on",
+                "body": "<p>Tampered body</p>",
+                "design": '{"pages": ["tampered"]}',
+                "source": "tampered source",
+                "source_format": "mjml",
+                "_save": "Save",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.body, stored_body)
+        self.assertEqual(self.template.source, stored_source)
+        self.assertEqual(self.template.source_format, "html")
+        self.assertEqual(self.template.design, {"pages": [{"id": "original"}]})
+
+    def test_editable_fields_persist(self):
+        response = self.client.post(
+            self.change_url,
+            {
+                "name": "Renamed",
+                "subject": "New subject",
+                "_save": "Save",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.name, "Renamed")
+        self.assertEqual(self.template.subject, "New subject")
+        self.assertFalse(self.template.is_active)
+
+    def test_design_action_still_registered(self):
+        self.assertIn("open_designer", EmailTemplateAdmin.actions_detail)
 
 
 class EmailAssetUploadTests(TestCase):

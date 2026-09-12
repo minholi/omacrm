@@ -637,17 +637,24 @@ class EmailTemplateAdmin(ModelAdmin):
     list_display = ("name", "subject", "is_active", "modified_at")
     list_filter = ("is_active",)
     search_fields = ("name", "subject")
-    readonly_fields = ("created_at", "modified_at")
+    readonly_fields = (
+        "body",
+        "design",
+        "source",
+        "source_format",
+        "created_at",
+        "modified_at",
+    )
     actions_detail = ("open_designer",)
     fieldsets = (
         (None, {"fields": ("name", "subject", "is_active")}),
         (
             _("Body"),
             {
-                "fields": ("body",),
+                "fields": ("body", "source", "source_format", "design"),
                 "description": _(
-                    "Prefer the Design action for rich emails; the raw HTML field "
-                    "is kept for advanced or legacy templates."
+                    "Read-only. Edit the email with the Design action above; "
+                    "source code is filled by the designer or by API/scripts."
                 ),
             },
         ),
