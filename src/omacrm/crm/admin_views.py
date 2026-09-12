@@ -138,8 +138,12 @@ def email_template_design_save(request, pk):
     body, _text = prepare_email_html(raw)
 
     email_template.body = body
+    email_template.source = body
+    email_template.source_format = "html"
     email_template.design = design
-    email_template.save(update_fields=["body", "design", "modified_at"])
+    email_template.save(
+        update_fields=["body", "source", "source_format", "design", "modified_at"]
+    )
     return JsonResponse({"ok": True})
 
 

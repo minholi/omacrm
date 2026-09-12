@@ -1,11 +1,14 @@
 import re
+from dataclasses import dataclass, field
 from html.parser import HTMLParser
 
+import mrml
 from constance import config
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, Template
 from django.utils.html import strip_tags
+from django.utils.translation import gettext as _
 from premailer import Premailer
 
 from omacrm.core.models import Note
@@ -25,6 +28,95 @@ MERGE_TAGS = [
 _HTML_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 _RELATIVE_ATTR = re.compile(r"""(?P<attr>\b(?:src|href)\s*=\s*["'])/(?!/)""")
 _RELATIVE_URL_FUNC = re.compile(r"""(?P<prefix>url\(\s*["']?)/(?!/)""")
+_MJML_TAG_NAME = re.compile(r"<\s*/?\s*(mj-[a-z0-9-]+)", re.IGNORECASE)
+
+MJML_TAGS = frozenset(
+    {
+        "mjml",
+        "mj-head",
+        "mj-body",
+        "mj-title",
+        "mj-preview",
+        "mj-style",
+        "mj-attributes",
+        "mj-breakpoint",
+        "mj-font",
+        "mj-html-attributes",
+        "mj-include",
+        "mj-raw",
+        "mj-section",
+        "mj-column",
+        "mj-group",
+        "mj-wrapper",
+        "mj-text",
+        "mj-image",
+        "mj-button",
+        "mj-divider",
+        "mj-spacer",
+        "mj-table",
+        "mj-social",
+        "mj-social-element",
+        "mj-navbar",
+        "mj-navbar-link",
+        "mj-hero",
+        "mj-carousel",
+        "mj-carousel-image",
+        "mj-accordion",
+        "mj-accordion-element",
+        "mj-accordion-title",
+        "mj-accordion-text",
+    }
+)
+
+
+@dataclass
+class CompileResult:
+    html: str = ""
+    warnings: list[str] = field(default_factory=list)
+    error: str | None = None
+
+
+def _compile_mjml(rendered_source: str) -> CompileResult:
+    """Compile already-rendered MJML markup, collecting errors and warnings."""
+
+    try:
+        output = mrml.to_html(rendered_source)
+    except (OSError, ValueError) as exc:
+        return CompileResult(error=_("Invalid MJML: %(error)s") % {"error": exc})
+
+    warnings = [str(warning) for warning in output.warnings]
+    unknown = sorted(
+        {tag.lower() for tag in _MJML_TAG_NAME.findall(rendered_source)} - MJML_TAGS
+    )
+    if unknown:
+        return CompileResult(
+            html=output.content,
+            warnings=warnings,
+            error=_("Unknown MJML tag(s): %(tags)s") % {"tags": ", ".join(unknown)},
+        )
+    return CompileResult(html=output.content, warnings=warnings)
+
+
+def compile_email_source(source, source_format) -> CompileResult:
+    """Compile an email template source without ever raising.
+
+    MJML sources are rendered as Django templates first, compiled through the
+    MJML engine and then scanned for unknown component tags. HTML sources are
+    returned untouched; CSS inlining happens later in ``prepare_email_html``.
+    """
+
+    source = source or ""
+    if source_format != "mjml":
+        return CompileResult(html=source)
+
+    try:
+        rendered = Template(source).render(Context({}))
+    except Exception as exc:  # noqa: BLE001 - errors are reported, never raised
+        return CompileResult(
+            error=_("Invalid Django template: %(error)s") % {"error": exc}
+        )
+
+    return _compile_mjml(rendered)
 
 
 def render_email_template(template, record):
@@ -44,7 +136,14 @@ def render_email_template(template, record):
     )
 
     subject = Template(template.subject).render(context)
-    body = Template(template.body).render(context)
+
+    source = template.source or template.body
+    if template.source and template.source_format == "mjml":
+        rendered = Template(source).render(context)
+        result = _compile_mjml(rendered)
+        body = result.html or template.body
+    else:
+        body = Template(source).render(context)
     return subject, body
 
 
