@@ -350,30 +350,47 @@ Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
 
 Not from the EspoCRM survey (its open-source core has **no** workflow at all; that
 lives in the paid Advanced Pack). Motivated instead by Kestra/N8N/Mautic-style
-automation, and by what a journey needs to be worth building.
+automation.
+
+**Scope decision (2026-09-12):** the project builds what belongs to a CRM —
+automation driven by the data the CRM itself holds. The capabilities that *define*
+a marketing platform stay with the dedicated tool (Mautic), which the project
+integrates with rather than reimplements. So lead scoring, behaviour-based
+segments, landing pages, website tracking, SMS/social and A/B tests are **out of
+scope**, and only the workflow capabilities below are wanted.
 
 Today `Workflow` is trigger (`create`/`update`/`delete`) → condition → a
 **linear** list of actions. There are no steps, waits, branching or execution
 history, and the trigger is always a record write — never an engagement event.
 
+**In scope**
+
 | # | Item | Notes |
 | --- | --- | --- |
 | W1 | Steps with waits | "wait 3 days", "wait until a date", "wait until a condition" — needs a scheduler |
 | W2 | Branching / decision steps | route by condition instead of running one linear list |
-| W3 | Engagement triggers | email opened / clicked / bounced, contact entered a segment — **the piece that makes journeys worthwhile**, and the one that is structurally missing |
+| W3 | Engagement triggers — only for what the CRM already records | email opened / clicked / bounced on our own campaigns. The data exists today (`Campaign` counters and per-recipient tracking); only the trigger is missing |
 | W4 | Execution history | per-run state, logs and retry; today a failed action is simply lost |
-| W5 | Dynamic segments | `TargetList` is a static member list today; Mautic-style segments recompute from a filter |
-| W6 | Lead scoring | nothing today; feeds segmentation and routing |
-| W7 | Landing pages / hosted forms | partially covered by lead capture; tracked as the `hosted form page` item of the deferred backlog |
+| W5 | Target lists that recompute | `TargetList` holds a static member list today; derive its members from a saved filter, reusing the existing filter infrastructure |
 
-Suggested order: **W1 + W2 + W4** (the engine itself), then **W3** (engagement
-triggers), then **W5 + W6**. W7 already exists in the deferred backlog.
+**Out of scope — belongs to the marketing platform and reached through the
+integration below:** W6 lead scoring by engagement, behaviour-based dynamic
+segments, landing-page builder, website/page tracking, SMS and social channels,
+A/B tests. W7 (hosted form pages) stays in the deferred backlog as a capture
+feature of this project.
 
-Note on scope: this makes the CRM able to run lifecycle automation from CRM
-data. Replicating Mautic as a *marketing platform* (page tracking, scoring,
-landing-page builder, SMS/social, A/B tests) is a different, much larger goal —
-for heavy marketing automation the pragmatic path is integrating with a
-dedicated tool over the existing REST API and webhooks.
+Suggested order: **W1 + W2 + W4** (the engine itself), then **W3**, then **W5**.
+
+### Integrations (desired, not scheduled)
+
+The project should talk to the platforms that own the neighbouring concerns
+instead of absorbing them. Both over the existing REST API and webhooks, with no
+new front-end dependency.
+
+| Platform | Owns | Notes |
+| --- | --- | --- |
+| **Mautic** | marketing automation | sync contacts and segments, enrol contacts in campaigns, and feed engagement events back as workflow triggers. Journeys, scoring, landing pages and multi-channel stay on its side |
+| **Chatwoot** | conversations / support inbox | sync contacts and conversations so a case carries its conversation history. A WhatsApp campaign script already drives Chatwoot for the Artmed Experience event, so there is practical ground here |
 
 ## Resume checklist
 
