@@ -639,23 +639,22 @@ class EmailTemplateAdmin(ModelAdmin):
     search_fields = ("name", "subject")
     readonly_fields = (
         "body",
-        "design",
         "source",
         "source_format",
         "created_at",
         "modified_at",
     )
-    actions_detail = ("open_source_editor", "open_designer")
+    actions_detail = ("open_source_editor",)
     fieldsets = (
         (None, {"fields": ("name", "subject", "is_active")}),
         (
             _("Body"),
             {
-                "fields": ("body", "source", "source_format", "design"),
+                "fields": ("body", "source", "source_format"),
                 "description": _(
                     "Read-only. Edit the email with the Edit code action (code "
-                    "editor with live preview) or the Design action (visual "
-                    "designer); both write the compiled body."
+                    "editor with live preview); the source is the source of "
+                    "truth and the body its compiled cache."
                 ),
             },
         ),
@@ -665,10 +664,6 @@ class EmailTemplateAdmin(ModelAdmin):
     @action(description=_("Edit code"), icon="code", variant="primary")
     def open_source_editor(self, request, object_id):
         return redirect("email_template_source", pk=object_id)
-
-    @action(description=_("Design"), icon="palette", variant="primary")
-    def open_designer(self, request, object_id):
-        return redirect("email_template_design", pk=object_id)
 
 
 CAMPAIGN_STATUS_LABELS = {

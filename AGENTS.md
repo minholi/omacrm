@@ -88,8 +88,8 @@ src/omacrm/
                      # knowledge.py (crm.control_kb_article_status), email.py,
                      # target_lists.py, mass_email.py, portal.py (PortalAcl)
     views.py         # public campaign tracking + lead capture endpoints
-    admin_views.py   # GrapesJS visual email designer (/admin/email-template/...)
-    static/crm/js/email-designer.js   # designer front-end
+    admin_views.py   # email template code editor + preview/test-send
+    static/crm/js/email-source-editor.js   # CodeMirror editor front-end
     portal_views.py, portal_urls.py   # customer portal (/portal/)
     admin.py, tests/
   templates/admin/
@@ -188,14 +188,15 @@ src/omacrm/
   derives `bodyPlain` (its `body` uses Unfold's Trix WYSIWYG widget) and a
   scheduled job publishes/archives by date;
   `Document`/`DocumentFolder` support file uploads and related records.
-- **Email**: `EmailTemplate` bodies use Django template syntax; the
-  **visual designer** (GrapesJS, vendored under
-  `core/static/vendor/grapesjs/`) edits `body`/`design` at
-  `/admin/email-template/<pk>/design/`, reached through the **Design** detail
-  action. It offers merge-tag blocks (`{{ name }}`, `{{ custom.<field> }}`,
-  `{{ company_name }}`), preview, test send and image uploads to
-  `media/email-assets/` (`crm/admin_views.py`, standalone page to avoid
-  Unfold/GrapesJS CSS clashes). Outgoing HTML is CSS-inlined with `premailer`
+- **Email**: `EmailTemplate.source` is the source of truth (MJML or HTML,
+  `source_format`) and `body` is its server-side compiled cache; both use
+  Django template syntax (`{{ name }}`, `{{ custom.<field> }}`,
+  `{{ company_name }}`). The **code editor** at
+  `/admin/email-template/<pk>/source/`, reached through the **Edit code**
+  detail action, is the only way to edit a template: a CodeMirror 6 page
+  (vendored IIFE bundle) with live preview, MJML tag highlighting and
+  `EmailTemplatePreview`/test-send (`crm/admin_views.py`). Outgoing HTML is
+  CSS-inlined with `premailer`
   and relative URLs are absolutized through the `public_base_url` constance
   setting (`prepare_email_html`); the `Send Email` dialog action on
   Account/Contact/Lead renders a template,
@@ -310,13 +311,7 @@ src/omacrm/
   must not collide with a built-in field.
 - **Unfold styling**: project templates may only use CSS classes present in
   Unfold's compiled stylesheet; arbitrary Tailwind classes need a Tailwind
-  build configured for the project (not set up). The GrapesJS designer page is
-  standalone on purpose (no `admin/base.html`): both CSS bundles are global and
-  would otherwise clash.
-- **Vendored GrapesJS**: pinned `grapes.min.js`/`grapes.min.css` +
-  `grapesjs-preset-newsletter` in `core/static/vendor/grapesjs/` (BSD-3-Clause
-  licenses included); no npm/CDN at runtime. The designer imports legacy
-  `body` HTML when `design` is empty and stores GrapesJS project data on save.
+  build configured for the project (not set up).
 - **Global settings** are edited with django-constance at
   `/admin/constance/config/` (base currency, formats, records per page, ...).
 - **db.sqlite3** and `media/` are gitignored.

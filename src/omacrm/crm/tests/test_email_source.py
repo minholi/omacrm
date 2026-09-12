@@ -117,7 +117,7 @@ class EmailTemplateCompileTests(TestCase):
 class BackfillMigrationTests(TestCase):
     def test_migration_fills_source_and_source_format(self):
         template = EmailTemplate.objects.create(
-            name="Legacy", subject="Hi", body="<p>Legacy</p>"
+            name="Legacy", subject="Hi", body="<p>Legacy</p>", source=""
         )
         self.assertEqual(template.source, "")
 
@@ -162,7 +162,7 @@ class RenderEmailTemplateTests(TestCase):
 
     def test_falls_back_to_body_when_source_empty(self):
         template = EmailTemplate.objects.create(
-            name="Body only", subject="Hi", body="<p>Body {{ name }}</p>"
+            name="Body only", subject="Hi", body="<p>Body {{ name }}</p>", source=""
         )
         _subject, body = render_email_template(template, self.contact)
         self.assertIn("Body Jane Mail", body)

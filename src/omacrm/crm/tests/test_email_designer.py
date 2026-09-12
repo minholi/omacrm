@@ -1,20 +1,10 @@
-import json
-import shutil
-import tempfile
-from io import BytesIO
-from pathlib import Path
-
 from django.core import mail
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase, override_settings
-from django.contrib.staticfiles import finders
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from constance.test import override_config
-from PIL import Image
 
 from omacrm.core.models import User
-from omacrm.crm.admin import EmailTemplateAdmin
 from omacrm.crm.models import Contact, EmailTemplate
 from omacrm.crm.services.email import (
     MERGE_TAGS,
@@ -37,7 +27,8 @@ class RenderContextTests(TestCase):
         template = EmailTemplate(
             name="Context",
             subject="{{ company_name }} — {{ custom.tier }}",
-            body="<p>{{ name }} ({{ custom.tier }})</p>",
+            source="<p>{{ name }} ({{ custom.tier }})</p>",
+            source_format="html",
         )
         subject, body = render_email_template(template, self.contact)
         self.assertEqual(subject, "OmaCRM — Gold")
@@ -50,28 +41,24 @@ class RenderContextTests(TestCase):
             self.assertTrue(tag["token"].startswith("{{"))
 
 
-PLACEHOLDER_BODY = (
-    "Olá {{ name }}, escreva aqui a sua mensagem. Você pode usar "
-    "{{ company_name }} e outras variáveis da lista de merge tags."
-)
-
-
-class EmailTemplateBodyValidationTests(TestCase):
-    def test_new_template_defaults_to_placeholder_body(self):
+class EmailTemplateValidationTests(TestCase):
+    def test_new_template_defaults_to_starter_mjml_source(self):
         template = EmailTemplate()
-        self.assertEqual(template.body, PLACEHOLDER_BODY)
-        self.assertIn("{{ name }}", template.body)
-        self.assertIn("{{ company_name }}", template.body)
+        self.assertIn("<mjml>", template.source)
+        self.assertIn("{{ name }}", template.source)
+        self.assertIn("{{ company_name }}", template.source)
+        self.assertEqual(template.source_format, "mjml")
+        self.assertEqual(template.body, "")
 
-    def test_clean_passes_for_placeholder_default(self):
+    def test_clean_passes_for_starter_source(self):
         template = EmailTemplate(name="Default", subject="Hi")
         template.clean()
 
-    def test_clean_raises_for_empty_body(self):
-        template = EmailTemplate(name="Empty", subject="Hi", body="   ")
+    def test_clean_raises_for_empty_source(self):
+        template = EmailTemplate(name="Empty", subject="Hi", source="   ")
         with self.assertRaises(ValidationError) as caught:
             template.clean()
-        self.assertIn("body", caught.exception.message_dict)
+        self.assertIn("source", caught.exception.message_dict)
 
     def test_render_email_template_returns_subject_and_body(self):
         contact = Contact.objects.create(
@@ -80,7 +67,8 @@ class EmailTemplateBodyValidationTests(TestCase):
         template = EmailTemplate(
             name="Contract",
             subject="Hi {{ name }}",
-            body="<p>Hello {{ name }}</p>",
+            source="<p>Hello {{ name }}</p>",
+            source_format="html",
         )
         subject, body = render_email_template(template, contact)
         self.assertEqual(subject, "Hi Jane Mail")
@@ -151,7 +139,8 @@ class SendEmailInliningTests(TestCase):
         template = EmailTemplate.objects.create(
             name="Styled",
             subject="Hello {{ name }}",
-            body="<style>p{color:blue}</style><p>Dear {{ name }}</p>",
+            source="<style>p{color:blue}</style><p>Dear {{ name }}</p>",
+            source_format="html",
         )
         send_email(self.contact, template=template, user=self.admin)
         message = mail.outbox[0]
@@ -161,145 +150,18 @@ class SendEmailInliningTests(TestCase):
         self.assertIn("Dear Jane Mail", message.body)
 
 
-class VendorAssetTests(TestCase):
-    def test_grapesjs_assets_are_vendored(self):
-        for path in (
-            "vendor/grapesjs/grapes.min.js",
-            "vendor/grapesjs/grapes.min.css",
-            "vendor/grapesjs/grapesjs-preset-newsletter.min.js",
-        ):
-            self.assertIsNotNone(finders.find(path), path)
-
-
-class EmailDesignerViewTests(TestCase):
+class EmailTemplatePreviewTests(TestCase):
     def setUp(self):
-        self.admin = User.objects.create_superuser("designer", "d@example.com", "pw")
-        self.staff = User.objects.create_user(
-            "designer-staff", "s@example.com", "pw", is_staff=True
-        )
+        self.admin = User.objects.create_superuser("preview", "p@example.com", "pw")
         self.contact = Contact.objects.create(
             first_name="Jane", last_name="Mail", email_address="jane@example.com"
         )
         self.template = EmailTemplate.objects.create(
-            name="Design Me",
+            name="Preview Me",
             subject="Hi {{ name }}",
-            body="<p>Hello {{ name }}</p>",
+            source="<p>Hello {{ name }}</p>",
+            source_format="html",
         )
-        self.design_url = reverse(
-            "email_template_design", args=[self.template.pk]
-        )
-        self.save_url = reverse(
-            "email_template_design_save", args=[self.template.pk]
-        )
-
-    def test_editor_requires_login(self):
-        response = self.client.get(self.design_url)
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/admin/login/", response["Location"])
-
-    def test_editor_requires_change_permission(self):
-        self.client.force_login(self.staff)
-        response = self.client.get(self.design_url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_editor_renders_grapesjs_and_config(self):
-        self.client.force_login(self.admin)
-        response = self.client.get(self.design_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "vendor/grapesjs/grapes.min.js")
-        self.assertContains(
-            response, "vendor/grapesjs/grapesjs-preset-newsletter.min.js"
-        )
-        self.assertContains(response, "email-designer-config")
-        self.assertContains(response, "{{ name }}")
-
-    def test_admin_change_form_has_design_action(self):
-        self.client.force_login(self.admin)
-        response = self.client.get(
-            reverse("admin:crm_emailtemplate_change", args=[self.template.pk])
-        )
-        action_url = reverse(
-            "admin:crm_emailtemplate_open_designer", args=[self.template.pk]
-        )
-        self.assertContains(response, "Design")
-        self.assertContains(response, action_url)
-
-    def test_design_action_redirects_to_editor(self):
-        self.client.force_login(self.admin)
-        response = self.client.post(
-            reverse("admin:crm_emailtemplate_open_designer", args=[self.template.pk])
-        )
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response["Location"], self.design_url)
-
-    def test_save_updates_design_and_inlines_body(self):
-        self.client.force_login(self.admin)
-        payload = {
-            "design": {"pages": []},
-            "html": "<style>p{color:green}</style><p>Hello {{ name }}</p>",
-            "css": "",
-        }
-        response = self.client.post(
-            self.save_url, data=json.dumps(payload), content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()["ok"])
-
-        self.template.refresh_from_db()
-        self.assertEqual(self.template.design, {"pages": []})
-        self.assertRegex(self.template.body, r'style="color:\s*green')
-        self.assertIn("{{ name }}", self.template.body)
-
-    def test_save_accepts_non_empty_body(self):
-        self.client.force_login(self.admin)
-        payload = {
-            "design": {"pages": [{"id": "page-1"}]},
-            "html": "<p>Fresh body</p>",
-            "css": "",
-        }
-        response = self.client.post(
-            self.save_url, data=json.dumps(payload), content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()["ok"])
-        self.template.refresh_from_db()
-        self.assertEqual(self.template.design, {"pages": [{"id": "page-1"}]})
-        self.assertIn("Fresh body", self.template.body)
-
-    def test_save_rejects_empty_body_without_touching_the_row(self):
-        self.client.force_login(self.admin)
-        stored = EmailTemplate.objects.get(pk=self.template.pk)
-        payload = {"design": {"pages": []}, "html": "   ", "css": ""}
-        response = self.client.post(
-            self.save_url, data=json.dumps(payload), content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(response.json()["ok"])
-        self.assertIn("error", response.json())
-
-        self.template.refresh_from_db()
-        self.assertEqual(self.template.body, stored.body)
-        self.assertEqual(self.template.source, stored.source)
-        self.assertEqual(self.template.design, stored.design)
-
-    def test_save_rejects_invalid_json(self):
-        self.client.force_login(self.admin)
-        response = self.client.post(
-            self.save_url, data="{not json", content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 400)
-
-    def test_save_requires_post(self):
-        self.client.force_login(self.admin)
-        self.assertEqual(self.client.get(self.save_url).status_code, 405)
-
-    def test_save_enforces_csrf(self):
-        client = Client(enforce_csrf_checks=True)
-        client.force_login(self.admin)
-        response = client.post(
-            self.save_url, data="{}", content_type="application/json"
-        )
-        self.assertEqual(response.status_code, 403)
 
     def test_preview_renders_merge_tags(self):
         self.client.force_login(self.admin)
@@ -339,20 +201,18 @@ class EmailTemplateAdminReadOnlyTests(TestCase):
             body=self.original_body,
             source=self.original_source,
             source_format="html",
-            design={"pages": [{"id": "original"}]},
         )
         self.template.refresh_from_db()
         self.change_url = reverse(
             "admin:crm_emailtemplate_change", args=[self.template.pk]
         )
 
-    def test_change_form_renders_body_and_design_read_only(self):
+    def test_change_form_renders_body_and_source_read_only(self):
         response = self.client.get(self.change_url)
         self.assertEqual(response.status_code, 200)
-        for name in ("body", "design", "source", "source_format"):
+        for name in ("body", "source", "source_format"):
             self.assertNotContains(response, f'name="{name}"')
         self.assertContains(response, "Original source")
-        self.assertContains(response, "pages")
 
     def test_tampered_compiled_values_are_not_saved(self):
         stored_body = self.template.body
@@ -364,7 +224,6 @@ class EmailTemplateAdminReadOnlyTests(TestCase):
                 "subject": self.template.subject,
                 "is_active": "on",
                 "body": "<p>Tampered body</p>",
-                "design": '{"pages": ["tampered"]}',
                 "source": "tampered source",
                 "source_format": "mjml",
                 "_save": "Save",
@@ -375,7 +234,6 @@ class EmailTemplateAdminReadOnlyTests(TestCase):
         self.assertEqual(self.template.body, stored_body)
         self.assertEqual(self.template.source, stored_source)
         self.assertEqual(self.template.source_format, "html")
-        self.assertEqual(self.template.design, {"pages": [{"id": "original"}]})
 
     def test_editable_fields_persist(self):
         response = self.client.post(
@@ -391,68 +249,3 @@ class EmailTemplateAdminReadOnlyTests(TestCase):
         self.assertEqual(self.template.name, "Renamed")
         self.assertEqual(self.template.subject, "New subject")
         self.assertFalse(self.template.is_active)
-
-    def test_design_action_still_registered(self):
-        self.assertIn("open_designer", EmailTemplateAdmin.actions_detail)
-
-
-class EmailAssetUploadTests(TestCase):
-    def setUp(self):
-        self.admin = User.objects.create_superuser("assets", "a@example.com", "pw")
-        self.staff = User.objects.create_user(
-            "assets-staff", "as@example.com", "pw", is_staff=True
-        )
-        self.upload_url = reverse("email_asset_upload")
-        self.media_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.media_dir, ignore_errors=True)
-        media_override = override_settings(MEDIA_ROOT=self.media_dir)
-        media_override.enable()
-        self.addCleanup(media_override.disable)
-
-    def _png(self):
-        buffer = BytesIO()
-        Image.new("RGB", (2, 2), "white").save(buffer, format="PNG")
-        return SimpleUploadedFile(
-            "logo.png", buffer.getvalue(), content_type="image/png"
-        )
-
-    def test_upload_requires_login(self):
-        response = self.client.post(self.upload_url, {"files": self._png()})
-        self.assertEqual(response.status_code, 302)
-
-    def test_upload_requires_change_permission(self):
-        self.client.force_login(self.staff)
-        response = self.client.post(self.upload_url, {"files": self._png()})
-        self.assertEqual(response.status_code, 403)
-
-    def test_upload_rejects_non_image(self):
-        self.client.force_login(self.admin)
-        upload = SimpleUploadedFile(
-            "notes.txt", b"secret", content_type="text/plain"
-        )
-        response = self.client.post(self.upload_url, {"files": upload})
-        self.assertEqual(response.status_code, 400)
-
-    def test_upload_rejects_fake_image(self):
-        self.client.force_login(self.admin)
-        upload = SimpleUploadedFile(
-            "fake.png", b"not an image", content_type="image/png"
-        )
-        response = self.client.post(self.upload_url, {"files": upload})
-        self.assertEqual(response.status_code, 400)
-
-    def test_upload_stores_image_and_returns_asset(self):
-        self.client.force_login(self.admin)
-        response = self.client.post(self.upload_url, {"files": self._png()})
-        self.assertEqual(response.status_code, 200)
-        asset = response.json()["data"][0]
-        self.assertEqual(asset["name"], "logo.png")
-        self.assertTrue(asset["src"].startswith("/media/email-assets/"))
-        self.assertTrue(asset["src"].endswith(".png"))
-        self.assertTrue(
-            (Path(self.media_dir) / asset["src"].replace("/media/", "")).exists()
-        )
-
-    def test_upload_requires_post(self):
-        self.client.force_login(self.admin)
-        self.assertEqual(self.client.get(self.upload_url).status_code, 405)

@@ -2,6 +2,40 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+STARTER_SOURCE = """<mjml>
+  <mj-head>
+    <mj-title>{{ company_name }}</mj-title>
+    <mj-preview>News from {{ company_name }}</mj-preview>
+    <mj-attributes>
+      <mj-text font-family="Helvetica, Arial, sans-serif" font-size="15px" color="#374151" line-height="1.6" />
+      <mj-button font-family="Helvetica, Arial, sans-serif" background-color="#4f46e5" color="#ffffff" border-radius="6px" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <mj-section background-color="#ffffff" padding="24px">
+      <mj-column>
+        <mj-text align="center" font-size="20px" font-weight="bold" color="#111827">
+          {{ company_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="24px">
+      <mj-column>
+        <mj-text>Hello {{ name }},</mj-text>
+        <mj-text>
+          Start writing your message here. Replace this text with your content.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-raw>
+      <div style="padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+        &copy; {{ company_name }}. All rights reserved.
+      </div>
+    </mj-raw>
+  </mj-body>
+</mjml>
+"""
+
 
 class EmailTemplate(models.Model):
     SOURCE_FORMAT_CHOICES = [("mjml", "MJML"), ("html", "HTML")]
@@ -10,33 +44,22 @@ class EmailTemplate(models.Model):
     subject = models.CharField(max_length=255)
     source = models.TextField(
         blank=True,
+        default=STARTER_SOURCE,
         help_text=_(
-            "Authored template code. Django template syntax is supported, e.g. "
-            "{{ name }} or {{ record.name }}; MJML source is compiled to "
-            "responsive HTML when the source format is MJML."
+            "Authored template code and source of truth. Django template syntax "
+            "is supported, e.g. {{ name }} or {{ record.name }}; MJML source is "
+            "compiled to the responsive HTML stored in body."
         ),
     )
     source_format = models.CharField(
         max_length=8,
         choices=SOURCE_FORMAT_CHOICES,
-        default="html",
+        default="mjml",
         help_text=_("Format of the authored source code."),
     )
     body = models.TextField(
         blank=True,
-        default=(
-            "Olá {{ name }}, escreva aqui a sua mensagem. Você pode usar "
-            "{{ company_name }} e outras variáveis da lista de merge tags."
-        ),
-        help_text=_(
-            "Compiled HTML. Django template syntax is supported, e.g. {{ name }} "
-            "or {{ record.name }}; the visual designer writes to this field."
-        ),
-    )
-    design = models.JSONField(
-        null=True,
-        blank=True,
-        help_text=_("Visual designer project data (used to reopen the editor)."),
+        help_text=_("Compiled HTML cache derived from the source."),
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -60,12 +83,10 @@ class EmailTemplate(models.Model):
 
     def clean(self):
         super().clean()
-        if not (self.body or "").strip():
+        if not (self.source or "").strip():
             raise ValidationError(
-                {"body": [_("The template body cannot be empty.")]}
+                {"source": [_("The template source cannot be empty.")]}
             )
-        if not self.source:
-            return
 
         from omacrm.crm.services.email import compile_email_source
 

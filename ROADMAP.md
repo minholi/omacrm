@@ -4,11 +4,11 @@
 > be resumed at any time by any developer/agent. Architecture conventions live
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
-_Last updated: 2026-09-11 — Phases A–G implemented (runtime, sales CRM,
+_Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
-GrapesJS visual email designer).
-364 tests passing; see
+email template code editor with MJML source).
+404 tests passing; see
 the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
 gaps._
 
@@ -279,7 +279,7 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog; can reuse the GrapesJS designer as a second design target. |
+| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog; can reuse the email template code editor. |
 
 ### Customization & platform (Phase G)
 
@@ -291,7 +291,7 @@ Nothing here is required for the current feature set to be usable.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (364 tests)
+uv run python src/omacrm/manage.py test      # must be green (404 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -307,6 +307,15 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Email template code editor: the GrapesJS visual designer
+  and its assets/endpoints were removed; `EmailTemplate.source` is now the
+  source of truth (starter MJML default), `source_format` defaults to `mjml`,
+  `body` is kept purely as the compiled cache and `clean()` rejects an empty
+  source. Templates are edited only through the **Edit code** action at
+  `/admin/email-template/<pk>/source/` — a vendored CodeMirror 6 page with
+  live preview, MJML tag highlighting and test send (`crm/admin_views.py`)
+  (404 tests).
 
 - **2026-09-11** — Dashboard sales chart: KPI cards for Account/Contact/
   Lead/Opportunity now follow `AclService.scope_queryset` and a **Sales by

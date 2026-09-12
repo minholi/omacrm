@@ -70,7 +70,10 @@ class MassEmailUnsubscribeTests(TestCase):
         add_to_target_list(self.contact, self.target_list)
 
         self.template = EmailTemplate.objects.create(
-            name="Blast", subject="Hi", body="<p>Hello</p>"
+            name="Blast",
+            subject="Hi",
+            source="<p>Hello</p>",
+            source_format="html",
         )
         self.campaign = Campaign.objects.create(name="Blast campaign")
         self.mass_email = MassEmail.objects.create(
@@ -126,7 +129,9 @@ class BounceTests(TestCase):
 
         add_to_target_list(self.contact, self.target_list)
 
-        self.template = EmailTemplate.objects.create(name="T", subject="s", body="b")
+        self.template = EmailTemplate.objects.create(
+            name="T", subject="s", source="b", source_format="html"
+        )
         self.campaign = Campaign.objects.create(name="Bounce campaign")
         self.mass_email = MassEmail.objects.create(
             name="Bounce blast", email_template=self.template, campaign=self.campaign
@@ -173,7 +178,8 @@ class LeadCaptureOptInTests(TestCase):
         self.template = EmailTemplate.objects.create(
             name="Confirm",
             subject="Confirm your subscription",
-            body="<p>Please confirm</p>",
+            source="<p>Please confirm</p>",
+            source_format="html",
         )
         self.capture = LeadCapture.objects.create(
             name="Opt-in form",

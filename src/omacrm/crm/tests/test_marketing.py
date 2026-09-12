@@ -110,7 +110,10 @@ class MassEmailTests(TestCase):
         add_to_target_list(self.no_email, self.target_list)
 
         self.template = EmailTemplate.objects.create(
-            name="Blast", subject="Hi {{ first_name }}", body="<p>Hello {{ first_name }}</p>"
+            name="Blast",
+            subject="Hi {{ first_name }}",
+            source="<p>Hello {{ first_name }}</p>",
+            source_format="html",
         )
         self.campaign = Campaign.objects.create(name="Blast campaign")
         self.mass_email = MassEmail.objects.create(

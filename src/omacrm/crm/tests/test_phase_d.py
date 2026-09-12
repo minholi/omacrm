@@ -106,7 +106,8 @@ class EmailTests(TestCase):
         self.template = EmailTemplate.objects.create(
             name="Welcome",
             subject="Hello {{ name }}",
-            body="<p>Dear {{ name }}, welcome!</p>",
+            source="<p>Dear {{ name }}, welcome!</p>",
+            source_format="html",
         )
 
     def test_render_template(self):

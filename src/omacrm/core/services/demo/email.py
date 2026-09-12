@@ -97,7 +97,8 @@ def seed_email(context):
     templates = {}
     for name, subject, body in TEMPLATES:
         template, _ = EmailTemplate.objects.get_or_create(
-            name=name, defaults={"subject": subject, "body": body}
+            name=name,
+            defaults={"subject": subject, "source": body, "source_format": "html"},
         )
         templates[name] = template
 
