@@ -357,6 +357,15 @@ src/omacrm/
 - **Custom fields** only work on models with `custom_data`
   (`BaseEntity`/`CustomDataMixin`). `CustomField.name` must be snake_case and
   must not collide with a built-in field.
+- **Sortable changelist columns**: Django calls `get_list_display` twice per
+  changelist (once for the columns, once as the `get_sortable_by` fallback)
+  and decides whether a header is clickable with `field_name in cl.sortable_by`,
+  which is identity for callables. A dynamic `get_list_display` that returns
+  fresh display objects therefore makes those columns silently unsortable —
+  generated custom-field columns were affected for a long time before the
+  compact currency columns made it visible. `MetadataModelAdmin` memoises the
+  resolved list on the request so both calls see the same instances; keep any
+  new generated display inside that list.
 - **Unfold styling**: project templates may only use CSS classes present in
   Unfold's compiled stylesheet; arbitrary Tailwind classes need a Tailwind
   build configured for the project (not set up).

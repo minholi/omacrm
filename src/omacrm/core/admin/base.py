@@ -495,6 +495,18 @@ class MetadataModelAdmin(
         return display
 
     def get_list_display(self, request):
+        # Django calls this twice per changelist (once for the columns and once
+        # via ``get_sortable_by``) and decides header clickability with
+        # ``field_name in cl.sortable_by``. Generated displays are fresh
+        # closures, so returning a new list each call would make them look
+        # unsortable; memoise the resolved list on the request instead.
+        cache = getattr(request, "_metadata_list_display_cache", None)
+        if cache is None:
+            cache = {}
+            request._metadata_list_display_cache = cache
+        if self in cache:
+            return cache[self]
+
         base = list(super().get_list_display(request))
         entity = self.metadata_entity()
         custom_fields = registry.custom_fields(self.entity_type)
@@ -533,7 +545,9 @@ class MetadataModelAdmin(
                 base.append(self._custom_display(field_def))
         if self.supports_stars():
             base.append(self._star_display(request))
-        return self._resolve_currency_columns(base)
+        resolved = self._resolve_currency_columns(base)
+        cache[self] = resolved
+        return resolved
 
     def get_list_filter(self, request):
         filters = list(super().get_list_filter(request))

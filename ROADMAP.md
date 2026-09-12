@@ -446,6 +446,15 @@ tables — so "the tests of the file I changed" would not have caught them.
 
 ## Change log
 
+- **2026-09-12** — Sortable changelist columns: `get_list_display` is now
+  memoised per request, so the columns it builds dynamically (custom fields, the
+  compact currency displays, the star column) are clickable in the header again.
+  Django calls `get_list_display` twice — once for the columns, once as the
+  `get_sortable_by` fallback — and decides clickability with
+  `field_name in cl.sortable_by`, which is identity for callables, so displays
+  created fresh on every call were silently unsortable. The custom-field columns
+  had never been sortable (532 tests).
+
 - **2026-09-12** — Changelist currency columns: `format_compact` moved to
   `core/services/formatting.py` (still re-exported by
   `crm/services/analytics.py` for the dashboard) and
