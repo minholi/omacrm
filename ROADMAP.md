@@ -8,7 +8,7 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
-stars/favourites and record following). 493 tests passing; see the
+stars/favourites and record following). 502 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -414,7 +414,7 @@ new front-end dependency.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (493 tests)
+uv run python src/omacrm/manage.py test      # must be green (502 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
