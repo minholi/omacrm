@@ -346,6 +346,35 @@ Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
 (#1) is delivered; the next items are **follow/favourites**, then
 **persisted kanban order**. Tiers 2 and 3 are recorded here but not scheduled.
 
+### Workflow engine — improvement to the existing `Workflow`
+
+Not from the EspoCRM survey (its open-source core has **no** workflow at all; that
+lives in the paid Advanced Pack). Motivated instead by Kestra/N8N/Mautic-style
+automation, and by what a journey needs to be worth building.
+
+Today `Workflow` is trigger (`create`/`update`/`delete`) → condition → a
+**linear** list of actions. There are no steps, waits, branching or execution
+history, and the trigger is always a record write — never an engagement event.
+
+| # | Item | Notes |
+| --- | --- | --- |
+| W1 | Steps with waits | "wait 3 days", "wait until a date", "wait until a condition" — needs a scheduler |
+| W2 | Branching / decision steps | route by condition instead of running one linear list |
+| W3 | Engagement triggers | email opened / clicked / bounced, contact entered a segment — **the piece that makes journeys worthwhile**, and the one that is structurally missing |
+| W4 | Execution history | per-run state, logs and retry; today a failed action is simply lost |
+| W5 | Dynamic segments | `TargetList` is a static member list today; Mautic-style segments recompute from a filter |
+| W6 | Lead scoring | nothing today; feeds segmentation and routing |
+| W7 | Landing pages / hosted forms | partially covered by lead capture; tracked as the `hosted form page` item of the deferred backlog |
+
+Suggested order: **W1 + W2 + W4** (the engine itself), then **W3** (engagement
+triggers), then **W5 + W6**. W7 already exists in the deferred backlog.
+
+Note on scope: this makes the CRM able to run lifecycle automation from CRM
+data. Replicating Mautic as a *marketing platform* (page tracking, scoring,
+landing-page builder, SMS/social, A/B tests) is a different, much larger goal —
+for heavy marketing automation the pragmatic path is integrating with a
+dedicated tool over the existing REST API and webhooks.
+
 ## Resume checklist
 
 ```bash
