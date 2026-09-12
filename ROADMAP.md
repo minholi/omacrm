@@ -8,8 +8,8 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
-stars/favourites, record following and per-user kanban order). 514 tests
-passing; see the
+stars/favourites, record following, per-user kanban order and compact
+changelist currency columns). 524 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -445,6 +445,16 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Changelist currency columns: `format_compact` moved to
+  `core/services/formatting.py` (still re-exported by
+  `crm/services/analytics.py` for the dashboard) and
+  `MetadataModelAdmin.get_list_display` now resolves metadata `currency`
+  columns — built-in fields like Opportunity `amount`, custom currency fields
+  and admin displays ordered by them — to a compact
+  `<span title="€45,000.00">€ 45K</span>` cell, with empty values left to
+  Django's default empty display and the column still sortable via
+  `admin_order_field` (524 tests).
 
 - **2026-09-12** — Persisted kanban order (Tier 1 #3): `KanbanOrder`
   (`core/models/collab.py`, one row per user, entity type and record, indexed

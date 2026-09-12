@@ -5,9 +5,10 @@ from datetime import date, timedelta
 from constance import config
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from django.utils.formats import date_format, number_format
+from django.utils.formats import date_format
 
 from omacrm.core.services.acl import AclService
+from omacrm.core.services.formatting import format_compact
 from omacrm.crm.models import Opportunity
 from omacrm.crm.models.sales import OpportunityStage
 
@@ -26,17 +27,6 @@ def _month_starts(months, today=None):
 
 def _as_date(value):
     return value.date() if hasattr(value, "date") else value
-
-
-def format_compact(value):
-    """Compact amount for dashboard labels: 97440 -> 97.4K, 1200000 -> 1.2M."""
-
-    number = float(value or 0)
-    for threshold, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
-        if abs(number) >= threshold:
-            scaled = number_format(number / threshold, decimal_pos=1)
-            return f"{scaled.rstrip('0').rstrip('.')}{suffix}"
-    return number_format(number, decimal_pos=0, force_grouping=True)
 
 
 def _scoped(user, queryset):

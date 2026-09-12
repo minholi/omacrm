@@ -7,6 +7,7 @@ from django.contrib.admin.utils import flatten_fieldsets
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from simple_history.admin import SimpleHistoryAdmin
 from unfold.admin import ModelAdmin
@@ -30,6 +31,7 @@ from omacrm.core.services import custom_fields as custom_field_service
 from omacrm.core.services import relations, subscriptions
 from omacrm.core.services.acl import AclService
 from omacrm.core.services.duplicates import DuplicateConflict, check_duplicates
+from omacrm.core.services.formatting import format_currency_compact
 from omacrm.core.services.stream import post_note
 
 AUDIT_READONLY = (
@@ -400,6 +402,65 @@ class MetadataModelAdmin(
         display.admin_order_field = f"custom_data__{field_def.name}"
         return display
 
+    def _currency_display(self, field_def):
+        def display(obj):
+            if field_def.custom:
+                value = (getattr(obj, "custom_data", {}) or {}).get(field_def.name)
+            else:
+                value = getattr(obj, field_def.model_field or field_def.name, None)
+            compact = format_currency_compact(value)
+            if compact is None:
+                return None
+            compact_value, exact_value = compact
+            return format_html(
+                '<span title="{}">{}</span>', exact_value, compact_value
+            )
+
+        display.short_description = field_def.display_label
+        display.admin_order_field = (
+            f"custom_data__{field_def.name}" if field_def.custom else field_def.name
+        )
+        return display
+
+    def _currency_field_for_column(self, column):
+        """Metadata currency FieldDef behind a changelist column, if any."""
+
+        fields = self.get_metadata_fields()
+        if isinstance(column, str):
+            field_def = fields.get(column)
+            if field_def is not None and field_def.type == "currency":
+                return field_def
+            ordering = getattr(
+                getattr(self, column, None), "admin_order_field", None
+            )
+        else:
+            ordering = getattr(column, "admin_order_field", None)
+        if not isinstance(ordering, str):
+            return None
+        field_def = fields.get(ordering.removeprefix("custom_data__"))
+        if field_def is not None and field_def.type == "currency":
+            return field_def
+        return None
+
+    def _resolve_currency_columns(self, columns):
+        """Render metadata currency columns with the compact formatter."""
+
+        resolved = []
+        for column in columns:
+            field_def = self._currency_field_for_column(column)
+            if field_def is None:
+                resolved.append(column)
+                continue
+            display = self._currency_display(field_def)
+            source = (
+                getattr(self, column, None) if isinstance(column, str) else column
+            )
+            formatting = getattr(source, "formatting", None)
+            if formatting is not None:
+                display.formatting = formatting
+            resolved.append(display)
+        return resolved
+
     def _star_display(self, request):
         from django.template.loader import render_to_string
 
@@ -472,7 +533,7 @@ class MetadataModelAdmin(
                 base.append(self._custom_display(field_def))
         if self.supports_stars():
             base.append(self._star_display(request))
-        return base
+        return self._resolve_currency_columns(base)
 
     def get_list_filter(self, request):
         filters = list(super().get_list_filter(request))

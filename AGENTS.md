@@ -190,7 +190,11 @@ src/omacrm/
   zero-filled, computed by `crm/services/analytics.py` with
   `AclService.scope_queryset` and rendered through Unfold's bundled Chart.js
   (`unfold/components/chart/bar.html`); totals use compact K/M/B labels
-  (`format_compact`, full value in the `title`) and compact axis ticks.
+  (`core/services/formatting.py::format_compact`, full value in the `title`)
+  and compact axis ticks. The same formatter drives entity changelists:
+  `MetadataModelAdmin` renders any metadata `currency` column (built-in or
+  custom) as a compact value with the `Money` symbol and the exact value in
+  the `title`, and keeps it sortable via `admin_order_field`.
 - **Notifications**: unread count is shown as a sidebar badge and on the
   dashboard; `core.send_notification_emails` emails a digest of unread
   notifications (constance `notification_email_enabled` + per-user
