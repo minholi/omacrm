@@ -26,6 +26,16 @@
                 label.textContent = text;
             }
         }
+        // Swap the state classes, otherwise the only feedback is the glyph going
+        // from outlined to filled at the same colour — easy to miss entirely.
+        var on = button.dataset.activeClass;
+        var off = button.dataset.inactiveClass;
+        if (on) {
+            button.classList[value ? "add" : "remove"](on);
+        }
+        if (off) {
+            button.classList[value ? "remove" : "add"](off);
+        }
         button.setAttribute("aria-pressed", value ? "true" : "false");
     }
 

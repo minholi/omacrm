@@ -1,11 +1,18 @@
 {% load i18n %}
+{% comment %}
+    Only classes compiled into Unfold's stylesheet exist here (there is no
+    Tailwind build in this project), so the starred colour is the theme primary
+    rather than a Tailwind yellow, which is not in the shipped CSS.
+{% endcomment %}
 <button type="button"
         data-subscription-toggle
         data-toggle-url="{{ url }}"
         data-icon-on="star"
         data-icon-off="star_border"
+        data-active-class="text-primary-600"
+        data-inactive-class="text-base-400"
         aria-pressed="{{ starred|yesno:'true,false' }}"
         {% if starred %}title="{% translate 'Remove from favourites' %}"{% else %}title="{% translate 'Add to favourites' %}"{% endif %}
-        class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-default text-base-400 hover:bg-base-100 hover:text-primary-600 dark:hover:bg-base-800 dark:hover:text-primary-500">
+        class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-default hover:bg-base-100 dark:hover:bg-base-800 {% if starred %}text-primary-600{% else %}text-base-400{% endif %}">
     <span class="material-symbols-outlined md-18" data-toggle-icon>{% if starred %}star{% else %}star_border{% endif %}</span>
 </button>
