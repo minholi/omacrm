@@ -1,5 +1,8 @@
 import json
+import re
+from pathlib import Path
 
+from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import reverse
 
@@ -130,6 +133,37 @@ class EmailTemplateSourceViewTests(TestCase):
         self.assertContains(response, "ese-format")
         self.assertContains(response, "Mobile 375px")
         self.assertContains(response, "{{ name }}")
+
+    def test_editor_renders_inside_admin_layout(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.source_url)
+        self.assertTemplateUsed(response, "admin/base.html")
+        self.assertContains(response, 'id="nav-sidebar"')
+        self.assertContains(response, "unfold/js/app.js")
+        self.assertContains(response, "switchTheme")
+
+    def test_editor_missing_template_returns_404(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse("email_template_source", args=[999999])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_editor_script_follows_admin_theme(self):
+        script = finders.find("crm/js/email-source-editor.js")
+        self.assertIsNotNone(script)
+        content = Path(script).read_text(encoding="utf-8")
+        self.assertIn("CM.oneDark", content)
+        self.assertIn("themeCompartment", content)
+        self.assertIn("MutationObserver", content)
+        self.assertIn("(prefers-color-scheme: dark)", content)
+
+    def test_editor_css_uses_unfold_theme_colours(self):
+        stylesheet = finders.find("crm/css/email-source-editor.css")
+        self.assertIsNotNone(stylesheet)
+        content = Path(stylesheet).read_text(encoding="utf-8")
+        self.assertIn("var(--color-", content)
+        self.assertIsNone(re.search(r"#[0-9a-fA-F]{3,8}\b", content))
 
     def test_editor_exposes_mjml_whitelist_and_merge_tags(self):
         self.client.force_login(self.admin)

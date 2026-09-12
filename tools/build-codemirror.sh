@@ -20,6 +20,7 @@ CM_LINT="6.9.7"
 CM_AUTOCOMPLETE="6.20.3"
 CM_COMMANDS="6.11.0"
 CM_LANG_XML="6.1.0"
+CM_THEME_ONE_DARK="6.1.3"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -33,7 +34,8 @@ npm i --silent \
   "@codemirror/lint@$CM_LINT" \
   "@codemirror/autocomplete@$CM_AUTOCOMPLETE" \
   "@codemirror/commands@$CM_COMMANDS" \
-  "@codemirror/lang-xml@$CM_LANG_XML"
+  "@codemirror/lang-xml@$CM_LANG_XML" \
+  "@codemirror/theme-one-dark@$CM_THEME_ONE_DARK"
 
 cp "$ENTRY" entry.mjs
 npx --yes esbuild entry.mjs \

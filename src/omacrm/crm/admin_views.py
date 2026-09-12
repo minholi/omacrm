@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
@@ -12,6 +13,7 @@ from django.utils.html import escape
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
+from unfold.views import UnfoldSiteViewMixin
 
 from omacrm.crm.models import Account, Contact, EmailTemplate, Lead
 from omacrm.crm.services.email import (
@@ -141,7 +143,10 @@ def _compile_response(result):
     )
 
 
-class EmailTemplateSourceView(TemplateView):
+class EmailTemplateSourceView(UnfoldSiteViewMixin, TemplateView):
+    admin_site = admin.site
+    permission_required = ()
+    title = _("Email template source")
     template_name = "admin/crm/email_template_source.html"
 
     def get_context_data(self, **kwargs):

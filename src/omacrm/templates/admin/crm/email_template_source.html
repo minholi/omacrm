@@ -1,60 +1,73 @@
-{% load i18n static %}<!doctype html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title }}</title>
+{% extends "admin/base.html" %}
+{% load i18n static unfold %}
+
+{% block title %}{{ title }} &middot; {{ site_title }}{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
     <link rel="stylesheet" href="{% static 'crm/css/email-source-editor.css' %}">
-</head>
-<body>
-    <header class="toolbar">
-        <a class="toolbar-back" href="{{ source_editor_config.backUrl }}">&larr; {% translate "Back" %}</a>
-        <span class="toolbar-name">{{ email_template.name }}</span>
-        <span class="toolbar-spacer"></span>
-        <label class="toolbar-field">
-            <span class="sr-only">{% translate "Source format" %}</span>
-            <select id="ese-format" aria-label="{% translate 'Source format' %}">
-                <option value="mjml">MJML</option>
-                <option value="html">HTML</option>
-            </select>
-        </label>
-        <span class="status" id="ese-status" role="status" aria-live="polite"></span>
-        <button type="button" class="ese-button" id="ese-test">{% translate "Send test email" %}</button>
-        <button type="button" class="ese-button primary" id="ese-save">{% translate "Save" %}</button>
-    </header>
+{% endblock %}
 
-    <main class="workspace">
-        <section class="pane">
-            <div class="pane-header">
-                <span class="pane-title">{% translate "Source" %}</span>
-                <span class="pane-hint">{% translate "Ctrl+Space completes MJML tags and merge tags." %}</span>
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    <div class="flex flex-col gap-6" id="ese-root">
+        <div class="flex flex-wrap items-center gap-2">
+            {% component "unfold/components/button.html" with href=source_editor_config.backUrl variant="default" size="sm" %}&larr; {% translate "Back" %}{% endcomponent %}
+            <span class="font-semibold ml-2 text-important">{{ email_template.name }}</span>
+
+            <div class="flex flex-wrap items-center gap-2 ml-auto">
+                <label class="text-sm text-font-subtle-light dark:text-font-subtle-dark" for="ese-format">
+                    {% translate "Format" %}
+                </label>
+                <select id="ese-format"
+                        class="ese-format bg-white border border-base-200 rounded-default px-2 py-1.5 text-sm dark:bg-base-900 dark:border-base-800">
+                    <option value="mjml">MJML</option>
+                    <option value="html">HTML</option>
+                </select>
+                <span class="ese-status text-xs text-font-subtle-light dark:text-font-subtle-dark"
+                      id="ese-status" role="status" aria-live="polite"></span>
+                {% component "unfold/components/button.html" with type="button" variant="default" size="sm" extra_attrs='id="ese-test"' %}{% translate "Send test email" %}{% endcomponent %}
+                {% component "unfold/components/button.html" with type="button" variant="primary" size="sm" extra_attrs='id="ese-save"' %}{% translate "Save" %}{% endcomponent %}
             </div>
-            <div class="ese-editor" id="ese-source" aria-label="{% translate 'Template source' %}"></div>
-        </section>
+        </div>
 
-        <section class="pane">
-            <div class="pane-header">
-                <div class="device-switch" role="group" aria-label="{% translate 'Preview device' %}">
-                    <button type="button" class="ese-button device active" data-device="desktop">
-                        {% translate "Desktop" %}
-                    </button>
-                    <button type="button" class="ese-button device" data-device="mobile">
-                        {% translate "Mobile 375px" %}
-                    </button>
+        <div class="ese-workspace">
+            {% component "unfold/components/card.html" with class="ese-pane" %}
+                <div class="ese-pane-header border-b border-base-200 px-3 py-2 dark:border-base-800">
+                    <span class="text-xs font-semibold text-important">{% translate "Source" %}</span>
+                    <span class="ese-hint text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        {% translate "Ctrl+Space completes MJML tags and merge tags." %}
+                    </span>
                 </div>
-                <span class="pane-hint">{% translate "Merge tags render empty in the live preview." %}</span>
-            </div>
-            <div class="preview-wrap" id="ese-preview-wrap">
-                <iframe id="ese-preview" title="{% translate 'Template preview' %}" sandbox=""></iframe>
-            </div>
-            <div class="diagnostics" id="ese-diagnostics" hidden>
-                <ul class="diagnostics-list" id="ese-diagnostics-list"></ul>
-            </div>
-        </section>
-    </main>
+                <div class="ese-editor" id="ese-source" aria-label="{% translate 'Template source' %}"></div>
+            {% endcomponent %}
+
+            {% component "unfold/components/card.html" with class="ese-pane" %}
+                <div class="ese-pane-header border-b border-base-200 px-3 py-2 dark:border-base-800">
+                    <div class="device-switch flex flex-wrap items-center gap-1"
+                         role="group" aria-label="{% translate 'Preview device' %}">
+                        {% component "unfold/components/button.html" with type="button" variant="default" size="sm" class="ese-device active" extra_attrs='data-device="desktop"' %}{% translate "Desktop" %}{% endcomponent %}
+                        {% component "unfold/components/button.html" with type="button" variant="default" size="sm" class="ese-device" extra_attrs='data-device="mobile"' %}{% translate "Mobile 375px" %}{% endcomponent %}
+                    </div>
+                    <span class="ese-hint text-xs text-font-subtle-light dark:text-font-subtle-dark">
+                        {% translate "Merge tags render empty in the live preview." %}
+                    </span>
+                </div>
+                <div class="ese-preview-wrap bg-base-50 dark:bg-base-800" id="ese-preview-wrap">
+                    <iframe id="ese-preview" title="{% translate 'Template preview' %}" sandbox=""></iframe>
+                </div>
+                <div class="ese-diagnostics bg-red-50 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                     id="ese-diagnostics" hidden>
+                    <ul class="ese-diagnostics-list" id="ese-diagnostics-list"></ul>
+                </div>
+            {% endcomponent %}
+        </div>
+    </div>
 
     {{ source_editor_config|json_script:"ese-config" }}
     <script src="{% static 'vendor/codemirror/codemirror6.bundle.js' %}"></script>
     <script src="{% static 'crm/js/email-source-editor.js' %}"></script>
-</body>
-</html>
+{% endblock %}

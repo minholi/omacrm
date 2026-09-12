@@ -43,7 +43,7 @@ urlpatterns = [
     ),
     path(
         "admin/email-template/<int:pk>/source/",
-        admin.site.admin_view(EmailTemplateSourceView.as_view()),
+        admin.site.admin_view(EmailTemplateSourceView.as_view(admin_site=admin.site)),
         name="email_template_source",
     ),
     path(

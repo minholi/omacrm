@@ -1,279 +1,149 @@
-:root {
-    --ese-toolbar: #111827;
-    --ese-toolbar-text: #f9fafb;
-    --ese-bg: #f3f4f6;
-    --ese-surface: #ffffff;
-    --ese-border: #d1d5db;
-    --ese-text: #111827;
-    --ese-muted: #6b7280;
-    --ese-primary: #4f46e5;
-    --ese-primary-hover: #4338ca;
-    --ese-danger: #b91c1c;
-    --ese-danger-bg: #fef2f2;
-    --ese-warning: #92400e;
-}
+/* Email source editor: layout only; colours come from Unfold's theme
+   variables or from Unfold classes on the elements (see the template). */
 
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    height: 100%;
-    margin: 0;
-}
-
-body {
-    background: var(--ese-bg);
-    color: var(--ese-text);
-    display: flex;
-    flex-direction: column;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
-}
-
-.sr-only {
-    border: 0;
-    clip: rect(0, 0, 0, 0);
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    padding: 0;
-    position: absolute;
-    width: 1px;
-}
-
-/* Toolbar ----------------------------------------------------------------- */
-
-.toolbar {
-    align-items: center;
-    background: var(--ese-toolbar);
-    color: var(--ese-toolbar-text);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-}
-
-.toolbar-back {
-    color: #d1d5db;
-    text-decoration: none;
-}
-
-.toolbar-back:hover {
-    color: #ffffff;
-}
-
-.toolbar-name {
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.toolbar-spacer {
-    flex: 1;
-}
-
-.toolbar-field {
-    align-items: center;
-    display: inline-flex;
-    gap: 0.375rem;
-}
-
-.status {
-    color: #9ca3af;
-    font-size: 0.8125rem;
-    min-width: 4rem;
-}
-
-.status.is-error {
-    color: #fca5a5;
-}
-
-/* Controls ---------------------------------------------------------------- */
-
-select {
-    background: #ffffff;
-    border: 1px solid var(--ese-border);
-    border-radius: 6px;
-    color: var(--ese-text);
-    font: inherit;
-    max-width: 100%;
-    padding: 0.375rem 0.5rem;
-}
-
-.toolbar select {
-    background: #1f2937;
-    border-color: #4b5563;
-    color: var(--ese-toolbar-text);
-}
-
-.ese-button {
-    background: #374151;
-    border: 1px solid #4b5563;
-    border-radius: 6px;
-    color: var(--ese-toolbar-text);
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.8125rem;
-    padding: 0.375rem 0.75rem;
-}
-
-.ese-button:hover {
-    background: #4b5563;
-}
-
-.ese-button.primary {
-    background: var(--ese-primary);
-    border-color: var(--ese-primary);
-}
-
-.ese-button.primary:hover {
-    background: var(--ese-primary-hover);
-}
-
-.ese-button:disabled {
-    cursor: default;
-    opacity: 0.6;
-}
-
-.ese-button.device {
-    background: #ffffff;
-    border-color: var(--ese-border);
-    color: var(--ese-text);
-}
-
-.ese-button.device.active {
-    background: var(--ese-primary);
-    border-color: var(--ese-primary);
-    color: #ffffff;
-}
-
-/* Workspace --------------------------------------------------------------- */
-
-.workspace {
+#ese-root .ese-workspace {
     display: grid;
     flex: 1;
-    gap: 0.75rem;
+    gap: 1rem;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    min-height: 0;
-    padding: 0.75rem;
+    min-height: 70vh;
+    min-width: 0;
 }
 
-.pane {
-    background: var(--ese-surface);
-    border: 1px solid var(--ese-border);
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
+#ese-root .ese-pane {
     min-height: 0;
     min-width: 0;
     overflow: hidden;
+    padding: 0;
 }
 
-.pane-header {
+/* The card component wraps its children in a growing <div>; turn that
+   wrapper into a flex column so the editor and preview fill the pane. */
+
+#ese-root .ese-pane > div {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#ese-root .ese-pane-header {
     align-items: center;
-    background: #f9fafb;
-    border-bottom: 1px solid var(--ese-border);
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.5rem 0.625rem;
 }
 
-.pane-title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-}
-
-.pane-hint {
-    color: var(--ese-muted);
-    font-size: 0.75rem;
+#ese-root .ese-hint {
     margin-left: auto;
+}
+
+#ese-root .ese-format {
+    max-width: 100%;
+}
+
+#ese-root .ese-status {
+    min-width: 4rem;
+}
+
+#ese-root .ese-status.is-error {
+    color: var(--color-red-600);
+}
+
+.dark #ese-root .ese-status.is-error {
+    color: var(--color-red-400);
+}
+
+#ese-root .ese-device.active {
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+}
+
+.dark #ese-root .ese-device.active {
+    border-color: var(--color-primary-500);
+    color: var(--color-primary-500);
 }
 
 /* CodeMirror mounts itself here and injects its own styles, so only the
    sizing and the surrounding layout are styled by this file. */
 
-#ese-source {
+#ese-root .ese-editor {
+    display: flex;
     flex: 1;
-    min-height: 240px;
+    min-height: 320px;
     overflow: hidden;
 }
 
-#ese-source .cm-editor {
+#ese-root .ese-editor .cm-editor {
     height: 100%;
+    width: 100%;
 }
 
-#ese-source .cm-editor.cm-focused {
+#ese-root .ese-editor .cm-editor.cm-focused {
     outline: none;
 }
 
-#ese-source .cm-scroller {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+#ese-root .ese-editor .cm-scroller {
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
     line-height: 1.5;
 }
 
-.preview-wrap {
-    background: #e5e7eb;
+#ese-root .ese-preview-wrap {
+    align-items: flex-start;
     display: flex;
     flex: 1;
     justify-content: center;
-    min-height: 240px;
+    min-height: 320px;
     overflow: auto;
-    padding: 0.75rem;
+    padding: 1rem;
 }
 
-.preview-wrap iframe {
-    background: #ffffff;
-    border: 1px solid var(--ese-border);
-    border-radius: 4px;
+#ese-root .ese-preview-wrap iframe {
+    background: var(--color-white);
+    border: 1px solid var(--color-base-200);
+    border-radius: var(--border-radius, 0.375rem);
     height: 100%;
-    min-height: 240px;
+    min-height: 320px;
     width: 100%;
 }
 
-.preview-wrap.is-mobile iframe {
+.dark #ese-root .ese-preview-wrap iframe {
+    border-color: var(--color-base-800);
+}
+
+#ese-root .ese-preview-wrap.is-mobile iframe {
     max-width: 100%;
     width: 375px;
 }
 
 /* Diagnostics ------------------------------------------------------------- */
 
-.diagnostics {
-    background: var(--ese-danger-bg);
-    border-top: 1px solid #fecaca;
-    color: var(--ese-danger);
+#ese-root .ese-diagnostics {
     max-height: 10rem;
     overflow: auto;
     padding: 0.5rem 0.75rem;
 }
 
-.diagnostics-list {
+#ese-root .ese-diagnostics-list {
     font-size: 0.8125rem;
     margin: 0;
     padding-left: 1.125rem;
 }
 
-.diagnostics-list li {
+#ese-root .ese-diagnostics-list li {
     overflow-wrap: anywhere;
 }
 
 /* Small screens: stack the editor above the preview ----------------------- */
 
 @media (max-width: 900px) {
-    .workspace {
+    #ese-root .ese-workspace {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(260px, 1fr) minmax(260px, 1fr);
+        min-height: 0;
     }
 
-    .toolbar-name {
-        max-width: 40vw;
-    }
-
-    #ese-source .cm-scroller {
+    #ese-root .ese-editor .cm-scroller {
         font-size: 0.75rem;
     }
 }

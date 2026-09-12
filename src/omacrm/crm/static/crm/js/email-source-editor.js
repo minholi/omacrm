@@ -22,6 +22,7 @@
     var compiling = false;
     var compileAgain = false;
     var languageCompartment = new CM.Compartment();
+    var themeCompartment = new CM.Compartment();
 
     var mjmlTags = cfg.mjmlTags || [];
     var knownTags = {};
@@ -106,6 +107,17 @@
         return [CM.xml(), CM.lintGutter(), CM.linter(lintMjml, { delay: 300 })];
     }
 
+    /* Follow the Unfold theme switcher: dark mode is a "dark" class on the
+       document element, and "auto" follows the operating system. */
+
+    function darkMode() {
+        return document.documentElement.classList.contains("dark");
+    }
+
+    function themeExtensions() {
+        return darkMode() ? CM.oneDark : [];
+    }
+
     var mjmlCompletions = CM.completeFromList(
         mjmlTags.map(function (tag) {
             return { label: tag, type: "property", detail: "MJML" };
@@ -146,6 +158,7 @@
             doc: cfg.source || "",
             extensions: [
                 CM.basicSetup,
+                themeCompartment.of(themeExtensions()),
                 languageCompartment.of(formatExtensions(currentFormat())),
                 CM.autocompletion({
                     override: [mjmlCompletions, completeMergeTags],
@@ -160,6 +173,37 @@
         }),
         parent: editorEl,
     });
+
+    var editorDark = darkMode();
+
+    function syncEditorTheme() {
+        var next = darkMode();
+        if (next === editorDark) {
+            return;
+        }
+        editorDark = next;
+        editor.dispatch({
+            effects: themeCompartment.reconfigure(
+                next ? CM.oneDark : []
+            ),
+        });
+    }
+
+    if (window.MutationObserver) {
+        new MutationObserver(syncEditorTheme).observe(
+            document.documentElement,
+            { attributes: true, attributeFilter: ["class"] }
+        );
+    }
+
+    if (window.matchMedia) {
+        var darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
+        if (darkMedia.addEventListener) {
+            darkMedia.addEventListener("change", syncEditorTheme);
+        } else if (darkMedia.addListener) {
+            darkMedia.addListener(syncEditorTheme);
+        }
+    }
 
     function source() {
         return editor.state.doc.toString();

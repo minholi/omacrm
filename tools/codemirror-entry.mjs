@@ -8,6 +8,7 @@ import { xml } from "@codemirror/lang-xml";
 import { linter, lintGutter } from "@codemirror/lint";
 import { autocompletion, completeFromList } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 window.OmaCodeMirror = {
   EditorView,
@@ -22,4 +23,5 @@ window.OmaCodeMirror = {
   keymap,
   lineNumbers,
   indentWithTab,
+  oneDark,
 };
