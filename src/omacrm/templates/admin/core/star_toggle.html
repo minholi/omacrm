@@ -6,6 +6,6 @@
         data-icon-off="star_border"
         aria-pressed="{{ starred|yesno:'true,false' }}"
         {% if starred %}title="{% translate 'Remove from favourites' %}"{% else %}title="{% translate 'Add to favourites' %}"{% endif %}
-        class="inline-flex h-8 w-8 items-center justify-center rounded-default text-base-400 hover:bg-base-100 hover:text-primary-600 dark:hover:bg-base-800 dark:hover:text-primary-500">
+        class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-default text-base-400 hover:bg-base-100 hover:text-primary-600 dark:hover:bg-base-800 dark:hover:text-primary-500">
     <span class="material-symbols-outlined md-18" data-toggle-icon>{% if starred %}star{% else %}star_border{% endif %}</span>
 </button>
