@@ -8,7 +8,7 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side).
-441 tests passing; see the
+449 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -440,7 +440,7 @@ uv run python src/omacrm/manage.py runserver
   values — hidden/read-only values are ignored, a conditionally required
   field only blocks while its condition holds — and exposes the active rules
   plus metadata defaults to the change form as `json_script`
-  `dynamic-logic-config` for the follow-up client-side show/hide (441 tests).
+  `dynamic-logic-config` for the follow-up client-side show/hide (449 tests).
 
 - **2026-09-12** — Email template code editor: the GrapesJS visual designer
   and its assets/endpoints were removed; `EmailTemplate.source` is now the
