@@ -35,6 +35,38 @@ uv run python src/omacrm/manage.py run_cron --process # enqueue scheduled jobs
 uv run python src/omacrm/manage.py rebuild_metadata   # clear metadata caches
 ```
 
+## Demo deployment behind a reverse proxy
+
+For an HTTPS demo the app can run under gunicorn while a reverse proxy
+(e.g. Traefik) terminates TLS and forwards plain HTTP to `127.0.0.1:8020`.
+Whitenoise serves the collected static files in that setup.
+
+```bash
+uv sync --group server
+export DJANGO_DEBUG=0
+export DJANGO_SECRET_KEY="a-long-random-production-secret"
+export DJANGO_ALLOWED_HOSTS=crm.example.com
+export DJANGO_CSRF_TRUSTED_ORIGINS=https://crm.example.com
+export DJANGO_SERVE_MEDIA=1   # optional: let Django serve uploaded media
+
+uv run python src/omacrm/manage.py migrate
+uv run python src/omacrm/manage.py collectstatic --noinput
+uv run --group server gunicorn omacrm.config.wsgi:application --bind 127.0.0.1:8020
+```
+
+Environment variables read by `config/settings.py`:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DJANGO_DEBUG` | `1` | Set to `0` outside local development. |
+| `DJANGO_ALLOWED_HOSTS` | `*` | Comma-separated host names. |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | *(empty)* | Comma-separated full origins, e.g. `https://crm.example.com`. |
+| `DJANGO_SERVE_MEDIA` | `0` | Set to `1` to serve `MEDIA_ROOT` through Django (demo only). |
+| `DJANGO_SECRET_KEY` | development fallback | Set a unique value in production. |
+
+The proxy must forward `X-Forwarded-Proto` (Traefik does by default) so Django
+recognizes HTTPS requests through `SECURE_PROXY_SSL_HEADER`.
+
 ## Documentation
 
 - [ROADMAP.md](ROADMAP.md) — agreed plan, phase status, next steps and a

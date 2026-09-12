@@ -1,8 +1,10 @@
 """URL configuration for the OmaCRM project."""
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.generic import RedirectView
+from django.views.static import serve as static_serve
 
 from omacrm.core.admin.views import (
     CalendarView,
@@ -151,3 +153,12 @@ urlpatterns = [
     ),
     path("api/v1/", include(router.urls)),
 ]
+
+if settings.SERVE_MEDIA:
+    urlpatterns += [
+        re_path(
+            rf"^{settings.MEDIA_URL.lstrip('/')}(?P<path>.*)$",
+            static_serve,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
+    ]
