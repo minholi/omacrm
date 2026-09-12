@@ -352,6 +352,15 @@ _rules_cache: dict[str, list] = {}
 
 
 def invalidate_dynamic_logic_cache() -> None:
+    """Drop the in-process rule cache.
+
+    Wired to the ``post_save``/``post_delete`` signals in ``core.apps``, so the
+    cache is only cleared in the process that performed the write. Rules changed
+    from a shell/console, or by another worker, therefore stay stale in the
+    serving process until it restarts — which is the case this cache trades for
+    one query per form render.
+    """
+
     _rules_cache.clear()
 
 
