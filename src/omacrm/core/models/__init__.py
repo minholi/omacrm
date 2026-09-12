@@ -2,6 +2,7 @@ from omacrm.core.models.base import AuditMixin, BaseEntity, CustomDataMixin
 from omacrm.core.models.automation import DynamicLogic, Formula, Workflow
 from omacrm.core.models.collab import (
     Attachment,
+    KanbanOrder,
     Note,
     Notification,
     StarSubscription,
@@ -43,6 +44,7 @@ __all__ = [
     "EmailAccount",
     "Formula",
     "Job",
+    "KanbanOrder",
     "Layout",
     "Note",
     "Notification",

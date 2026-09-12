@@ -15,6 +15,7 @@ from omacrm.core.admin.views import (
     LinkAutocompleteView,
     RoleAclEditorView,
     kanban_move,
+    kanban_order,
     notification_stream,
 )
 from omacrm.core.api.router import router
@@ -100,6 +101,11 @@ urlpatterns = [
         "admin/kanban/<str:entity_type>/move/",
         admin.site.admin_view(kanban_move),
         name="kanban_move",
+    ),
+    path(
+        "admin/kanban/<str:entity_type>/order/",
+        admin.site.admin_view(kanban_order),
+        name="kanban_order",
     ),
     path(
         "campaigns/track/<int:pk>/",

@@ -8,7 +8,8 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
-stars/favourites and record following). 502 tests passing; see the
+stars/favourites, record following and per-user kanban order). 514 tests
+passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -307,7 +308,7 @@ not treated as gaps.
 | --- | --- | --- | --- |
 | 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | **✅ delivered 2026-09-12** (rules + server-side enforcement + JSON for the follow-up client-side show/hide) |
 | 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | **✅ delivered 2026-09-12** (stars, following, auto-follow, Starred/Following filters, follower notifications) |
-| 3 | Persisted kanban order | `KanbanOrder` | The board exists; only the ordering is not stored |
+| 3 | Persisted kanban order | `KanbanOrder` | **✅ delivered 2026-09-12** (per-user card order within a column, batched id-list endpoint) |
 | 4 | Captcha on public forms | `Tools/Captcha` | Lead capture is public and currently unprotected |
 | 5 | App secrets | `Tools/AppSecret` | Named credentials for webhooks/integrations |
 | 6 | OpenAPI specification | `Tools/OpenApi` | Contract for integrators |
@@ -343,9 +344,9 @@ not treated as gaps.
 | 26 | Pluggable file storage (S3) | `Core/FileStorage` |
 
 Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
-(#1) and **follow/favourites** (#2) are delivered; the next item is
-**persisted kanban order** (#3). Tiers 2 and 3 are recorded here but not
-scheduled.
+(#1), **follow/favourites** (#2) and **persisted kanban order** (#3) are
+delivered; the next item is **captcha on public forms** (#4). Tiers 2 and 3
+are recorded here but not scheduled.
 
 ### Workflow engine — improvement to the existing `Workflow`
 
@@ -444,6 +445,20 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Persisted kanban order (Tier 1 #3): `KanbanOrder`
+  (`core/models/collab.py`, one row per user, entity type and record, indexed
+  by user/entity/type/column/order) stores where each user put a card inside a
+  column. `core/services/kanban.py` gains `reorder()` (validates the ids
+  against the column and the user's read ACL, then writes one batched
+  `bulk_create` upsert) and `board()` now returns arranged cards first in the
+  stored order with unarranged ones after them in metadata order, so a user
+  with no saved rows sees the historical board unchanged; `move_record()`
+  clears a record's saved order when its status changes so it lands at the end
+  of its new column. Drops post the column's ids in DOM order to the new
+  `/admin/kanban/<Entity>/order/` endpoint (`kanban_order`), and the Alpine
+  board keeps the card in place only when both the status change and the order
+  were accepted (514 tests).
 
 - **2026-09-12** — Stars & following fixes: `merge_records` now moves
   `StarSubscription`/`StreamSubscription` rows from the duplicate to the master

@@ -7,6 +7,7 @@
 
 {% block content %}
     <div class="flex flex-col gap-6" id="kanban-root" data-move-url="{{ move_url }}"
+         data-order-url="{{ order_url }}"
          x-data="{
             kanbanDrop(event) {
                 const item = event.item;
@@ -19,6 +20,7 @@
                 const root = document.getElementById('kanban-root');
                 const tokenField = root.querySelector('[name=csrfmiddlewaretoken]');
                 const status = document.getElementById('kanban-status');
+                const changedColumn = Boolean(from) && from !== dropzone;
 
                 function updateCounts() {
                     root.querySelectorAll('[data-column]').forEach(function (el) {
@@ -31,38 +33,76 @@
                     status.textContent = message;
                     status.style.color = isError ? '#dc2626' : '';
                 }
-
-                updateCounts();
-                fetch(root.dataset.moveUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': tokenField ? tokenField.value : '',
-                    },
-                    body: JSON.stringify({pk: item.dataset.pk, value: value}),
-                })
-                    .then(function (response) {
+                function postJson(url, payload) {
+                    return fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': tokenField ? tokenField.value : '',
+                        },
+                        body: JSON.stringify(payload),
+                    }).then(function (response) {
                         return response.json().then(function (data) {
                             return {ok: response.ok, data: data};
                         });
-                    })
+                    });
+                }
+                function columnIds(zone) {
+                    return Array.prototype.map.call(
+                        zone.querySelectorAll('.kanban-card'),
+                        function (card) { return card.dataset.pk; }
+                    );
+                }
+                function undoMove() {
+                    if (!changedColumn) return;
+                    const source = from.closest('[data-column]');
+                    postJson(root.dataset.moveUrl, {
+                        pk: item.dataset.pk,
+                        value: source ? source.dataset.column : '',
+                    }).catch(function () {});
+                }
+                function fail(result) {
+                    if (from) from.appendChild(item);
+                    updateCounts();
+                    setStatus(
+                        (result && result.data && result.data.error) ||
+                            '{% translate "Could not move the card." %}',
+                        true
+                    );
+                }
+
+                updateCounts();
+
+                const moving = changedColumn
+                    ? postJson(root.dataset.moveUrl, {pk: item.dataset.pk, value: value})
+                    : Promise.resolve({ok: true, data: {}});
+
+                moving
                     .then(function (result) {
-                        if (result.ok) {
-                            setStatus('{% translate "Saved." %}', false);
-                        } else {
-                            if (from) from.appendChild(item);
-                            updateCounts();
-                            setStatus(
-                                (result.data && result.data.error) ||
-                                    '{% translate "Could not move the card." %}',
-                                true
-                            );
+                        if (!result.ok) {
+                            fail(result);
+                            return;
                         }
+                        return postJson(root.dataset.orderUrl, {
+                            group: value,
+                            ids: columnIds(dropzone),
+                        }).then(
+                            function (orderResult) {
+                                if (orderResult.ok) {
+                                    setStatus('{% translate "Saved." %}', false);
+                                    return;
+                                }
+                                undoMove();
+                                fail(orderResult);
+                            },
+                            function () {
+                                undoMove();
+                                fail();
+                            }
+                        );
                     })
                     .catch(function () {
-                        if (from) from.appendChild(item);
-                        updateCounts();
-                        setStatus('{% translate "Could not move the card." %}', true);
+                        fail();
                     });
             }
          }">

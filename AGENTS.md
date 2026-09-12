@@ -323,7 +323,14 @@ src/omacrm/
   at `/admin/kanban/<Entity>/` (linked from the changelist), with ACL-scoped
   columns from the field choices, drag-and-drop moves posted to
   `/admin/kanban/<Entity>/move/` and empty/unknown values in a "No value"
-  column (`core/services/kanban.py`).
+  column (`core/services/kanban.py`). The card order inside a column is
+  persisted **per user** in `KanbanOrder` (`core/models/collab.py`, one row per
+  user and record): cards the user arranged come first in that order and the
+  rest follow by the entity's metadata ordering. A drop posts the column's ids
+  to `/admin/kanban/<Entity>/order/` (`kanban_order`, Espo-style list of ids
+  validated against the column and the user's ACL, written in one batched
+  upsert); changing a card's status clears its stored row so it lands at the
+  end of its new column.
 - **Portal**: customer-portal users are `User` records with `type=portal`
   linked to a `Contact` (`Contact.portal_user`) and granted `PortalRole`s;
   `/portal/` (server-rendered, no Unfold) exposes the user's own Cases and

@@ -187,6 +187,36 @@ class StreamSubscription(models.Model):
         return f"{self.user} follows {self.entity_type}:{self.entity_id}"
 
 
+class KanbanOrder(models.Model):
+    """A user's saved card position inside one Kanban column.
+
+    The record is identified by its metadata entity type plus primary key, so
+    runtime custom entities work exactly like built-in ones. The unique
+    constraint keeps one row per user and record — a record sits in one column
+    at a time — and the index covers reading one column's order for one user.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="kanban_orders",
+    )
+    entity_type = models.CharField(max_length=64)
+    entity_id = models.PositiveBigIntegerField()
+    group = models.CharField(max_length=100)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        unique_together = [("user", "entity_type", "entity_id")]
+        indexes = [
+            models.Index(fields=["user", "entity_type", "group", "order"]),
+        ]
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.entity_type}:{self.entity_id} at {self.group}#{self.order}"
+
+
 class StreamEvent(models.Model):
     """A pending real-time stream update for one user (consumed over SSE)."""
 

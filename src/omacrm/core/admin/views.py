@@ -288,6 +288,9 @@ class KanbanView(UnfoldSiteViewMixin, TemplateView):
                 "move_url": reverse(
                     "kanban_move", kwargs={"entity_type": entity_type}
                 ),
+                "order_url": reverse(
+                    "kanban_order", kwargs={"entity_type": entity_type}
+                ),
             }
         )
         return context
@@ -326,6 +329,41 @@ def kanban_move(request, entity_type):
     try:
         kanban.move_record(
             record, entity_type, config["field"], str(payload.get("value", ""))
+        )
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+    return JsonResponse({"ok": True})
+
+
+def kanban_order(request, entity_type):
+    """Persist the card order of one Kanban column (JSON endpoint)."""
+
+    from omacrm.core.services import kanban
+
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "POST required."}, status=405)
+
+    config = kanban.kanban_config(entity_type)
+    if config is None:
+        return JsonResponse(
+            {"ok": False, "error": "Kanban is not enabled for this entity."},
+            status=404,
+        )
+
+    try:
+        payload = json.loads(request.body or b"{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON."}, status=400)
+
+    ids = payload.get("ids")
+    if not isinstance(ids, list):
+        return JsonResponse(
+            {"ok": False, "error": "A list of record ids is required."}, status=400
+        )
+
+    try:
+        kanban.reorder(
+            request.user, entity_type, str(payload.get("group", "")), ids
         )
     except ValueError as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=400)
