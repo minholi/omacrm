@@ -177,7 +177,12 @@ src/omacrm/
   `Exists` query per page. `Preferences.auto_follow_entity_types` follows new
   records of those types for every user who selected them and auto-follows the
   author after a stream post; `post_note()` sends a `Stream` notification to
-  the record's active followers (the author is skipped).
+  the record's active followers (the author is skipped, and a mentioned
+  follower gets only the `Mention`). Merging two records moves the duplicate's
+  stars/follows to the master under its metadata entity type, dropping a
+  duplicate row when the user already subscribed to the master
+  (`core/services/merge.py`); removing a custom entity deletes the
+  subscriptions keyed by its entity type (`core/services/custom_entities.py`).
 - **Dashboard**: `/admin/` (`core/admin/dashboard.py`, `templates/admin/index.html`)
   shows KPI cards (system counts plus ACL-scoped Account/Contact/Lead/
   Opportunity counts) and a **Sales by month** card: recorded Closed Won

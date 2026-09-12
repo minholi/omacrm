@@ -224,6 +224,28 @@ class FollowerNotificationTests(TestCase):
         stream.post_note(self.account, "Hello", user=self.author)
         self.assertEqual(self._stream_notifications(outsider).count(), 0)
 
+    def test_mentioned_follower_gets_only_the_mention(self):
+        stream.post_note(
+            self.account,
+            f"@{self.follower.user_name} please review",
+            user=self.author,
+        )
+
+        self.assertEqual(Notification.objects.filter(user=self.follower).count(), 1)
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.follower, type=Notification.Type.MENTION
+            ).count(),
+            1,
+        )
+        self.assertEqual(self._stream_notifications(self.follower).count(), 0)
+
+    def test_non_mentioned_follower_gets_one_stream_notification(self):
+        stream.post_note(self.account, "No mentions here", user=self.author)
+
+        self.assertEqual(self._stream_notifications(self.follower).count(), 1)
+        self.assertEqual(Notification.objects.filter(user=self.follower).count(), 1)
+
     def test_reactions_do_not_notify_followers(self):
         note = stream.post_note(self.account, "Hello", user=self.author)
         Notification.objects.all().delete()
@@ -360,6 +382,42 @@ class CustomEntitySubscriptionTests(TestCase):
             )
         )
         self.assertEqual([row.starred for row in rows], [True])
+
+    def test_unregistering_an_entity_purges_only_its_subscriptions(self):
+        other = CustomEntity.objects.create(
+            name="Gadget", label="Gadget", label_plural="Gadgets"
+        )
+        registry.invalidate()
+        other_record = DynamicRecord.objects.create(
+            entity_type="Gadget", name="Beep"
+        )
+        self.addCleanup(DynamicRecord.objects.filter(entity_type="Gadget").delete)
+        self.addCleanup(custom_entities.unregister, other)
+        self.addCleanup(other.delete)
+
+        subscriptions.set_starred(self.user, self.record, True)
+        subscriptions.set_following(self.user, self.record, True)
+        subscriptions.set_starred(self.user, other_record, True)
+        subscriptions.set_following(self.user, other_record, True)
+
+        custom_entities.unregister(self.entity)
+
+        self.assertFalse(
+            StarSubscription.objects.filter(entity_type="Widget").exists()
+        )
+        self.assertFalse(
+            StreamSubscription.objects.filter(entity_type="Widget").exists()
+        )
+        self.assertTrue(
+            StarSubscription.objects.filter(
+                entity_type="Gadget", entity_id=other_record.pk
+            ).exists()
+        )
+        self.assertTrue(
+            StreamSubscription.objects.filter(
+                entity_type="Gadget", entity_id=other_record.pk
+            ).exists()
+        )
 
 
 class PreferencesAdminTests(TestCase):

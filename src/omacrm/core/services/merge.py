@@ -5,7 +5,46 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
+from omacrm.core.metadata.registry import registry
+
 logger = logging.getLogger(__name__)
+
+
+def _transfer_subscriptions(model, entity_type, master_pk, duplicate_pk) -> int:
+    """Re-point one subscription table from duplicate to master.
+
+    A user who had subscribed to both records already has a row on the master;
+    the duplicate's colliding row is dropped so the unique star constraint is
+    respected. Returns the number of duplicate rows reconciled.
+    """
+
+    duplicate_rows = list(
+        model.objects.filter(entity_type=entity_type, entity_id=duplicate_pk)
+        .values_list("pk", "user_id")
+    )
+    if not duplicate_rows:
+        return 0
+
+    existing_users = set(
+        model.objects.filter(
+            entity_type=entity_type, entity_id=master_pk
+        ).values_list("user_id", flat=True)
+    )
+    move_pks = [
+        pk for pk, user_id in duplicate_rows if user_id not in existing_users
+    ]
+    remove_pks = [
+        pk for pk, user_id in duplicate_rows if user_id in existing_users
+    ]
+
+    moved = len(remove_pks)
+    if remove_pks:
+        model.objects.filter(pk__in=remove_pks).delete()
+    if move_pks:
+        moved += model.objects.filter(pk__in=move_pks).update(
+            entity_id=master_pk
+        )
+    return moved
 
 
 @transaction.atomic
@@ -19,10 +58,23 @@ def merge_records(master, duplicate, values: dict | None = None) -> dict:
     soft-deleted with it).
     """
 
-    from omacrm.core.models import Attachment, Email, Note
+    from omacrm.core.models import (
+        Attachment,
+        Email,
+        Note,
+        StarSubscription,
+        StreamSubscription,
+    )
 
     model = type(master)
-    moved = {"notes": 0, "attachments": 0, "emails": 0, "relations": 0}
+    moved = {
+        "notes": 0,
+        "attachments": 0,
+        "emails": 0,
+        "relations": 0,
+        "stars": 0,
+        "follows": 0,
+    }
 
     for field_name, value in (values or {}).items():
         setattr(master, field_name, value)
@@ -47,6 +99,17 @@ def merge_records(master, duplicate, values: dict | None = None) -> dict:
     moved["emails"] += Email.objects.filter(
         parent_type=duplicate_ct, parent_id=duplicate.pk
     ).update(parent_type=master_ct, parent_id=master.pk)
+
+    entity_type = registry.entity_type_for_instance(master) or getattr(
+        master, "entity_type", ""
+    )
+    if entity_type:
+        moved["stars"] = _transfer_subscriptions(
+            StarSubscription, entity_type, master.pk, duplicate.pk
+        )
+        moved["follows"] = _transfer_subscriptions(
+            StreamSubscription, entity_type, master.pk, duplicate.pk
+        )
 
     for relation in duplicate._meta.related_objects:
         field = relation.field

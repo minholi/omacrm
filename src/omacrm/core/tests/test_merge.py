@@ -1,7 +1,14 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from omacrm.core.models import Note, User
+from omacrm.core.models import (
+    Note,
+    StarSubscription,
+    StreamSubscription,
+    User,
+)
+from omacrm.core.services import subscriptions
+from omacrm.core.services.merge import merge_records
 from omacrm.crm.models import Account, Contact
 
 
@@ -85,6 +92,70 @@ class MergeTests(TestCase):
         self.assertTrue(Account.objects.filter(pk=self.right.pk).exists())
         self.contact.refresh_from_db()
         self.assertEqual(self.contact.account_id, self.right.pk)
+
+    def test_subscriptions_move_to_the_master(self):
+        fan = User.objects.create_user("merge-fan", "fan@example.com", "pw")
+        subscriptions.set_starred(fan, self.right, True)
+        subscriptions.set_following(fan, self.right, True)
+
+        moved = merge_records(self.left, self.right)
+
+        self.assertEqual(moved["stars"], 1)
+        self.assertEqual(moved["follows"], 1)
+        self.assertTrue(subscriptions.is_starred(fan, self.left))
+        self.assertTrue(subscriptions.is_following(fan, self.left))
+        self.assertFalse(
+            StarSubscription.objects.filter(
+                entity_type="Account", entity_id=self.right.pk
+            ).exists()
+        )
+        self.assertFalse(
+            StreamSubscription.objects.filter(
+                entity_type="Account", entity_id=self.right.pk
+            ).exists()
+        )
+
+    def test_subscriber_of_both_keeps_one_row_on_the_master(self):
+        fan = User.objects.create_user("merge-both", "both@example.com", "pw")
+        subscriptions.set_starred(fan, self.left, True)
+        subscriptions.set_starred(fan, self.right, True)
+        subscriptions.set_following(fan, self.left, True)
+        subscriptions.set_following(fan, self.right, True)
+
+        moved = merge_records(self.left, self.right)
+
+        self.assertEqual(moved["stars"], 1)
+        self.assertEqual(moved["follows"], 1)
+        self.assertEqual(
+            StarSubscription.objects.filter(
+                user=fan, entity_type="Account", entity_id=self.left.pk
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            StreamSubscription.objects.filter(
+                user=fan, entity_type="Account", entity_id=self.left.pk
+            ).count(),
+            1,
+        )
+        self.assertFalse(
+            StarSubscription.objects.filter(
+                entity_type="Account", entity_id=self.right.pk
+            ).exists()
+        )
+        self.assertFalse(
+            StreamSubscription.objects.filter(
+                entity_type="Account", entity_id=self.right.pk
+            ).exists()
+        )
+
+    def test_merge_without_subscriptions_is_unchanged(self):
+        moved = merge_records(self.left, self.right)
+
+        self.assertEqual(moved["stars"], 0)
+        self.assertEqual(moved["follows"], 0)
+        self.assertTrue(Account.objects.filter(pk=self.left.pk).exists())
+        self.assertFalse(Account.objects.filter(pk=self.right.pk).exists())
 
     def test_invalid_token(self):
         response = self.client.get(

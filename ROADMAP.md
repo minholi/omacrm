@@ -431,6 +431,16 @@ uv run python src/omacrm/manage.py runserver
 
 ## Change log
 
+- **2026-09-12** — Stars & following fixes: `merge_records` now moves
+  `StarSubscription`/`StreamSubscription` rows from the duplicate to the master
+  using the master's metadata entity type, dropping a duplicate's row when the
+  user already subscribed to the master (so the star unique constraint holds)
+  and reporting both under `moved["stars"]`/`moved["follows"]`; removing a
+  custom entity purges the subscriptions keyed by its entity type next to the
+  existing `CustomLink` cleanup; and `post_note()` makes the mention win over
+  the follower notification, so a mentioned follower gets one `Mention`
+  notification instead of a `Mention` plus a `Stream` (499 tests).
+
 - **2026-09-12** — Stars & following (Tier 1 #2): `StarSubscription`/
   `StreamSubscription` (`core/models/collab.py`, unique star per user and
   record) and `core/services/subscriptions.py` (star/follow toggles, batch

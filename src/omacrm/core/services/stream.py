@@ -156,16 +156,18 @@ def post_note(instance, text: str, user=None, is_internal: bool = False):
         created_by=user or get_current_user(),
     )
     subscriptions.auto_follow_after_note(note)
-    notify_mentions(note)
-    notify_followers(note)
+    mentions = notify_mentions(note)
+    mentioned_user_ids = {item.user_id for item in mentions if item}
+    notify_followers(note, exclude=mentioned_user_ids)
     return note
 
 
-def notify_followers(note):
+def notify_followers(note, exclude=None):
     """Notify the record's active followers about a stream post.
 
-    The author is skipped so own posts stay quiet, and internal notes do not
-    reach portal users.
+    The author is skipped so own posts stay quiet, internal notes do not
+    reach portal users, and users mentioned in the post already got the
+    stronger mention notification.
     """
 
     from omacrm.core.services import notifications, subscriptions
@@ -180,6 +182,8 @@ def notify_followers(note):
     followers = subscriptions.followers_of(parent)
     if note.created_by_id:
         followers = followers.exclude(pk=note.created_by_id)
+    if exclude:
+        followers = followers.exclude(pk__in=exclude)
     if note.is_internal:
         followers = followers.exclude(type="portal")
 

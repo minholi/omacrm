@@ -279,11 +279,17 @@ def unregister(custom_entity) -> None:
     try:
         from django.db.models import Q
 
-        from omacrm.core.models import CustomLink
+        from omacrm.core.models import (
+            CustomLink,
+            StarSubscription,
+            StreamSubscription,
+        )
         from omacrm.core.services import relations
 
         relations.delete_links_for_entity(name)
         CustomLink.objects.filter(Q(entity_type=name) | Q(link_entity=name)).delete()
+        StarSubscription.objects.filter(entity_type=name).delete()
+        StreamSubscription.objects.filter(entity_type=name).delete()
     except Exception:  # noqa: BLE001 - cleanup is best effort
         logger.exception("Could not remove links of custom entity %s", name)
 

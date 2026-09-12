@@ -14,10 +14,12 @@ from django.urls import reverse
 from omacrm.core.models import (
     Notification,
     Preferences,
+    StarSubscription,
     StreamSubscription,
     User,
 )
 from omacrm.core.services import stream, subscriptions
+from omacrm.core.services.merge import merge_records
 from omacrm.crm.models import Account
 
 
@@ -52,7 +54,8 @@ class SubscriptionSemanticsTests(TestCase):
             )
         )
         print(f"\n  mention+follow -> {total} notification(s): {kinds}")
-        self.assertLessEqual(total, 2, f"a single post produced {total} notifications")
+        self.assertEqual(total, 1, f"a single post produced {total} notifications")
+        self.assertEqual(kinds, [Notification.Type.MENTION])
 
     def test_unfollowing_silences_further_posts(self):
         subscriptions.set_following(self.follower, self.account, True)
@@ -141,4 +144,85 @@ class SubscriptionSemanticsTests(TestCase):
                 user=self.author, entity_type="Account", entity_id=self.account.pk
             ).count(),
             1,
+        )
+
+
+class MergeAndNotificationReviewTests(TestCase):
+    """The merge/notification fixes, probed with combinations not covered elsewhere."""
+
+    def setUp(self):
+        self.a = User.objects.create_user("rev-a", "reva@example.com", "pw")
+        self.b = User.objects.create_user("rev-b", "revb@example.com", "pw")
+        self.c = User.objects.create_user("rev-c", "revc@example.com", "pw")
+        self.master = Account.objects.create(name="Review master")
+        self.duplicate = Account.objects.create(name="Review duplicate")
+        self.tables = (StarSubscription, StreamSubscription)
+
+    def _rows(self, model, entity_id):
+        return sorted(
+            model.objects.filter(entity_type="Account", entity_id=entity_id).values_list(
+                "user_id", flat=True
+            )
+        )
+
+    def test_every_combination_of_subscribers_lands_on_the_master(self):
+        # a: duplicate only | b: master only | c: both — c is the collision case
+        for model in self.tables:
+            model.objects.create(
+                user=self.a, entity_type="Account", entity_id=self.duplicate.pk
+            )
+            model.objects.create(
+                user=self.b, entity_type="Account", entity_id=self.master.pk
+            )
+            model.objects.create(
+                user=self.c, entity_type="Account", entity_id=self.master.pk
+            )
+            model.objects.create(
+                user=self.c, entity_type="Account", entity_id=self.duplicate.pk
+            )
+
+        merge_records(self.master, self.duplicate)
+
+        for model in self.tables:
+            with self.subTest(model=model.__name__):
+                self.assertEqual(
+                    self._rows(model, self.master.pk),
+                    sorted([self.a.pk, self.b.pk, self.c.pk]),
+                    "every user must end with exactly one row on the master",
+                )
+                self.assertEqual(
+                    self._rows(model, self.duplicate.pk),
+                    [],
+                    "nothing may be left pointing at the duplicate",
+                )
+
+    def test_merge_reports_what_it_reconciled(self):
+        StarSubscription.objects.create(
+            user=self.a, entity_type="Account", entity_id=self.duplicate.pk
+        )
+        moved = merge_records(self.master, self.duplicate)
+        self.assertEqual(moved["stars"], 1)
+        self.assertEqual(moved["follows"], 0)
+        self.assertEqual(self._rows(StarSubscription, self.master.pk), [self.a.pk])
+
+    def test_mentioned_and_plain_follower_in_one_post(self):
+        subscriptions.set_following(self.a, self.master, True)
+        subscriptions.set_following(self.b, self.master, True)
+        mention = f"@{self.a.user_name}"
+        self.assertRegex(mention, stream.MENTION_RE, "mention format changed")
+        stream.post_note(self.master, f"hey {mention}", user=self.c)
+
+        self.assertEqual(
+            list(
+                Notification.objects.filter(user=self.a).values_list("type", flat=True)
+            ),
+            [Notification.Type.MENTION],
+            "the mentioned follower must get only the mention",
+        )
+        self.assertEqual(
+            list(
+                Notification.objects.filter(user=self.b).values_list("type", flat=True)
+            ),
+            ["Stream"],
+            "the plain follower must still get the stream notification",
         )
