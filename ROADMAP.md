@@ -439,7 +439,7 @@ uv run python src/omacrm/manage.py runserver
   custom entity purges the subscriptions keyed by its entity type next to the
   existing `CustomLink` cleanup; and `post_note()` makes the mention win over
   the follower notification, so a mentioned follower gets one `Mention`
-  notification instead of a `Mention` plus a `Stream` (499 tests).
+  notification instead of a `Mention` plus a `Stream` (502 tests).
 
 - **2026-09-12** — Stars & following (Tier 1 #2): `StarSubscription`/
   `StreamSubscription` (`core/models/collab.py`, unique star per user and
