@@ -413,11 +413,25 @@ new front-end dependency.
 
 ```bash
 uv sync
-uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (502 tests)
-uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
+uv run python src/omacrm/manage.py check            # must be clean
+uv run python src/omacrm/manage.py test --parallel  # gate: full suite, ~1 min on 2 cores (was ~2 min serial)
+uv run python src/omacrm/manage.py seed_demo        # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
+
+While working, a narrow target with `--keepdb` is enough to get feedback — the
+~9s database setup dominates anything below the full suite, so without it even a
+single module costs 20s:
+
+```bash
+uv run python src/omacrm/manage.py test --keepdb omacrm.core.tests.test_subscriptions
+```
+
+That is a loop, not a verdict: run the full suite before anything goes to `main`.
+Regressions here have come from interactions rather than from single modules —
+the MJML tag whitelist broke because of `base.mjml`, the shared admin form's
+`full_clean` affects every metadata admin, and the merge now touches four
+tables — so "the tests of the file I changed" would not have caught them.
 
 1. Read `AGENTS.md` for architecture and conventions.
 2. Pick an item from **Phase G** or the **deferred backlog** above and follow
