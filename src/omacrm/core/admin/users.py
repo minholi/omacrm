@@ -1,11 +1,13 @@
 import secrets
 
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from hijack.contrib.admin import HijackUserAdminMixin
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.forms import AdminPasswordChangeForm
+from unfold.widgets import UnfoldAdminSelect2MultipleWidget
 
 from omacrm.core.admin.base import AclAdminMixin, MetadataModelAdmin
 from omacrm.core.forms import CoreUserChangeForm, CoreUserCreationForm
@@ -17,6 +19,7 @@ from omacrm.core.models import (
     TeamUser,
     User,
 )
+from omacrm.core.services import subscriptions
 
 
 @admin.register(User)
@@ -144,11 +147,41 @@ class TeamUserAdmin(ModelAdmin):
     autocomplete_fields = ("team", "user")
 
 
+class PreferencesAdminForm(forms.ModelForm):
+    auto_follow_entity_types = forms.MultipleChoiceField(
+        label=_("Auto-follow entity types"),
+        required=False,
+        widget=UnfoldAdminSelect2MultipleWidget,
+        help_text=_("Automatically follow new records of these entity types."),
+    )
+
+    class Meta:
+        model = Preferences
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["auto_follow_entity_types"].choices = (
+            subscriptions.stream_entity_choices()
+        )
+
+
 @admin.register(Preferences)
 class PreferencesAdmin(ModelAdmin):
-    list_display = ("user", "language", "time_zone", "default_currency")
+    form = PreferencesAdminForm
+    list_display = (
+        "user",
+        "language",
+        "time_zone",
+        "default_currency",
+        "auto_follow_list",
+    )
     search_fields = ("user__user_name",)
     autocomplete_fields = ("user",)
+
+    @admin.display(description=_("Auto-follow"))
+    def auto_follow_list(self, obj):
+        return ", ".join(obj.auto_follow_entity_types or []) or "-"
 
 
 @admin.register(PortalRole)

@@ -15,6 +15,7 @@ from unfold.forms import BaseDialogForm
 from unfold.widgets import UnfoldAdminTextareaWidget
 
 from omacrm.core.admin.datasets import note_dataset_for
+from omacrm.core.admin.filters import FollowingListFilter, StarredListFilter
 from omacrm.core.admin.import_export import MetadataImportExportMixin
 from omacrm.core.admin.inlines import AttachmentInline
 from omacrm.core.metadata.fields import (
@@ -26,7 +27,7 @@ from omacrm.core.metadata.fields import (
 )
 from omacrm.core.metadata.registry import registry
 from omacrm.core.services import custom_fields as custom_field_service
-from omacrm.core.services import relations
+from omacrm.core.services import relations, subscriptions
 from omacrm.core.services.acl import AclService
 from omacrm.core.services.duplicates import DuplicateConflict, check_duplicates
 from omacrm.core.services.stream import post_note
@@ -304,6 +305,22 @@ class MetadataModelAdmin(
     def get_metadata_fields(self):
         return registry.fields(self.entity_type)
 
+    def supports_stars(self) -> bool:
+        if not self.entity_type:
+            return False
+        try:
+            return bool(registry.get(self.entity_type).stars)
+        except KeyError:
+            return False
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if self.supports_stars():
+            queryset = subscriptions.annotate_starred(
+                queryset, request.user, self.entity_type
+            )
+        return queryset
+
     # -- permissions --------------------------------------------------------
 
     def get_readonly_fields(self, request, obj=None):
@@ -383,6 +400,24 @@ class MetadataModelAdmin(
         display.admin_order_field = f"custom_data__{field_def.name}"
         return display
 
+    def _star_display(self, request):
+        from django.template.loader import render_to_string
+
+        meta = self.model._meta
+
+        def display(obj):
+            url = reverse(
+                f"admin:{meta.app_label}_{meta.model_name}_subscription_toggle",
+                args=["star", obj.pk],
+            )
+            return render_to_string(
+                "admin/core/star_toggle.html",
+                {"url": url, "starred": bool(getattr(obj, "starred", False))},
+            )
+
+        display.short_description = ""
+        return display
+
     def _link_display(self, field_def):
         def display(obj):
             records = relations.get_related(obj, field_def.name)
@@ -435,6 +470,8 @@ class MetadataModelAdmin(
         for field_def in custom_fields:
             if field_def.name not in used_custom:
                 base.append(self._custom_display(field_def))
+        if self.supports_stars():
+            base.append(self._star_display(request))
         return base
 
     def get_list_filter(self, request):
@@ -445,6 +482,10 @@ class MetadataModelAdmin(
             filter_class = build_list_filter(field_def)
             if filter_class is not None:
                 filters.append(filter_class)
+        if self.supports_stars():
+            filters.append(StarredListFilter)
+        if self.entity_type and self.metadata_entity().stream:
+            filters.append(FollowingListFilter)
         return filters
 
     def get_search_fields(self, request):
@@ -467,6 +508,25 @@ class MetadataModelAdmin(
             context["dynamic_logic_config"] = dynamic_logic.frontend_config(
                 self.entity_type
             )
+            if obj is not None and obj.pk:
+                meta = self.model._meta
+                toggle_name = (
+                    f"admin:{meta.app_label}_{meta.model_name}_subscription_toggle"
+                )
+                if self.supports_stars():
+                    context["star_toggle_url"] = reverse(
+                        toggle_name, args=["star", obj.pk]
+                    )
+                    context["entity_starred"] = subscriptions.is_starred(
+                        request.user, obj
+                    )
+                if self.metadata_entity().stream:
+                    context["follow_toggle_url"] = reverse(
+                        toggle_name, args=["follow", obj.pk]
+                    )
+                    context["entity_followed"] = subscriptions.is_following(
+                        request.user, obj
+                    )
         return super().render_change_form(
             request, context, add=add, change=change, form_url=form_url, obj=obj
         )
@@ -728,12 +788,25 @@ class MetadataModelAdmin(
         return f"{meta.app_label}_{meta.model_name}_merge"
 
     def get_custom_urls(self):
-        from omacrm.core.admin.views import MassUpdateView, MergeView
+        from omacrm.core.admin.views import (
+            MassUpdateView,
+            MergeView,
+            SubscriptionToggleView,
+        )
 
         return tuple(super().get_custom_urls()) + (
             ("mass-update/", self.mass_update_url_name(), MassUpdateView.as_view()),
             ("merge/", self.merge_url_name(), MergeView.as_view()),
+            (
+                "subscriptions/<str:kind>/<path:object_id>/",
+                self.subscription_toggle_url_name(),
+                SubscriptionToggleView.as_view(),
+            ),
         )
+
+    def subscription_toggle_url_name(self):
+        meta = self.model._meta
+        return f"{meta.app_label}_{meta.model_name}_subscription_toggle"
 
     @admin.action(description=_("Merge selected records"))
     def merge_selected(self, request, queryset):

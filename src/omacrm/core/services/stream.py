@@ -143,9 +143,10 @@ def on_save(instance, created: bool = False) -> None:
 
 
 def post_note(instance, text: str, user=None, is_internal: bool = False):
-    """Create a stream post on a record and notify mentioned users."""
+    """Create a stream post, auto-follow the author and notify users."""
 
     from omacrm.core.models import Note
+    from omacrm.core.services import subscriptions
 
     note = Note.objects.create(
         type=Note.Type.POST,
@@ -154,8 +155,47 @@ def post_note(instance, text: str, user=None, is_internal: bool = False):
         is_internal=is_internal,
         created_by=user or get_current_user(),
     )
+    subscriptions.auto_follow_after_note(note)
     notify_mentions(note)
+    notify_followers(note)
     return note
+
+
+def notify_followers(note):
+    """Notify the record's active followers about a stream post.
+
+    The author is skipped so own posts stay quiet, and internal notes do not
+    reach portal users.
+    """
+
+    from omacrm.core.services import notifications, subscriptions
+
+    try:
+        parent = note.parent
+    except Exception:  # noqa: BLE001 - dangling generic parent
+        parent = None
+    if parent is None:
+        return []
+
+    followers = subscriptions.followers_of(parent)
+    if note.created_by_id:
+        followers = followers.exclude(pk=note.created_by_id)
+    if note.is_internal:
+        followers = followers.exclude(type="portal")
+
+    label = getattr(parent, "name", None) or str(parent)
+    created = []
+    for user in followers:
+        created.append(
+            notifications.notify(
+                user,
+                "Stream",
+                message=f"{note.created_by or 'Someone'} posted on {label}",
+                related=parent,
+                data={"note_id": note.pk},
+            )
+        )
+    return created
 
 
 def notify_mentions(note):

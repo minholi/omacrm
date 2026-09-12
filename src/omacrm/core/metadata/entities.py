@@ -70,6 +70,7 @@ registry.register(
             {"title": None, "fields": ["name", "description", "roles", "created_at"]},
         ],
         icon="groups",
+        stars=False,
         acl_default="no",
     )
 )
@@ -95,6 +96,7 @@ registry.register(
             {"title": None, "fields": ["name", "description", "data", "field_data", "created_at"]},
         ],
         icon="shield_person",
+        stars=False,
         acl_default="no",
     )
 )

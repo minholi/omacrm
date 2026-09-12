@@ -1,0 +1,24 @@
+{% load i18n %}
+
+{% if star_toggle_url or follow_toggle_url %}
+    <div class="flex flex-row flex-wrap items-center gap-2 mb-4">
+        {% if star_toggle_url %}
+            {% include "admin/core/star_toggle.html" with url=star_toggle_url starred=entity_starred %}
+        {% endif %}
+
+        {% if follow_toggle_url %}
+            <button type="button"
+                    data-subscription-toggle
+                    data-toggle-url="{{ follow_toggle_url }}"
+                    data-icon-on="notifications_active"
+                    data-icon-off="notifications"
+                    data-label-on="{% translate 'Unfollow' %}"
+                    data-label-off="{% translate 'Follow' %}"
+                    aria-pressed="{{ entity_followed|yesno:'true,false' }}"
+                    class="inline-flex items-center gap-1 border border-base-200 rounded-default px-3 py-1 text-sm hover:text-primary-600 dark:border-base-800 dark:hover:text-primary-500">
+                <span class="material-symbols-outlined md-18" data-toggle-icon>{% if entity_followed %}notifications_active{% else %}notifications{% endif %}</span>
+                <span data-toggle-label>{% if entity_followed %}{% translate 'Unfollow' %}{% else %}{% translate 'Follow' %}{% endif %}</span>
+            </button>
+        {% endif %}
+    </div>
+{% endif %}

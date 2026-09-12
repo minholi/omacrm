@@ -12,6 +12,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 from django.views.generic import TemplateView
 from unfold.views import BaseAutocompleteView, UnfoldSiteViewMixin
 
@@ -975,3 +976,40 @@ class MassUpdateView(TemplateView):
             _("%(count)s record(s) updated.") % {"count": updated},
         )
         return redirect(self._changelist_url())
+
+
+class SubscriptionToggleView(View):
+    """Toggle the current user's star or follow on one record."""
+
+    http_method_names = ["post"]
+
+    @property
+    def model_admin(self):
+        return self.kwargs.get("model_admin")
+
+    def post(self, request, kind, object_id, *args, **kwargs):
+        from omacrm.core.services import subscriptions
+
+        model_admin = self.model_admin
+        obj = model_admin.get_object(request, object_id)
+        if obj is None:
+            return JsonResponse({"error": "not_found"}, status=404)
+        if not model_admin.has_view_permission(request, obj):
+            return JsonResponse({"error": "forbidden"}, status=403)
+
+        if kind == "star":
+            if not model_admin.supports_stars():
+                return JsonResponse({"error": "unsupported"}, status=400)
+            value = subscriptions.set_starred(
+                request.user, obj, not subscriptions.is_starred(request.user, obj)
+            )
+        elif kind == "follow":
+            if not model_admin.metadata_entity().stream:
+                return JsonResponse({"error": "unsupported"}, status=400)
+            value = subscriptions.set_following(
+                request.user, obj, not subscriptions.is_following(request.user, obj)
+            )
+        else:
+            return JsonResponse({"error": "unknown_kind"}, status=400)
+
+        return JsonResponse({"value": bool(value)})

@@ -38,6 +38,7 @@ class EntityDef:
     detail_layout: list = dataclass_field(default_factory=list)
     list_layout: list = dataclass_field(default_factory=list)
     stream: bool = False
+    stars: bool = True
     calendar: bool = False
     kanban_field: str = ""
     duplicate_check_fields: list = dataclass_field(default_factory=list)

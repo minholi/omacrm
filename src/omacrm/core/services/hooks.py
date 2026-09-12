@@ -120,6 +120,11 @@ class HookRegistry:
         def receiver(sender, instance, created=False, **kwargs):
             stream_module.on_save(instance, created=created)
 
+            if created:
+                from omacrm.core.services import subscriptions
+
+                subscriptions.auto_follow_created(instance)
+
             from omacrm.core.services import formula, webhooks, workflows
 
             formula.run_formulas(instance, "after_save")

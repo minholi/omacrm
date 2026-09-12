@@ -54,20 +54,24 @@ src/omacrm/
   config/            # project package: settings, urls, wsgi/asgi, test_runner
   core/              # platform layer
     models/          # base.py (BaseEntity/CustomDataMixin), user.py, meta.py,
-                     # collab.py (Attachment/Note/Notification/UserReaction),
+                     # collab.py (Attachment/Note/Notification/UserReaction/
+                     # StarSubscription/StreamSubscription),
                      # jobs.py, currency.py, webhooks.py, automation.py
                      # (Formula/Workflow), dynamic.py (CustomEntity/
                      # DynamicRecord), email.py (Email/EmailAccount)
     metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
-    services/        # acl, hooks, stream, notifications, duplicates, jobs,
-                     # context, builtin_jobs, currency, webhooks, formula,
-                     # workflows, custom_entities, phone, reactions, address,
-                     # crypto, inbound_email, navigation, relations,
-                     # custom_fields, kanban, demo/ (seed_demo)
+    services/        # acl, hooks, stream, subscriptions, notifications,
+                     # duplicates, jobs, context, builtin_jobs, currency,
+                     # webhooks, formula, workflows, custom_entities, phone,
+                     # reactions, address, crypto, inbound_email, navigation,
+                     # relations, custom_fields, kanban, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
-                     # automation, dynamic, email, dashboard, views.py
-                     # (calendar + layout/ACL editors), datasets.py, inlines.py
+                     # automation, dynamic, email, dashboard, filters.py
+                     # (Starred/Following list filters), views.py
+                     # (calendar + layout/ACL editors + subscription toggle),
+                     # datasets.py, inlines.py
+    static/core/js/  # notifications.js, subscriptions.js
     api/             # serializers.py, viewsets.py, router.py
     middleware.py    # CurrentUserMiddleware
     forms.py, managers.py
@@ -162,6 +166,18 @@ src/omacrm/
   and a `Post Note` dialog action (mentions `@user_name` create notifications);
   notes support emoji reactions (`UserReaction` + React row action, summaries
   in Notes/Stream); `AttachmentInline` adds file uploads to entity change pages.
+- **Stars & following** (`core/services/subscriptions.py`, `StarSubscription`/
+  `StreamSubscription` in `core/models/collab.py`): every metadata-driven
+  entity can be starred (one row per user and record) or followed; records are
+  identified by metadata entity type plus pk, so runtime custom entities work
+  too. Changelists get a star column, "Starred"/"Following" filters and the
+  record form a star plus Follow/Unfollow control, all toggled in place via
+  `/admin/<app>/<model>/subscriptions/<star|follow>/<id>/` and
+  `core/static/core/js/subscriptions.js` (no reload); list annotations use one
+  `Exists` query per page. `Preferences.auto_follow_entity_types` follows new
+  records of those types for every user who selected them and auto-follows the
+  author after a stream post; `post_note()` sends a `Stream` notification to
+  the record's active followers (the author is skipped).
 - **Dashboard**: `/admin/` (`core/admin/dashboard.py`, `templates/admin/index.html`)
   shows KPI cards (system counts plus ACL-scoped Account/Contact/Lead/
   Opportunity counts) and a **Sales by month** card: recorded Closed Won

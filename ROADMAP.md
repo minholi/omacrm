@@ -7,8 +7,8 @@
 _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
-email template code editor with MJML source, dynamic logic server side).
-449 tests passing; see the
+email template code editor with MJML source, dynamic logic server side,
+stars/favourites and record following). 493 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -306,7 +306,7 @@ not treated as gaps.
 | # | Item | EspoCRM source | Notes |
 | --- | --- | --- | --- |
 | 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | **✅ delivered 2026-09-12** (rules + server-side enforcement + JSON for the follow-up client-side show/hide) |
-| 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | Stream and notifications already exist |
+| 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | **✅ delivered 2026-09-12** (stars, following, auto-follow, Starred/Following filters, follower notifications) |
 | 3 | Persisted kanban order | `KanbanOrder` | The board exists; only the ordering is not stored |
 | 4 | Captcha on public forms | `Tools/Captcha` | Lead capture is public and currently unprotected |
 | 5 | App secrets | `Tools/AppSecret` | Named credentials for webhooks/integrations |
@@ -343,8 +343,9 @@ not treated as gaps.
 | 26 | Pluggable file storage (S3) | `Core/FileStorage` |
 
 Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
-(#1) is delivered; the next items are **follow/favourites**, then
-**persisted kanban order**. Tiers 2 and 3 are recorded here but not scheduled.
+(#1) and **follow/favourites** (#2) are delivered; the next item is
+**persisted kanban order** (#3). Tiers 2 and 3 are recorded here but not
+scheduled.
 
 ### Workflow engine — improvement to the existing `Workflow`
 
@@ -413,7 +414,7 @@ new front-end dependency.
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (408 tests)
+uv run python src/omacrm/manage.py test      # must be green (493 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
@@ -429,6 +430,21 @@ uv run python src/omacrm/manage.py runserver
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Stars & following (Tier 1 #2): `StarSubscription`/
+  `StreamSubscription` (`core/models/collab.py`, unique star per user and
+  record) and `core/services/subscriptions.py` (star/follow toggles, batch
+  `Exists` annotations, active-only `followers_of`). Every metadata-driven
+  admin gets a star column and **Starred**/**Following** list filters, the
+  change form a star plus **Follow/Unfollow** control posting in place to
+  `/admin/<app>/<model>/subscriptions/<kind>/<id>/`
+  (`core/static/core/js/subscriptions.js`), and the per-user
+  `Preferences.auto_follow_entity_types` preference follows new records of the
+  selected types for every user who enabled them and auto-follows the author
+  after a stream post.
+  `post_note()` now sends a `Stream` notification to the record's active
+  followers (author skipped, mentions unchanged). Runtime custom entities work
+  through the metadata entity type + pk convention (493 tests).
 
 - **2026-09-12** — Dynamic logic (Tier 1 #1): `DynamicLogic` rules
   (`core/services/dynamic_logic.py`, managed under Customization → Dynamic

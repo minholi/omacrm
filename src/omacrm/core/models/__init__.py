@@ -4,7 +4,9 @@ from omacrm.core.models.collab import (
     Attachment,
     Note,
     Notification,
+    StarSubscription,
     StreamEvent,
+    StreamSubscription,
     UserReaction,
 )
 from omacrm.core.models.currency import Currency, CurrencyRate
@@ -50,7 +52,9 @@ __all__ = [
     "SavedFilter",
     "ScheduledJob",
     "ScheduledJobLog",
+    "StarSubscription",
     "StreamEvent",
+    "StreamSubscription",
     "Team",
     "TeamUser",
     "User",

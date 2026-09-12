@@ -191,6 +191,7 @@ class Preferences(models.Model):
     dashboard_layout = models.JSONField(default=dict, blank=True)
     preset_filters = models.JSONField(default=dict, blank=True)
     notifications_config = models.JSONField(default=dict, blank=True)
+    auto_follow_entity_types = models.JSONField(default=list, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

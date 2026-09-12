@@ -138,6 +138,55 @@ class UserReaction(models.Model):
         return f"{self.emoji} by {self.user}"
 
 
+class StarSubscription(models.Model):
+    """A user's favourite (star) on one record of any entity type.
+
+    The record is identified by its metadata entity type plus primary key, so
+    runtime custom entities work exactly like built-in ones. The unique
+    constraint keeps one star per user and record.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="star_subscriptions",
+    )
+    entity_type = models.CharField(max_length=64, db_index=True)
+    entity_id = models.PositiveBigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("user", "entity_type", "entity_id")]
+        indexes = [
+            models.Index(fields=["user", "entity_type"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.entity_type}:{self.entity_id} starred by {self.user}"
+
+
+class StreamSubscription(models.Model):
+    """A user following one record (gets stream notifications about it)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="stream_subscriptions",
+    )
+    entity_type = models.CharField(max_length=64)
+    entity_id = models.PositiveBigIntegerField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["entity_type", "entity_id"]),
+            models.Index(fields=["user", "entity_type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user} follows {self.entity_type}:{self.entity_id}"
+
+
 class StreamEvent(models.Model):
     """A pending real-time stream update for one user (consumed over SSE)."""
 
