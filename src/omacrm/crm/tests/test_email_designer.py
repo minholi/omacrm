@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.core import mail
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.contrib.staticfiles import finders
@@ -47,6 +48,43 @@ class RenderContextTests(TestCase):
             self.assertIn("token", tag)
             self.assertIn("label", tag)
             self.assertTrue(tag["token"].startswith("{{"))
+
+
+PLACEHOLDER_BODY = (
+    "Olá {{ name }}, escreva aqui a sua mensagem. Você pode usar "
+    "{{ company_name }} e outras variáveis da lista de merge tags."
+)
+
+
+class EmailTemplateBodyValidationTests(TestCase):
+    def test_new_template_defaults_to_placeholder_body(self):
+        template = EmailTemplate()
+        self.assertEqual(template.body, PLACEHOLDER_BODY)
+        self.assertIn("{{ name }}", template.body)
+        self.assertIn("{{ company_name }}", template.body)
+
+    def test_clean_passes_for_placeholder_default(self):
+        template = EmailTemplate(name="Default", subject="Hi")
+        template.clean()
+
+    def test_clean_raises_for_empty_body(self):
+        template = EmailTemplate(name="Empty", subject="Hi", body="   ")
+        with self.assertRaises(ValidationError) as caught:
+            template.clean()
+        self.assertIn("body", caught.exception.message_dict)
+
+    def test_render_email_template_returns_subject_and_body(self):
+        contact = Contact.objects.create(
+            first_name="Jane", last_name="Mail", email_address="jane@example.com"
+        )
+        template = EmailTemplate(
+            name="Contract",
+            subject="Hi {{ name }}",
+            body="<p>Hello {{ name }}</p>",
+        )
+        subject, body = render_email_template(template, contact)
+        self.assertEqual(subject, "Hi Jane Mail")
+        self.assertIn("Hello Jane Mail", body)
 
 
 class PrepareEmailHtmlTests(TestCase):
@@ -211,6 +249,38 @@ class EmailDesignerViewTests(TestCase):
         self.assertEqual(self.template.design, {"pages": []})
         self.assertRegex(self.template.body, r'style="color:\s*green')
         self.assertIn("{{ name }}", self.template.body)
+
+    def test_save_accepts_non_empty_body(self):
+        self.client.force_login(self.admin)
+        payload = {
+            "design": {"pages": [{"id": "page-1"}]},
+            "html": "<p>Fresh body</p>",
+            "css": "",
+        }
+        response = self.client.post(
+            self.save_url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.design, {"pages": [{"id": "page-1"}]})
+        self.assertIn("Fresh body", self.template.body)
+
+    def test_save_rejects_empty_body_without_touching_the_row(self):
+        self.client.force_login(self.admin)
+        stored = EmailTemplate.objects.get(pk=self.template.pk)
+        payload = {"design": {"pages": []}, "html": "   ", "css": ""}
+        response = self.client.post(
+            self.save_url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("error", response.json())
+
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.body, stored.body)
+        self.assertEqual(self.template.source, stored.source)
+        self.assertEqual(self.template.design, stored.design)
 
     def test_save_rejects_invalid_json(self):
         self.client.force_login(self.admin)

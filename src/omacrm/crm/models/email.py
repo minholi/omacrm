@@ -23,10 +23,15 @@ class EmailTemplate(models.Model):
         help_text=_("Format of the authored source code."),
     )
     body = models.TextField(
+        blank=True,
+        default=(
+            "Olá {{ name }}, escreva aqui a sua mensagem. Você pode usar "
+            "{{ company_name }} e outras variáveis da lista de merge tags."
+        ),
         help_text=_(
             "Compiled HTML. Django template syntax is supported, e.g. {{ name }} "
             "or {{ record.name }}; the visual designer writes to this field."
-        )
+        ),
     )
     design = models.JSONField(
         null=True,
@@ -55,6 +60,10 @@ class EmailTemplate(models.Model):
 
     def clean(self):
         super().clean()
+        if not (self.body or "").strip():
+            raise ValidationError(
+                {"body": [_("The template body cannot be empty.")]}
+            )
         if not self.source:
             return
 

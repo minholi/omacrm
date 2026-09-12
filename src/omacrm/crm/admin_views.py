@@ -133,6 +133,10 @@ def email_template_design_save(request, pk):
         return JsonResponse(
             {"ok": False, "error": _("Invalid design data.")}, status=400
         )
+    if not html.strip():
+        return JsonResponse(
+            {"ok": False, "error": _("The template body cannot be empty.")}, status=400
+        )
 
     raw = f"<style>{css}</style>{html}" if css.strip() else html
     body, _text = prepare_email_html(raw)
