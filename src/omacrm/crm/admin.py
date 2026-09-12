@@ -645,7 +645,7 @@ class EmailTemplateAdmin(ModelAdmin):
         "created_at",
         "modified_at",
     )
-    actions_detail = ("open_designer",)
+    actions_detail = ("open_source_editor", "open_designer")
     fieldsets = (
         (None, {"fields": ("name", "subject", "is_active")}),
         (
@@ -653,13 +653,18 @@ class EmailTemplateAdmin(ModelAdmin):
             {
                 "fields": ("body", "source", "source_format", "design"),
                 "description": _(
-                    "Read-only. Edit the email with the Design action above; "
-                    "source code is filled by the designer or by API/scripts."
+                    "Read-only. Edit the email with the Edit code action (code "
+                    "editor with live preview) or the Design action (visual "
+                    "designer); both write the compiled body."
                 ),
             },
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    @action(description=_("Edit code"), icon="code", variant="primary")
+    def open_source_editor(self, request, object_id):
+        return redirect("email_template_source", pk=object_id)
 
     @action(description=_("Design"), icon="palette", variant="primary")
     def open_designer(self, request, object_id):

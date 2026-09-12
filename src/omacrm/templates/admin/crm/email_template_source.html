@@ -1,0 +1,60 @@
+{% load i18n static %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'crm/css/email-source-editor.css' %}">
+</head>
+<body>
+    <header class="toolbar">
+        <a class="toolbar-back" href="{{ source_editor_config.backUrl }}">&larr; {% translate "Back" %}</a>
+        <span class="toolbar-name">{{ email_template.name }}</span>
+        <span class="toolbar-spacer"></span>
+        <label class="toolbar-field">
+            <span class="sr-only">{% translate "Source format" %}</span>
+            <select id="ese-format" aria-label="{% translate 'Source format' %}">
+                <option value="mjml">MJML</option>
+                <option value="html">HTML</option>
+            </select>
+        </label>
+        <span class="status" id="ese-status" role="status" aria-live="polite"></span>
+        <button type="button" class="ese-button" id="ese-test">{% translate "Send test email" %}</button>
+        <button type="button" class="ese-button primary" id="ese-save">{% translate "Save" %}</button>
+    </header>
+
+    <main class="workspace">
+        <section class="pane">
+            <div class="pane-header">
+                <span class="pane-title">{% translate "Source" %}</span>
+                <span class="pane-hint">{% translate "Ctrl+Space completes MJML tags and merge tags." %}</span>
+            </div>
+            <div class="ese-editor" id="ese-source" aria-label="{% translate 'Template source' %}"></div>
+        </section>
+
+        <section class="pane">
+            <div class="pane-header">
+                <div class="device-switch" role="group" aria-label="{% translate 'Preview device' %}">
+                    <button type="button" class="ese-button device active" data-device="desktop">
+                        {% translate "Desktop" %}
+                    </button>
+                    <button type="button" class="ese-button device" data-device="mobile">
+                        {% translate "Mobile 375px" %}
+                    </button>
+                </div>
+                <span class="pane-hint">{% translate "Merge tags render empty in the live preview." %}</span>
+            </div>
+            <div class="preview-wrap" id="ese-preview-wrap">
+                <iframe id="ese-preview" title="{% translate 'Template preview' %}" sandbox=""></iframe>
+            </div>
+            <div class="diagnostics" id="ese-diagnostics" hidden>
+                <ul class="diagnostics-list" id="ese-diagnostics-list"></ul>
+            </div>
+        </section>
+    </main>
+
+    {{ source_editor_config|json_script:"ese-config" }}
+    <script src="{% static 'vendor/codemirror/codemirror6.bundle.js' %}"></script>
+    <script src="{% static 'crm/js/email-source-editor.js' %}"></script>
+</body>
+</html>

@@ -39,6 +39,8 @@ MJML_TAGS = frozenset(
         "mj-preview",
         "mj-style",
         "mj-attributes",
+        "mj-all",
+        "mj-class",
         "mj-breakpoint",
         "mj-font",
         "mj-html-attributes",

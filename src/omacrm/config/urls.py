@@ -22,9 +22,12 @@ from omacrm.core.api.viewsets import DynamicRecordViewSet
 from omacrm.crm import views as crm_views
 from omacrm.crm.admin_views import (
     EmailTemplateDesignView,
+    EmailTemplateSourceView,
     email_asset_upload,
+    email_template_compile,
     email_template_design_save,
     email_template_preview,
+    email_template_source_save,
     email_template_test_send,
 )
 from omacrm.crm import views as crm_views
@@ -55,6 +58,21 @@ urlpatterns = [
         "admin/email-template/<int:pk>/test-send/",
         admin.site.admin_view(email_template_test_send),
         name="email_template_test_send",
+    ),
+    path(
+        "admin/email-template/<int:pk>/source/",
+        admin.site.admin_view(EmailTemplateSourceView.as_view()),
+        name="email_template_source",
+    ),
+    path(
+        "admin/email-template/<int:pk>/source/save/",
+        admin.site.admin_view(email_template_source_save),
+        name="email_template_source_save",
+    ),
+    path(
+        "admin/email-template/<int:pk>/compile/",
+        admin.site.admin_view(email_template_compile),
+        name="email_template_compile",
     ),
     path(
         "admin/calendar/",

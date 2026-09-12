@@ -1,0 +1,10 @@
+<mj-section background-color="#ffffff" padding="24px">
+  <mj-column>
+    <mj-text font-weight="bold" color="#111827">Left column</mj-text>
+    <mj-text>Add content for the left column here.</mj-text>
+  </mj-column>
+  <mj-column>
+    <mj-text font-weight="bold" color="#111827">Right column</mj-text>
+    <mj-text>Add content for the right column here.</mj-text>
+  </mj-column>
+</mj-section>

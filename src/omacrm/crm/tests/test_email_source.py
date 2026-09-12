@@ -166,3 +166,26 @@ class RenderEmailTemplateTests(TestCase):
         )
         _subject, body = render_email_template(template, self.contact)
         self.assertIn("Body Jane Mail", body)
+
+    def test_mj_all_and_mj_class_are_valid_mjml_tags(self):
+        """mj-all/mj-class are official MJML tags, used inside mj-attributes.
+
+        They were missing from the whitelist once and every template that used
+        them was rejected as "Unknown MJML tag(s)".
+        """
+        template = EmailTemplate.objects.create(
+            name="Mjml attributes",
+            subject="Hi",
+            source_format="mjml",
+            source=(
+                "<mjml><mj-head><mj-attributes>"
+                '<mj-all font-family="Helvetica" />'
+                '<mj-class name="brand" color="#ff0000" />'
+                "</mj-attributes></mj-head><mj-body><mj-section><mj-column>"
+                '<mj-text mj-class="brand">Ola {{ name }}</mj-text>'
+                "</mj-column></mj-section></mj-body></mjml>"
+            ),
+        )
+        _subject, body = render_email_template(template, self.contact)
+        self.assertIn("Ola Jane Mail", body)
+        self.assertNotIn("<mj-", body)
