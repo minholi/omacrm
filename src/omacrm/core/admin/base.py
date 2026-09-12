@@ -609,6 +609,12 @@ class MetadataModelAdmin(
                             self._dynamic_inactive.add(name)
 
             def full_clean(self):
+                # This also runs on GET, which is not obvious: the admin template
+                # renders form errors (``adminform.form.non_field_errors`` in
+                # change_form.html and ``field.errors`` in unfold's field.html),
+                # and touching ``form.errors`` triggers full_clean. That is what
+                # makes the dynamic state visible in the rendered HTML instead of
+                # only being enforced on submit.
                 self._apply_dynamic_logic()
                 return super().full_clean()
 
