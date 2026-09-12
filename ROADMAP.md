@@ -8,9 +8,10 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source).
-404 tests passing; see
-the [deferred backlog](#deferred-backlog-not-yet-implemented) for optional
-gaps._
+408 tests passing; see the
+[deferred backlog](#deferred-backlog-not-yet-implemented) and the
+[EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
+remaining optional work._
 
 ## Vision
 
@@ -286,12 +287,71 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 
+## EspoCRM parity backlog (surveyed 2026-09-12)
+
+Gaps found by reading the upstream EspoCRM source (release 10.0.8, commit
+`1effd3d`) and checking every candidate against this codebase by evidence.
+False positives were discarded by inspecting context — `sla` was matching
+"translate", `position` was the user's job title, `extension` an icon name and
+`ImportError` the Python builtin, so all of those are real gaps, not parity.
+
+Two caveats about the source: the EspoCRM repository is the **open-source core
+only** (Advanced Pack and Sales Pack are commercial and not covered here), and
+several Espo notions — `DataManager`, `Rebuild`, `Upgrades`, its own ORM —
+exist to compensate for what Django provides natively, so they are deliberately
+not treated as gaps.
+
+### Tier 1 — quick wins (daily use, small)
+
+| # | Item | EspoCRM source | Notes |
+| --- | --- | --- | --- |
+| 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | Fits `FieldDef`; the highest-value customisation gap |
+| 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | Stream and notifications already exist |
+| 3 | Persisted kanban order | `KanbanOrder` | The board exists; only the ordering is not stored |
+| 4 | Captcha on public forms | `Tools/Captcha` | Lead capture is public and currently unprotected |
+| 5 | App secrets | `Tools/AppSecret` | Named credentials for webhooks/integrations |
+| 6 | OpenAPI specification | `Tools/OpenApi` | Contract for integrators |
+| 7 | Popup notifications | `Tools/PopupNotification` | Browser-level notice on top of badge/toasts |
+| 8 | Rename labels from the UI | `Tools/LabelManager` | Rename entities/fields without code |
+
+### Tier 2 — medium investments (high product value)
+
+| # | Item | EspoCRM source |
+| --- | --- | --- |
+| 9 | PDF templates | `Tools/Pdf` |
+| 10 | Multiple phones/emails per record, with per-address opt-out | `PhoneNumber`, `EmailAddress` |
+| 11 | Configurable pipelines | `Pipeline`, `PipelineStage` |
+| 12 | Email filters + group folders | `EmailFilter`, `GroupEmailFolder` |
+| 13 | Data privacy (export / anonymise a data subject) | `Tools/DataPrivacy` |
+| 14 | Working-time calendars / SLA | `WorkingTimeCalendar`, `WorkingTimeRange` |
+| 15 | Generic category trees | `Tools/CategoryTree` |
+| 16 | Dashboard templates | `DashboardTemplate` |
+| 17 | Import history and errors | `ImportEntity`, `ImportError` |
+| 18 | Action history (user activity audit) | `Tools/ActionHistory` |
+| 19 | Two-factor authentication | `TwoFactorCode`, `Tools/UserSecurity` |
+| 20 | Locale-aware name formatting | `Tools/Name` |
+
+### Tier 3 — structural (large, or a product decision)
+
+| # | Item | EspoCRM source |
+| --- | --- | --- |
+| 21 | OAuth/OIDC and LDAP sign-in | `Tools/OAuth`, `Tools/Oidc`, `Core/Authentication` |
+| 22 | SMS channel | `Sms`, `Core/Sms` |
+| 23 | Extension manager | `Tools/Extension` |
+| 24 | Assisted upgrades | `Core/Upgrades` |
+| 25 | External accounts hub | `Tools/ExternalAccount` |
+| 26 | Pluggable file storage (S3) | `Core/FileStorage` |
+
+Execution order agreed on 2026-09-12: work **Tier 1 top-down**, starting with
+**Dynamic logic**, then **follow/favourites**, then **persisted kanban order**.
+Tiers 2 and 3 are recorded here but not scheduled.
+
 ## Resume checklist
 
 ```bash
 uv sync
 uv run python src/omacrm/manage.py check     # must be clean
-uv run python src/omacrm/manage.py test      # must be green (404 tests)
+uv run python src/omacrm/manage.py test      # must be green (408 tests)
 uv run python src/omacrm/manage.py seed_demo # rich demo dataset; --reset rebuilds it
 uv run python src/omacrm/manage.py runserver
 ```
