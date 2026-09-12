@@ -8,8 +8,9 @@ _Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
-stars/favourites, record following, per-user kanban order and compact
-changelist currency columns). 524 tests passing; see the
+stars/favourites, record following, per-user kanban order, compact changelist
+currency columns, sortable generated columns and metadata-owned entity
+names). 535 tests passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -445,6 +446,15 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-12** — Entity display names come from the metadata: on registration
+  the registry mirrors `EntityDef.display_label`/`display_label_plural` onto the
+  model's `_meta.verbose_name`/`verbose_name_plural`, bypassing
+  `_meta.original_attrs` so the lazy labels survive and no phantom migration
+  appears. The admin read Django's class-name-derived names instead, showing
+  "Opportunitys" while the sidebar showed "Opportunities"; 13 of the 20 entities
+  differed, twelve of them only in case (`accounts` vs `Accounts`). Labels belong
+  in `metadata.py`, never in a model `Meta` (535 tests).
 
 - **2026-09-12** — Sortable changelist columns: `get_list_display` is now
   memoised per request, so the columns it builds dynamically (custom fields, the

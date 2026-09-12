@@ -111,8 +111,14 @@ src/omacrm/
   User/Team/Role).
 - **Metadata registry** (`core/metadata/`): `EntityDef`/`FieldDef` register from
   each app's `metadata` module; `CustomField`/`Layout` DB rows merge on top.
-  Cache invalidates on metadata model save via signals; `rebuild_metadata`
-  clears registry and API serializer caches.
+  Entity display names are **metadata-owned**: on registration the registry
+  mirrors `EntityDef.display_label`/`display_label_plural` onto the model's
+  `_meta.verbose_name`/`verbose_name_plural` (bypassing
+  `_meta.original_attrs`), so admin titles, breadcrumbs and intermediate pages
+  read the metadata label instead of Django's class-name-derived "Opportunitys";
+  define labels in `metadata.py`, never in the model `Meta`. Cache invalidates
+  on metadata model save via signals; `rebuild_metadata` clears registry and
+  API serializer caches.
 - **Custom fields** live in `custom_data`; `MetadataModelAdmin` renders them in
   forms/lists/filters/searches from metadata (Enum/Bool get list filters).
   Types: varchar, text, enum, multiEnum, bool, int, float, decimal, number

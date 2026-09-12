@@ -42,7 +42,29 @@ class MetadataRegistry:
 
     def register(self, entity: EntityDef) -> EntityDef:
         self._entities[entity.entity_type] = entity
+        self._apply_model_labels(entity)
         return entity
+
+    def _apply_model_labels(self, entity: EntityDef) -> None:
+        """Mirror the metadata labels onto the model's ``_meta``.
+
+        The Django admin reads ``_meta.verbose_name``/``verbose_name_plural``
+        for changelist titles and breadcrumbs while the metadata stays the
+        single source of truth. Only those attributes are assigned; the
+        model's ``original_attrs`` -- what the migration autodetector reads --
+        is left untouched, so no migration is generated for the labels.
+        Models may not exist yet at registration time, so a missing model is
+        silently skipped.
+        """
+
+        from django.apps import apps
+
+        try:
+            model = apps.get_model(entity.model)
+        except LookupError:
+            return
+        model._meta.verbose_name = entity.display_label
+        model._meta.verbose_name_plural = entity.display_label_plural
 
     def unregister(self, entity_type: str) -> None:
         self._entities.pop(entity_type, None)
@@ -61,6 +83,10 @@ class MetadataRegistry:
             except ModuleNotFoundError as exc:
                 if exc.name != module_name:
                     raise
+        # Registrations that ran before the model was importable are retried
+        # here, where the app registry is guaranteed to be ready.
+        for entity in self._entities.values():
+            self._apply_model_labels(entity)
         self._loaded = True
 
     def invalidate(self) -> None:
@@ -116,7 +142,7 @@ class MetadataRegistry:
                 "fields": ["assigned_user", "teams", "created_at", "modified_at"],
             },
         ]
-        return EntityDef(
+        definition = EntityDef(
             entity_type=entity_type,
             model=f"core.{entity_type}",
             label=label,
@@ -136,6 +162,8 @@ class MetadataRegistry:
             icon=(row.icon if row else "") or "extension",
             dynamic=True,
         )
+        self._apply_model_labels(definition)
+        return definition
 
     # -- access -------------------------------------------------------------
 
