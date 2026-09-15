@@ -4,13 +4,14 @@
 > be resumed at any time by any developer/agent. Architecture conventions live
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
-_Last updated: 2026-09-12 — Phases A–G implemented (runtime, sales CRM,
+_Last updated: 2026-09-15 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
 notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
 stars/favourites, record following, per-user kanban order, compact changelist
-currency columns, sortable generated columns and metadata-owned entity
-names). 535 tests passing; see the
+currency columns, sortable generated columns, metadata-owned entity names,
+captcha on public lead forms and the hosted web-to-lead form). 578 tests
+passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
 remaining optional work._
@@ -282,7 +283,7 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
-| Web-to-lead hosted form page | E | JSON endpoint + double opt-in exist; no hosted HTML form page. Target: backlog; can reuse the email template code editor. |
+| Web-to-lead hosted form page | E | **✅ delivered 2026-09-15** (public `/lead-capture/<api_key>/form/`, captcha-aware, double opt-in acknowledged, shared helpers with the JSON endpoint) |
 
 ### Customization & platform (Phase G)
 
@@ -310,7 +311,7 @@ not treated as gaps.
 | 1 | Dynamic logic (show / hide / require fields from other values) | `Tools/DynamicLogic` | **✅ delivered 2026-09-12** (rules + server-side enforcement + JSON for the follow-up client-side show/hide) |
 | 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | **✅ delivered 2026-09-12** (stars, following, auto-follow, Starred/Following filters, follower notifications) |
 | 3 | Persisted kanban order | `KanbanOrder` | **✅ delivered 2026-09-12** (per-user card order within a column, batched id-list endpoint) |
-| 4 | Captcha on public forms | `Tools/Captcha` | Lead capture is public and currently unprotected |
+| 4 | Captcha on public forms | `Tools/Captcha` | **✅ delivered 2026-09-15** (per-capture `form_captcha`, switchable reCAPTCHA v3 / Turnstile, fail closed) |
 | 5 | App secrets | `Tools/AppSecret` | Named credentials for webhooks/integrations |
 | 6 | OpenAPI specification | `Tools/OpenApi` | Contract for integrators |
 | 7 | Popup notifications | `Tools/PopupNotification` | Browser-level notice on top of badge/toasts |
@@ -345,9 +346,9 @@ not treated as gaps.
 | 26 | Pluggable file storage (S3) | `Core/FileStorage` |
 
 Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
-(#1), **follow/favourites** (#2) and **persisted kanban order** (#3) are
-delivered; the next item is **captcha on public forms** (#4). Tiers 2 and 3
-are recorded here but not scheduled.
+(#1), **follow/favourites** (#2), **persisted kanban order** (#3) and
+**captcha on public forms** (#4) are delivered; the next item is **app
+secrets** (#5). Tiers 2 and 3 are recorded here but not scheduled.
 
 ### Workflow engine — improvement to the existing `Workflow`
 
@@ -446,6 +447,40 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Hosted web-to-lead form (deferred backlog item pulled
+  forward): each `LeadCapture` now gets a server-rendered public form at
+  `/lead-capture/<api_key>/form/` with the fields its `field_list` allows
+  (labels, choices and validation come from a dynamic Lead `ModelForm`), the
+  reCAPTCHA v3 or Turnstile widget when `form_captcha` is on, CSRF protection,
+  inline double opt-in acknowledgement ("check your inbox") and a 404 for an
+  unknown or inactive key. `crm/services/lead_capture.py` now owns the shared
+  helpers — allowed web fields, form building, captcha gating, lead storage
+  (source, assignment, campaign log, opt-in email, target list) — and the JSON
+  endpoint was refactored onto them with its responses unchanged. The admin's
+  **Public form** field links to the page for copying/preview (578 tests).
+
+- **2026-09-15** — Captcha on public forms (Tier 1 #4): `LeadCapture.form_captcha`
+  makes the public lead-capture endpoint verify a token before creating the
+  lead, so web-to-lead can be protected without API keys or IP rules.
+  `core/services/captcha.py` is one switchable implementation for Google
+  reCAPTCHA v3 and Cloudflare Turnstile — both post `secret`/`response` (+
+  `remoteip`) to their siteverify endpoint, so the provider, keys, score
+  threshold and verify URL (override for tests/self-hosted) are constance
+  settings under "Captcha". reCAPTCHA requires a score at or above the
+  threshold; Turnstile answers without one; a returned `action` must match
+  `lead_capture` when present, and network/parse failures count as a failed
+  verification, never a 500. Submissions may send the token as `captcha_token`
+  or the provider's browser field (`g-recaptcha-response`,
+  `cf-turnstile-response`); captcha required without a configured provider
+  fails closed with a 503, and captures with the flag off are unchanged
+  (562 tests).
+
+- **2026-09-15** — Test flake fix: the mass-email unsubscribe test compared two
+  independently timestamp-signed tokens, so it failed whenever a second
+  boundary fell between the send and the assertion (always under parallel
+  load). It now decodes the token from the sent body and checks that it points
+  at the queue item.
 
 - **2026-09-12** — Entity display names come from the metadata: on registration
   the registry mirrors `EntityDef.display_label`/`display_label_plural` onto the

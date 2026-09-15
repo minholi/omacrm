@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ capture.name }}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+               background: #f5f5f5; color: #111827; display: flex;
+               align-items: center; justify-content: center; min-height: 100vh;
+               margin: 0; padding: 24px; }
+        .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,.08); max-width: 520px;
+                width: 100%; padding: 32px; }
+        h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
+        .lead { margin: 0 0 24px; text-align: center; color: #6b7280; }
+        .field { margin-bottom: 16px; }
+        label { display: block; font-size: 14px; font-weight: 500;
+                margin-bottom: 6px; }
+        input, textarea { width: 100%; box-sizing: border-box; padding: 9px 12px;
+                          border: 1px solid #d1d5db; border-radius: 6px;
+                          font: inherit; color: inherit; background: #fff; }
+        textarea { min-height: 96px; resize: vertical; }
+        button { width: 100%; padding: 11px 16px; margin-top: 8px;
+                 border: 0; border-radius: 6px; background: #4f46e5;
+                 color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+        button:hover { background: #4338ca; }
+        .alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+                 border-radius: 6px; padding: 12px; margin-bottom: 16px;
+                 font-size: 14px; }
+        .error { color: #b91c1c; font-size: 13px; margin-top: 4px; }
+        .cf-turnstile { margin: 8px 0 4px; }
+    </style>
+    {% if captcha.provider == "turnstile" %}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% elif captcha.provider == "recaptcha" %}
+        <script src="https://www.google.com/recaptcha/api.js?render={{ captcha.site_key }}"></script>
+    {% endif %}
+</head>
+<body>
+    <div class="card">
+        <h1>{{ company_name }}</h1>
+        <p class="lead">{{ capture.name }}</p>
+
+        {% if captcha_error %}
+            <div class="alert">{{ captcha_error }}</div>
+        {% endif %}
+        {% if form.non_field_errors %}
+            <div class="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <form method="post" id="lead-capture-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            {% if captcha.provider == "turnstile" %}
+                <div class="cf-turnstile" data-sitekey="{{ captcha.site_key }}"
+                     data-action="lead_capture"></div>
+            {% elif captcha.provider == "recaptcha" %}
+                <input type="hidden" name="captcha_token" id="captcha-token">
+            {% endif %}
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    {% if captcha.provider == "recaptcha" %}
+        <script>
+            document.getElementById("lead-capture-form").addEventListener("submit", function (event) {
+                var form = event.target;
+                if (form.dataset.captchaReady === "1") return;
+                event.preventDefault();
+                grecaptcha.ready(function () {
+                    grecaptcha.execute("{{ captcha.site_key }}", {action: "lead_capture"}).then(function (token) {
+                        document.getElementById("captcha-token").value = token;
+                        form.dataset.captchaReady = "1";
+                        form.submit();
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+</body>
+</html>

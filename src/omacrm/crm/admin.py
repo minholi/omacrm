@@ -4,6 +4,7 @@ from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import GenericTabularInline, ModelAdmin, TabularInline
 from unfold.decorators import action, display
@@ -824,16 +825,17 @@ class LeadCaptureAdmin(ModelAdmin):
     list_display = ("name", "is_active", "campaign", "target_list", "source")
     list_filter = ("is_active", "campaign", "target_list")
     search_fields = ("name", "api_key")
-    readonly_fields = ("api_key", "created_at", "modified_at")
+    readonly_fields = ("api_key", "public_form", "created_at", "modified_at")
     autocomplete_fields = ("campaign", "target_list", "default_assigned_user")
     fieldsets = (
-        (None, {"fields": ("name", "is_active", "api_key")}),
+        (None, {"fields": ("name", "is_active", "api_key", "public_form")}),
         (_("Routing"), {"fields": ("campaign", "target_list", "source", "default_assigned_user")}),
         (
             _("Form"),
             {
                 "fields": (
                     "field_list",
+                    "form_captcha",
                     "opt_in_confirmation",
                     "opt_in_template",
                     "opt_in_lifetime_hours",
@@ -842,3 +844,12 @@ class LeadCaptureAdmin(ModelAdmin):
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    @display(description=_("Public form"))
+    def public_form(self, obj):
+        if not obj.pk:
+            return ""
+        url = reverse("lead_capture_form", args=[obj.api_key])
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">{}</a>', url, url
+        )

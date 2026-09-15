@@ -291,6 +291,13 @@ class LeadCapture(models.Model):
     opt_in_confirmation = models.BooleanField(
         default=False, help_text="Require email confirmation before storing the lead."
     )
+    form_captcha = models.BooleanField(
+        default=False,
+        help_text=(
+            "Require a captcha token on submissions "
+            "(needs a configured captcha provider)."
+        ),
+    )
     opt_in_template = models.ForeignKey(
         EmailTemplate,
         null=True,

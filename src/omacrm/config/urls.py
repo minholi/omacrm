@@ -128,6 +128,11 @@ urlpatterns = [
         name="lead_capture",
     ),
     path(
+        "lead-capture/<str:api_key>/form/",
+        crm_views.lead_capture_form,
+        name="lead_capture_form",
+    ),
+    path(
         "lead-capture/confirm/<str:token>/",
         crm_views.lead_capture_confirm,
         name="lead_capture_confirm",

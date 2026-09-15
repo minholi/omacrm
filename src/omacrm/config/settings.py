@@ -164,6 +164,24 @@ LOGIN_REDIRECT_URL = "/admin/"
 CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 
 CONSTANCE_ADDITIONAL_FIELDS = {
+    "captcha_provider_choices": [
+        "django.forms.ChoiceField",
+        {
+            "widget": "unfold.widgets.UnfoldAdminSelectWidget",
+            "choices": [
+                ("", "Disabled"),
+                ("recaptcha", "Google reCAPTCHA v3"),
+                ("turnstile", "Cloudflare Turnstile"),
+            ],
+        },
+    ],
+    "captcha_secret": [
+        "django.forms.CharField",
+        {
+            "widget": "unfold.widgets.UnfoldAdminPasswordToggleWidget",
+            "required": False,
+        },
+    ],
     **UNFOLD_CONSTANCE_ADDITIONAL_FIELDS,
 }
 
@@ -196,6 +214,33 @@ CONSTANCE_CONFIG = {
         "Email unread notifications as a digest",
         bool,
     ),
+    "captcha_provider": (
+        "",
+        "Captcha provider checked by forms with captcha enabled; empty "
+        "disables captcha",
+        "captcha_provider_choices",
+    ),
+    "captcha_site_key": (
+        "",
+        "Site key of the captcha provider (used by the form that embeds it)",
+        str,
+    ),
+    "captcha_secret_key": (
+        "",
+        "Secret key of the captcha provider (server-side verification)",
+        "captcha_secret",
+    ),
+    "captcha_score_threshold": (
+        0.2,
+        "Minimum reCAPTCHA v3 score accepted; Cloudflare Turnstile has no score",
+        float,
+    ),
+    "captcha_verify_url": (
+        "",
+        "Override the provider verification endpoint; empty uses the provider "
+        "default (tests, self-hosted or compatible services)",
+        str,
+    ),
 }
 
 CONSTANCE_CONFIG_FIELDSETS = {
@@ -210,6 +255,13 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Localization": ("phone_default_region",),
     "Email": ("public_base_url",),
     "Notifications": ("notification_email_enabled",),
+    "Captcha": (
+        "captcha_provider",
+        "captcha_site_key",
+        "captcha_secret_key",
+        "captcha_score_threshold",
+        "captcha_verify_url",
+    ),
 }
 
 # ---------------------------------------------------------------------------

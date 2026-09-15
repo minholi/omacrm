@@ -62,9 +62,10 @@ src/omacrm/
     metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
     services/        # acl, hooks, stream, subscriptions, notifications,
                      # duplicates, jobs, context, builtin_jobs, currency,
-                     # webhooks, formula, workflows, custom_entities, phone,
-                     # reactions, address, crypto, inbound_email, navigation,
-                     # relations, custom_fields, kanban, demo/ (seed_demo)
+                     # webhooks, captcha, formula, workflows, custom_entities,
+                     # phone, reactions, address, crypto, inbound_email,
+                     # navigation, relations, custom_fields, kanban, demo/
+                     # (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, dashboard, filters.py
@@ -90,8 +91,10 @@ src/omacrm/
                      # base-currency converted amounts
     services/        # lead_convert.py, reminders.py (crm.send_reminders),
                      # knowledge.py (crm.control_kb_article_status), email.py,
-                     # target_lists.py, mass_email.py, portal.py (PortalAcl)
-    views.py         # public campaign tracking + lead capture endpoints
+                     # lead_capture.py (JSON + hosted form), target_lists.py,
+                     # mass_email.py, portal.py (PortalAcl)
+    views.py         # public campaign tracking, lead capture (JSON + hosted
+                     # form), unsubscribe and event confirmation endpoints
     admin_views.py   # email template code editor + preview/test-send
     static/crm/js/email-source-editor.js   # CodeMirror editor front-end
     portal_views.py, portal_urls.py   # customer portal (/portal/)
@@ -261,7 +264,25 @@ src/omacrm/
   opportunities automatically, and have public click/open endpoints in
   `crm/views.py`. `LeadCapture` exposes a public
   `POST /api/v1/lead-capture/<api_key>/` endpoint with optional double opt-in
-  (signed confirmation link before the lead joins the target list).
+  (signed confirmation link before the lead joins the target list); when
+  `LeadCapture.form_captcha` is set the endpoint also verifies a captcha token
+  before creating the lead. Each capture also gets a server-rendered public
+  form at `/lead-capture/<api_key>/form/` (`crm/services/lead_capture.py`),
+  with fields from `field_list`, the provider widget when captcha is enabled,
+  double opt-in acknowledgement, and a **Public form** link on the admin page;
+  the JSON endpoint and the hosted form share the same store/captcha helpers.
+- **Captcha** (`core/services/captcha.py`): public forms can require a captcha
+  token, switchable between Google reCAPTCHA v3 and Cloudflare Turnstile via
+  the constance settings under "Captcha" (`captcha_provider`, site/secret
+  keys, `captcha_score_threshold`, and a `captcha_verify_url` override for
+  tests or self-hosted services). Verification posts `secret`/`response` (plus
+  `remoteip`) to the provider's siteverify endpoint, enforces `success`, a
+  matching `action` when the response returns one, and the score threshold
+  (reCAPTCHA only — Turnstile answers without a score); network or parse
+  failures count as a failed verification, never a 500. The lead-capture
+  endpoint accepts the token as `captcha_token` or the provider's browser
+  field (`g-recaptcha-response`/`cf-turnstile-response`) and fails closed
+  (503) when a capture requires captcha but no provider is configured.
 - **Webhooks**: `Webhook`/`WebhookQueueItem` (`core/models/webhooks.py`);
   signals enqueue create/update/delete events (soft delete maps to `delete`)
   and the `core.process_webhooks` job delivers them (HMAC signature, retries).

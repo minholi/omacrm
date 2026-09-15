@@ -1,15 +1,17 @@
 import base64
 import json
 
-from django.conf import settings as django_settings
 from django.core import signing
-from django.core.mail import send_mail
 from django.db.models import F
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
+from django.http import (
+    Http404,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseRedirect,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, render
-from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -21,22 +23,13 @@ from omacrm.crm.models import (
     Lead,
     LeadCapture,
 )
+from omacrm.crm.services import lead_capture as lead_capture_service
 from omacrm.crm.services.event_invitations import confirm_attendance
 from omacrm.crm.services.target_lists import add_to_target_list
 
 PIXEL_GIF = base64.b64decode(
     b"R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 )
-
-DEFAULT_CAPTURE_FIELDS = [
-    "first_name",
-    "last_name",
-    "email_address",
-    "phone_number",
-    "description",
-]
-
-LEAD_CAPTURE_OPT_IN_SALT = "omacrm.lead_capture.opt_in"
 
 
 def campaign_track_click(request, pk):
@@ -86,63 +79,74 @@ def lead_capture(request, api_key):
     if not isinstance(data, dict):
         return JsonResponse({"error": "invalid payload"}, status=400)
 
-    allowed = capture.field_list or DEFAULT_CAPTURE_FIELDS
+    allowed = capture.field_list or lead_capture_service.DEFAULT_CAPTURE_FIELDS
     values = {key: value for key, value in data.items() if key in allowed}
     if not values.get("last_name") and not values.get("email_address"):
         return JsonResponse(
             {"error": "last_name or email_address is required"}, status=400
         )
 
-    lead = Lead(**values)
-    lead.source = capture.source
-    if capture.default_assigned_user_id:
-        lead.assigned_user = capture.default_assigned_user
-    lead.save()
+    error = lead_capture_service.captcha_error(
+        capture, lead_capture_service.captcha_token(data), request
+    )
+    if error == "not_configured":
+        return JsonResponse({"error": "captcha is not configured"}, status=503)
+    if error == "missing":
+        return JsonResponse({"error": "captcha token required"}, status=400)
+    if error == "failed":
+        return JsonResponse({"error": "captcha verification failed"}, status=403)
 
-    if capture.campaign_id:
-        CampaignLogRecord.objects.create(
-            campaign=capture.campaign,
-            action=CampaignLogRecord.Action.LEAD_CREATED,
-            entity=lead,
-            data={"email": lead.email_address},
-        )
-
-    if capture.opt_in_confirmation:
-        _send_opt_in_confirmation(request, lead, capture)
+    lead, pending = lead_capture_service.store_lead(capture, values, request)
+    if pending:
         return JsonResponse(
             {"id": lead.pk, "status": "pending_confirmation"}, status=201
         )
-
-    if capture.target_list_id:
-        add_to_target_list(lead, capture.target_list)
-
     return JsonResponse({"id": lead.pk}, status=201)
 
 
-def _send_opt_in_confirmation(request, lead: Lead, capture: LeadCapture) -> None:
-    from omacrm.crm.services.email import render_email_template
+def lead_capture_form(request, api_key):
+    """Hosted web-to-lead form for one capture."""
 
-    token = signing.dumps(
-        {"lead": lead.pk, "capture": capture.pk}, salt=LEAD_CAPTURE_OPT_IN_SALT
+    capture = LeadCapture.objects.filter(api_key=api_key, is_active=True).first()
+    if capture is None:
+        raise Http404("Unknown lead capture form.")
+
+    form = lead_capture_service.build_form(
+        capture, data=request.POST if request.method == "POST" else None
     )
-    url = request.build_absolute_uri(reverse("lead_capture_confirm", args=[token]))
 
-    if capture.opt_in_template_id:
-        subject, body = render_email_template(capture.opt_in_template, lead)
-    else:
-        subject, body = (
-            _("Please confirm your subscription"),
-            f"<p>{_('Confirm your subscription:')}</p>",
+    captcha_error = ""
+    if request.method == "POST":
+        captcha_error = lead_capture_service.captcha_error(
+            capture, lead_capture_service.captcha_token(request.POST), request
         )
+        if not captcha_error and form.is_valid():
+            lead, pending = lead_capture_service.store_lead(
+                capture, form.cleaned_data, request
+            )
+            return render(
+                request,
+                "crm/lead_capture_form_done.html",
+                {
+                    "capture": capture,
+                    "lead": lead,
+                    "pending": pending,
+                    "company_name": lead_capture_service.company_name(),
+                },
+            )
 
-    body = f'{body}\n<p><a href="{url}">{url}</a></p>'
-    send_mail(
-        subject,
-        strip_tags(body),
-        django_settings.DEFAULT_FROM_EMAIL,
-        [lead.email_address],
-        html_message=body,
-        fail_silently=True,
+    return render(
+        request,
+        "crm/lead_capture_form.html",
+        {
+            "capture": capture,
+            "form": form,
+            "captcha": lead_capture_service.captcha_config(capture),
+            "captcha_error": lead_capture_service.CAPTCHA_ERROR_MESSAGES.get(
+                captcha_error, ""
+            ),
+            "company_name": lead_capture_service.company_name(),
+        },
     )
 
 
@@ -152,7 +156,7 @@ def lead_capture_confirm(request, token):
     try:
         data = signing.loads(
             token,
-            salt=LEAD_CAPTURE_OPT_IN_SALT,
+            salt=lead_capture_service.LEAD_CAPTURE_OPT_IN_SALT,
         )
     except signing.BadSignature:
         return HttpResponseBadRequest(
