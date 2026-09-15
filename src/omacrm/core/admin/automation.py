@@ -1,10 +1,9 @@
 from django.contrib import admin
-from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
-from unfold.widgets import UnfoldAdminTextareaWidget
 
+from omacrm.core.admin.widgets import JSONEditorWidget, ScriptEditorWidget
 from omacrm.core.models import DynamicLogic, Formula, Workflow, WorkflowRun
 
 
@@ -35,14 +34,16 @@ class FormulaAdmin(ModelAdmin):
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["script"].widget = ScriptEditorWidget(
+            kind="formula", entity_field="entity_type", rows=14
+        )
+        return form
+
 
 @admin.register(DynamicLogic)
 class DynamicLogicAdmin(ModelAdmin):
-    formfield_overrides = {
-        models.JSONField: {
-            "widget": UnfoldAdminTextareaWidget(attrs={"rows": 10})
-        }
-    }
     list_display = ("entity_type", "field_name", "action", "is_active")
     list_filter = ("action", "entity_type", "is_active")
     search_fields = ("entity_type", "field_name")
@@ -56,6 +57,13 @@ class DynamicLogicAdmin(ModelAdmin):
         (_("Condition"), {"fields": ("condition",)}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["condition"].widget = JSONEditorWidget(
+            kind="dynamic_logic", entity_field="entity_type", rows=12
+        )
+        return form
 
 
 @admin.register(Workflow)
@@ -92,6 +100,16 @@ class WorkflowAdmin(ModelAdmin):
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["condition"].widget = ScriptEditorWidget(
+            kind="formula", entity_field="entity_type", rows=3
+        )
+        form.base_fields["actions"].widget = JSONEditorWidget(
+            kind="workflow_actions", entity_field="entity_type", rows=16
+        )
+        return form
 
 
 @admin.register(WorkflowRun)

@@ -18,6 +18,7 @@ from unfold.widgets import (
 )
 
 from omacrm.core.admin.base import MetadataModelAdmin
+from omacrm.core.admin.widgets import JSONEditorWidget
 from omacrm.core.services.duplicates import DuplicateConflict
 from omacrm.core.services.jobs import schedule
 from omacrm.crm.models import (
@@ -844,6 +845,13 @@ class LeadCaptureAdmin(ModelAdmin):
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["field_list"].widget = JSONEditorWidget(
+            kind="lead_capture", fixed_entity="Lead", rows=6
+        )
+        return form
 
     @display(description=_("Public form"))
     def public_form(self, obj):

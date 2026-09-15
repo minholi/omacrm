@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 
+from omacrm.core.admin.widgets import JSONEditorWidget
 from omacrm.core.models import CustomField, CustomLink, Layout
 
 
@@ -43,6 +44,16 @@ class CustomFieldAdmin(ModelAdmin):
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["params"].widget = JSONEditorWidget(
+            kind="custom_field",
+            entity_field="entity_type",
+            context_fields=("name", "field_type"),
+            rows=8,
+        )
+        return form
 
 
 @admin.register(Layout)

@@ -5,6 +5,8 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { EditorState, Compartment } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { xml } from "@codemirror/lang-xml";
+import { json } from "@codemirror/lang-json";
+import { StreamLanguage } from "@codemirror/language";
 import { linter, lintGutter } from "@codemirror/lint";
 import { autocompletion, completeFromList } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
@@ -16,6 +18,8 @@ window.OmaCodeMirror = {
   Compartment,
   basicSetup,
   xml,
+  json,
+  StreamLanguage,
   linter,
   lintGutter,
   autocompletion,

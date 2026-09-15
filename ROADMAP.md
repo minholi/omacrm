@@ -12,8 +12,8 @@ stars/favourites, record following, per-user kanban order, compact changelist
 currency columns, sortable generated columns, metadata-owned entity names,
 captcha on public lead forms, the hosted web-to-lead form, app secrets, the
 OpenAPI specification and its Swagger UI, the staff-only metadata management
-API, the custom-entity record API fixes and the workflow engine's wait and
-branch steps). 640 tests
+API, the custom-entity record API fixes, the workflow engine's wait and
+branch steps and the authoring-editor foundation). 663 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -437,7 +437,7 @@ always-available advanced tier, built into the existing admin change forms
 
 | # | Item | Notes |
 | --- | --- | --- |
-| AU1 | Editor foundation + JSON tier | Staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
+| AU1 | Editor foundation + JSON tier | **✅ delivered 2026-09-15** — staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
 | AU2 | Visual builders | Inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
 | AU3 | Read-only flow & run visualization | `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
 
@@ -446,8 +446,8 @@ storage format and escape hatch; workflow trigger/branch/`until` conditions
 remain formula expressions handled by the code editor (the row builder serves
 `DynamicLogic.condition`); the bundle is rebuilt with the existing
 `tools/build-codemirror.sh` and committed, following the CodeMirror/Swagger
-vendoring pattern. Suggested order: **AU1 first for review, then AU2, then
-AU3**.
+vendoring pattern. Suggested order: **AU1 delivered 2026-09-15; next AU2,
+then AU3**.
 
 ## Resume checklist
 
@@ -484,6 +484,22 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Authoring UX AU1: the JSON/script declarations get a
+  CodeMirror tier. Staff-only `GET /admin/editor/metadata/<Entity>/` serves
+  fields (type, choices, links), action types, dynamic-logic operators and
+  formula helpers for completion, and `POST /admin/editor/validate/` runs the
+  declarations through the same validators save-time `full_clean()` uses:
+  `workflow_actions` (now collecting every error with its action path),
+  `dynamic_logic`, `formula` (new `formula.validate_script`), `custom_field`
+  and `lead_capture`. The Textarea widgets for Workflow actions and
+  condition, DynamicLogic condition, Formula script, CustomField params and
+  LeadCapture field_list are enhanced by `core/static/core/js/editors.js`
+  (completion, format button for JSON, debounced lint diagnostics, dark-mode
+  aware) while the textarea remains the submitted value, so saving without
+  JavaScript is unchanged. The vendored CodeMirror bundle gained
+  `@codemirror/lang-json` and a formula `StreamLanguage` (rebuilt through
+  `tools/build-codemirror.sh`, gzip 145 KB) (663 tests).
 
 - **2026-09-15** — Workflow engine W1 + W2: workflow rules are now step lists
   that can pause and branch. A `{"type": "wait", "duration": "3d"}` step, a

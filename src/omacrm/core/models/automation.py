@@ -38,19 +38,14 @@ class Formula(models.Model):
     def clean(self):
         super().clean()
         from omacrm.core.metadata.registry import registry
+        from omacrm.core.services.formula import validate_script
 
         if self.entity_type and not registry.has(self.entity_type):
             raise ValidationError({"entity_type": _("Unknown entity type.")})
-        if self.entity_type and registry.has(self.entity_type):
-            # Validate the script against the entity fields in a dry run.
-            from omacrm.core.services.formula import FormulaError, interpret
-
-            model = registry.model_for(self.entity_type)
-            instance = model()
-            try:
-                interpret(self.script, instance, dry_run=True)
-            except FormulaError as exc:
-                raise ValidationError({"script": str(exc)}) from exc
+        if self.entity_type:
+            problem = validate_script(self.script, self.entity_type)
+            if problem:
+                raise ValidationError({"script": problem})
 
 
 class DynamicLogic(models.Model):

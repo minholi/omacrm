@@ -1,0 +1,5 @@
+<div class="oma-editor" data-editor-root>
+    <textarea name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
+    <div class="oma-editor-mount" data-editor-mount></div>
+    {{ editor|json_script:config_id }}
+</div>

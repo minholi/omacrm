@@ -19,6 +19,7 @@ from omacrm.core.admin.views import (
     kanban_order,
     notification_stream,
 )
+from omacrm.core.admin.editor_views import editor_metadata, editor_validate
 from omacrm.core.api.metadata import metadata_router
 from omacrm.core.api.openapi import OpenApiView
 from omacrm.core.api.router import router
@@ -104,6 +105,16 @@ urlpatterns = [
         "admin/link-autocomplete/",
         admin.site.admin_view(LinkAutocompleteView.as_view()),
         name="link_autocomplete",
+    ),
+    path(
+        "admin/editor/metadata/<str:entity_type>/",
+        admin.site.admin_view(editor_metadata),
+        name="editor_metadata",
+    ),
+    path(
+        "admin/editor/validate/",
+        admin.site.admin_view(editor_validate),
+        name="editor_validate",
     ),
     path(
         "admin/kanban/<str:entity_type>/move/",

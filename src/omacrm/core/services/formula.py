@@ -357,6 +357,21 @@ def validate_expression(source: str) -> None:
     _parse_expression(source)
 
 
+def validate_script(script: str, entity_type: str) -> str | None:
+    """Return the formula error for a script on ``entity_type``, or ``None``."""
+
+    from omacrm.core.metadata.registry import registry
+
+    if not entity_type or not registry.has(entity_type):
+        return None
+    try:
+        model = registry.model_for(entity_type)
+        interpret(script, model(), dry_run=True)
+    except FormulaError as exc:
+        return str(exc)
+    return None
+
+
 def evaluate(source: str, context: dict):
     tree = _parse_expression(source)
     try:

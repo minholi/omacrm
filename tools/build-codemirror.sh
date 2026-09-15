@@ -20,6 +20,8 @@ CM_LINT="6.9.7"
 CM_AUTOCOMPLETE="6.20.3"
 CM_COMMANDS="6.11.0"
 CM_LANG_XML="6.1.0"
+CM_LANG_JSON="6.0.2"
+CM_LANGUAGE="6.12.4"
 CM_THEME_ONE_DARK="6.1.3"
 
 WORK="$(mktemp -d)"
@@ -35,6 +37,8 @@ npm i --silent \
   "@codemirror/autocomplete@$CM_AUTOCOMPLETE" \
   "@codemirror/commands@$CM_COMMANDS" \
   "@codemirror/lang-xml@$CM_LANG_XML" \
+  "@codemirror/lang-json@$CM_LANG_JSON" \
+  "@codemirror/language@$CM_LANGUAGE" \
   "@codemirror/theme-one-dark@$CM_THEME_ONE_DARK"
 
 cp "$ENTRY" entry.mjs

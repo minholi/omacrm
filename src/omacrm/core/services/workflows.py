@@ -135,94 +135,151 @@ def _entity_type(instance) -> str:
 def validate_actions(actions: list, entity_type: str) -> str | None:
     """Return a message for the first invalid workflow action, or ``None``."""
 
+    errors = validate_actions_detailed(actions, entity_type)
+    return errors[0]["message"] if errors else None
+
+
+def validate_actions_detailed(actions: list, entity_type: str) -> list[dict]:
+    """Return ``[{"path", "message"}]`` for every invalid workflow action."""
+
     try:
         model = registry.model_for(entity_type)
         metadata_fields = set(registry.fields(entity_type))
     except (KeyError, LookupError):
-        return None
+        return []
+
     field_names = {field.name for field in model._meta.get_fields()}
-    return _validate_action_list(
-        actions, model, field_names, metadata_fields
-    )
+    errors: list[dict] = []
+    _collect_action_errors(actions, model, field_names, metadata_fields, errors)
+    return errors
 
 
-def _validate_action_list(
-    actions, model, field_names, metadata_fields, depth=0, prefix=""
-) -> str | None:
+def _collect_action_errors(
+    actions, model, field_names, metadata_fields, errors, depth=0, prefix=""
+) -> None:
     if depth > MAX_BRANCH_DEPTH:
-        return _("Actions are nested too deeply.")
+        errors.append(
+            {
+                "path": prefix.rstrip() or "Actions",
+                "message": str(_("Actions are nested too deeply.")),
+            }
+        )
+        return
 
     for index, action in enumerate(actions):
         label = f"{prefix}Action #{index + 1}"
 
         if not isinstance(action, dict) or action.get("type") not in ACTION_TYPES:
-            return _("%(label)s is invalid.") % {"label": label}
+            errors.append(
+                {
+                    "path": label,
+                    "message": str(_("%(label)s is invalid.") % {"label": label}),
+                }
+            )
+            continue
 
         action_type = action["type"]
-        problem = None
 
         if action_type == "set_field":
             if action.get("field") not in field_names:
-                problem = _("%(label)s references an unknown field.") % {
-                    "label": label
-                }
+                errors.append(
+                    {
+                        "path": label,
+                        "message": str(
+                            _("%(label)s references an unknown field.")
+                            % {"label": label}
+                        ),
+                    }
+                )
 
         elif action_type == "webhook":
             try:
                 int(action.get("webhook_id"))
             except (TypeError, ValueError):
-                problem = _("%(label)s requires a numeric webhook_id.") % {
-                    "label": label
-                }
+                errors.append(
+                    {
+                        "path": label,
+                        "message": str(
+                            _("%(label)s requires a numeric webhook_id.")
+                            % {"label": label}
+                        ),
+                    }
+                )
 
         elif action_type == "update_related":
             problem = _validate_update_related(action, model, label)
+            if problem:
+                errors.append({"path": label, "message": str(problem)})
 
         elif action_type == "wait":
             problem = _validate_wait(action, metadata_fields, label)
+            if problem:
+                errors.append({"path": label, "message": str(problem)})
 
         elif action_type == "branch":
             condition = str(action.get("condition") or "")
             if not condition.strip():
-                problem = _("%(label)s requires a condition.") % {"label": label}
+                errors.append(
+                    {
+                        "path": label,
+                        "message": str(
+                            _("%(label)s requires a condition.") % {"label": label}
+                        ),
+                    }
+                )
             else:
                 try:
                     validate_expression(condition)
                 except FormulaError as exc:
-                    problem = _(
-                        "%(label)s has an invalid condition: %(error)s"
-                    ) % {"label": label, "error": exc}
-            if problem is None:
-                then = action.get("then")
-                if not isinstance(then, list) or not then:
-                    problem = _("%(label)s needs a non-empty 'then' list.") % {
-                        "label": label
+                    errors.append(
+                        {
+                            "path": label,
+                            "message": str(
+                                _("%(label)s has an invalid condition: %(error)s")
+                                % {"label": label, "error": exc}
+                            ),
+                        }
+                    )
+
+            then = action.get("then")
+            if not isinstance(then, list) or not then:
+                errors.append(
+                    {
+                        "path": label,
+                        "message": str(
+                            _("%(label)s needs a non-empty 'then' list.")
+                            % {"label": label}
+                        ),
                     }
-                else:
-                    bodies = [("then", then)]
-                    if action.get("else"):
-                        bodies.append(("else", action["else"]))
-                    for name, body in bodies:
-                        if not isinstance(body, list):
-                            problem = _(
-                                "%(label)s: the '%(name)s' body must be a list."
-                            ) % {"label": label, "name": name}
-                            break
-                        problem = _validate_action_list(
-                            body,
-                            model,
-                            field_names,
-                            metadata_fields,
-                            depth=depth + 1,
-                            prefix=f"{label} ({name}) ",
+                )
+            else:
+                bodies = [("then", then)]
+                if action.get("else"):
+                    bodies.append(("else", action["else"]))
+                for name, body in bodies:
+                    if not isinstance(body, list):
+                        errors.append(
+                            {
+                                "path": label,
+                                "message": str(
+                                    _(
+                                        "%(label)s: the '%(name)s' body must be "
+                                        "a list."
+                                    )
+                                    % {"label": label, "name": name}
+                                ),
+                            }
                         )
-                        if problem:
-                            break
-
-        if problem:
-            return problem
-
-    return None
+                        continue
+                    _collect_action_errors(
+                        body,
+                        model,
+                        field_names,
+                        metadata_fields,
+                        errors,
+                        depth=depth + 1,
+                        prefix=f"{label} ({name}) ",
+                    )
 
 
 def _validate_update_related(action, model, label):

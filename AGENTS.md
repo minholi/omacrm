@@ -72,9 +72,12 @@ src/omacrm/
                      # automation, dynamic, email, secrets, dashboard,
                      # filters.py (Starred/Following list filters), views.py
                      # (calendar + layout/ACL editors + subscription toggle),
+                     # editor_views.py + widgets.py (authoring editors),
                      # datasets.py, inlines.py
-    static/core/js/  # notifications.js, subscriptions.js
-    static/vendor/   # codemirror (email editor), swagger-ui (API docs)
+    static/core/js/  # notifications.js, subscriptions.js, editors.js
+                     # (CodeMirror authoring editors)
+    static/vendor/   # codemirror (email editor + authoring editors),
+                     # swagger-ui (API docs)
     api/             # serializers.py, viewsets.py, router.py, openapi.py,
                      # metadata.py (staff-only definition CRUD)
     middleware.py    # CurrentUserMiddleware
@@ -372,6 +375,19 @@ src/omacrm/
   the rules and defaults as `json_script` `dynamic-logic-config` for the
   follow-up client-side show/hide. Manage rules under Customization → Dynamic
   Logic.
+- **Authoring editors**: the JSON/script declarations (Workflow actions and
+  condition, DynamicLogic condition, Formula script, CustomField params,
+  LeadCapture field_list) are edited through CodeMirror-backed widgets
+  (`core/admin/widgets.py`, `core/static/core/js/editors.js`) that add
+  completion and live diagnostics while the textarea stays the submitted
+  value. Staff-only endpoints back them: `GET
+  /admin/editor/metadata/<Entity>/` (fields, links, action types, operators,
+  formula helpers) and `POST /admin/editor/validate/` (`workflow_actions`,
+  `dynamic_logic`, `formula`, `custom_field`, `lead_capture`), which delegate
+  to the same validators save-time `full_clean()` uses, so the UI cannot
+  drift from the server rules. The vendored CodeMirror bundle gained
+  `@codemirror/lang-json` and a formula `StreamLanguage`, rebuilt with
+  `tools/build-codemirror.sh`.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.
