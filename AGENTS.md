@@ -64,9 +64,9 @@ src/omacrm/
     services/        # acl, hooks, stream, subscriptions, notifications,
                      # duplicates, jobs, context, builtin_jobs, currency,
                      # webhooks, captcha, secrets, openapi, formula, workflows,
-                     # workflow_diagram, custom_entities, phone, reactions,
-                     # address, crypto, inbound_email, navigation, relations,
-                     # custom_fields, kanban, demo/ (seed_demo)
+                     # workflow_diagram, layouts, custom_entities, phone,
+                     # reactions, address, crypto, inbound_email, navigation,
+                     # relations, custom_fields, kanban, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, secrets, dashboard,
@@ -381,22 +381,28 @@ src/omacrm/
   Logic.
 - **Authoring editors**: the JSON/script declarations (Workflow actions and
   condition, DynamicLogic condition, Formula script, CustomField params,
-  LeadCapture field_list) are edited through CodeMirror-backed widgets
+  LeadCapture field_list, Layout data, Task/Call/Meeting reminders and
+  Call/Meeting recurrence rules) are edited through CodeMirror-backed widgets
   (`core/admin/widgets.py`, `core/static/core/js/editors.js`) that add
   completion and live diagnostics while the textarea stays the submitted
   value. JSON kinds also get a **Visual | JSON** toggle:
   `core/static/core/js/builders.js` renders type-aware builders — DynamicLogic
   condition groups (`and`/`or`/`not`), Workflow step cards (typed per action,
-  nested `then`/`else`, wait modes), CustomField params per `field_type` and
-  the LeadCapture field checklist — mutating the same parsed JSON and
-  preserving unknown keys/nodes as raw JSON cards. Staff-only endpoints back
+  nested `then`/`else`, wait modes), CustomField params per `field_type`, the
+  LeadCapture field checklist, layout columns/sections, reminder rows with
+  human lead times and the recurrence form — mutating the same parsed JSON and
+  preserving unknown keys/nodes as raw JSON cards; structural edits re-render
+  the visual pane while text inputs update in place. Staff-only endpoints back
   them: `GET /admin/editor/metadata/<Entity>/` (fields, links, action types,
   operators, formula helpers) and `POST /admin/editor/validate/`
   (`workflow_actions`, `dynamic_logic`, `formula`, `custom_field`,
-  `lead_capture`), which delegate to the same validators save-time
-  `full_clean()` uses, so the UI cannot drift from the server rules. The
-  vendored CodeMirror bundle gained `@codemirror/lang-json` and a formula
-  `StreamLanguage`, rebuilt with `tools/build-codemirror.sh`.
+  `lead_capture`, `layout`, `reminders`, `recurrence`), which delegate to the
+  same validators save-time `full_clean()` uses (`core/services/layouts.py`,
+  `crm/services/recurrence.py`, ...), so the UI cannot drift from the server
+  rules. The Layout admin links to `/admin/layout-editor/<Entity>/` for the
+  drag-and-drop path; the vendored CodeMirror bundle gained
+  `@codemirror/lang-json` and a formula `StreamLanguage`, rebuilt with
+  `tools/build-codemirror.sh`.
 - **Entity Manager / custom entities**: `CustomEntity` rows are materialized
   at startup into proxy models, registry entries and admins backed by
   `DynamicRecord` (JSON `custom_data`) — see `core/services/custom_entities.py`.

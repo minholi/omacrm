@@ -467,6 +467,13 @@ class TaskAdmin(MetadataModelAdmin):
     def display_assigned(self, obj):
         return obj.assigned_user.name if obj.assigned_user else "-"
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["reminders"].widget = JSONEditorWidget(
+            kind="reminders", rows=6
+        )
+        return form
+
 
 class AttendanceInline(GenericTabularInline):
     model = Attendance
@@ -515,6 +522,16 @@ class CallAdmin(EventInvitationMixin, MetadataModelAdmin):
     def display_assigned(self, obj):
         return obj.assigned_user.name if obj.assigned_user else "-"
 
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["reminders"].widget = JSONEditorWidget(
+            kind="reminders", rows=6
+        )
+        form.base_fields["recurrence_rule"].widget = JSONEditorWidget(
+            kind="recurrence", rows=10
+        )
+        return form
+
 
 @admin.register(Meeting)
 class MeetingAdmin(
@@ -539,6 +556,16 @@ class MeetingAdmin(
     @display(description=_("Assigned"), ordering="assigned_user")
     def display_assigned(self, obj):
         return obj.assigned_user.name if obj.assigned_user else "-"
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["reminders"].widget = JSONEditorWidget(
+            kind="reminders", rows=6
+        )
+        form.base_fields["recurrence_rule"].widget = JSONEditorWidget(
+            kind="recurrence", rows=10
+        )
+        return form
 
 
 class CaseAdminMixin:

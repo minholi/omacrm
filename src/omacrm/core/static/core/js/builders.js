@@ -342,7 +342,7 @@
             if (index !== -1) {
                 parentList.splice(index, 1);
             }
-            ctx.onChange(root);
+            ctx.structural(root);
         });
     }
 
@@ -364,7 +364,7 @@
                     } else if (!Array.isArray(node.value)) {
                         node.value = node.value ? [node.value] : [];
                     }
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }
             )
         );
@@ -394,11 +394,11 @@
                 row([
                     button("+ condition", function () {
                         node.value.push(defaultLeaf());
-                        ctx.onChange(root);
+                        ctx.structural(root);
                     }),
                     button("+ group", function () {
                         node.value.push({ type: "and", value: [] });
-                        ctx.onChange(root);
+                        ctx.structural(root);
                     }),
                 ])
             );
@@ -416,7 +416,7 @@
         header.appendChild(
             select(operators, node.type, function (next) {
                 node.type = next;
-                ctx.onChange(root);
+                ctx.structural(root);
             })
         );
         var remove = removeButton(root, ctx, parentList, node);
@@ -432,7 +432,7 @@
                 node.attribute,
                 function (next) {
                     node.attribute = next;
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }
             )
         );
@@ -480,7 +480,7 @@
                   if (index !== -1) {
                       parentList.splice(index, 1);
                   }
-                  ctx.onChange(root);
+                  ctx.structural(root);
               })
             : null;
         if (remove) {
@@ -519,27 +519,27 @@
         header.appendChild(
             select(actionTypeOptions(), action.type, function (next) {
                 list.splice(index, 1, { type: next });
-                ctx.onChange(root);
+                ctx.structural(root);
             })
         );
         header.appendChild(
             iconButton("arrow_upward", "Move up", function () {
                 if (move(list, index, -1)) {
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }
             })
         );
         header.appendChild(
             iconButton("arrow_downward", "Move down", function () {
                 if (move(list, index, 1)) {
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }
             })
         );
         header.appendChild(
             iconButton("delete", "Remove", function () {
                 list.splice(index, 1);
-                ctx.onChange(root);
+                ctx.structural(root);
             })
         );
         wrapper.appendChild(header);
@@ -567,7 +567,7 @@
                         action.field,
                         function (next) {
                             action.field = next;
-                            ctx.onChange(root);
+                            ctx.structural(root);
                         }
                     ),
                 ]),
@@ -705,7 +705,7 @@
                         action.poll_interval = "1h";
                         action.timeout = "30d";
                     }
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }),
             ]);
             var fields = [modeRow];
@@ -782,7 +782,7 @@
                 branchBody.push(
                     button("+ else branch", function () {
                         action.else = [];
-                        ctx.onChange(root);
+                        ctx.structural(root);
                     })
                 );
             }
@@ -801,7 +801,7 @@
             row([
                 button("+ step", function () {
                     list.push({ type: "notify", message: "" });
-                    ctx.onChange(root);
+                    ctx.structural(root);
                 }),
             ])
         );
@@ -874,7 +874,7 @@
                     }, { placeholder: "label" }),
                     iconButton("delete", "Remove", function () {
                         root.choices.splice(index, 1);
-                        ctx.onChange(root);
+                        ctx.structural(root);
                     }),
                 ])
             );
@@ -882,7 +882,7 @@
         wrapper.appendChild(
             button("+ choice", function () {
                 root.choices.push(["", ""]);
-                ctx.onChange(root);
+                ctx.structural(root);
             })
         );
         return wrapper;
@@ -967,17 +967,17 @@
                         }),
                         iconButton("arrow_upward", "Move up", function () {
                             if (move(names, index, -1)) {
-                                ctx.onChange(names);
+                                ctx.structural(names);
                             }
                         }),
                         iconButton("arrow_downward", "Move down", function () {
                             if (move(names, index, 1)) {
-                                ctx.onChange(names);
+                                ctx.structural(names);
                             }
                         }),
                         iconButton("delete", "Remove", function () {
                             names.splice(index, 1);
-                            ctx.onChange(names);
+                            ctx.structural(names);
                         }),
                     ],
                     "border border-base-200 rounded-default px-2 py-1 " +
@@ -1005,7 +1005,7 @@
                     picker,
                     button("+ add field", function () {
                         names.push(picker.value);
-                        ctx.onChange(names);
+                        ctx.structural(names);
                     }),
                 ])
             );
@@ -1013,8 +1013,434 @@
         return wrapper;
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Layout data builder (list columns / detail sections)                */
+    /* ------------------------------------------------------------------ */
+
+    function nameList(names, available, changed) {
+        var wrapper = el("div", { class: "flex flex-col gap-1" });
+        names.forEach(function (name, index) {
+            var known = available.some(function (field) {
+                return field.name === name;
+            });
+            wrapper.appendChild(
+                row(
+                    [
+                        el("span", {
+                            class:
+                                "grow " +
+                                (known
+                                    ? classString("important", "text-sm")
+                                    : classString("subtle")),
+                            text: known ? name : name + " (unknown)",
+                        }),
+                        iconButton("arrow_upward", "Move up", function () {
+                            if (move(names, index, -1)) {
+                                changed();
+                            }
+                        }),
+                        iconButton("arrow_downward", "Move down", function () {
+                            if (move(names, index, 1)) {
+                                changed();
+                            }
+                        }),
+                        iconButton("delete", "Remove", function () {
+                            names.splice(index, 1);
+                            changed();
+                        }),
+                    ],
+                    "border border-base-200 rounded-default px-2 py-1 " +
+                        "dark:border-base-800"
+                )
+            );
+        });
+        var remaining = available.filter(function (field) {
+            return names.indexOf(field.name) === -1;
+        });
+        if (remaining.length) {
+            var picker = select(
+                remaining.map(function (field) {
+                    return {
+                        value: field.name,
+                        label: field.label || field.name,
+                    };
+                }),
+                remaining[0].name,
+                function () {}
+            );
+            wrapper.appendChild(
+                row([
+                    picker,
+                    button("+ add field", function () {
+                        names.push(picker.value);
+                        changed();
+                    }),
+                ])
+            );
+        }
+        return wrapper;
+    }
+
+    function rawElement(value, remove) {
+        var actions = [jsonBlock(value)];
+        if (remove) {
+            actions.push(button("Remove", remove));
+        }
+        return card(actions);
+    }
+
+    function buildLayout(value, ctx) {
+        if (!Array.isArray(value)) {
+            return el("p", {
+                class: classString("subtle"),
+                text: "Layout data must be a JSON list.",
+            });
+        }
+        var layoutName = (ctx.context && ctx.context.layout_name) || "list";
+        var available = ctx.fields || [];
+        var wrapper = el("div", { class: "flex flex-col gap-2" });
+
+        if (layoutName === "list") {
+            wrapper.appendChild(
+                el("span", { class: classString("subtle"), text: "Columns" })
+            );
+            wrapper.appendChild(
+                nameList(value, available, function () {
+                    ctx.structural(value);
+                })
+            );
+            return wrapper;
+        }
+
+        value.forEach(function (section, index) {
+            if (!section || typeof section !== "object" || Array.isArray(section)) {
+                wrapper.appendChild(
+                    rawElement(section, function () {
+                        value.splice(index, 1);
+                        ctx.structural(value);
+                    })
+                );
+                return;
+            }
+            if (!Array.isArray(section.fields)) {
+                section.fields = [];
+            }
+            wrapper.appendChild(
+                card([
+                    row([
+                        textInput(
+                            section.title,
+                            function (next) {
+                                section.title = next;
+                                ctx.onChange(value);
+                            },
+                            { placeholder: "Section title" }
+                        ),
+                        iconButton("arrow_upward", "Move up", function () {
+                            if (move(value, index, -1)) {
+                                ctx.structural(value);
+                            }
+                        }),
+                        iconButton("arrow_downward", "Move down", function () {
+                            if (move(value, index, 1)) {
+                                ctx.structural(value);
+                            }
+                        }),
+                        iconButton("delete", "Remove section", function () {
+                            value.splice(index, 1);
+                            ctx.structural(value);
+                        }),
+                    ]),
+                    nameList(section.fields, available, function () {
+                        ctx.structural(value);
+                    }),
+                ])
+            );
+        });
+        wrapper.appendChild(
+            button("+ section", function () {
+                value.push({ title: "", fields: [] });
+                ctx.structural(value);
+            })
+        );
+        return wrapper;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Reminders builder ([{type, seconds}])                               */
+    /* ------------------------------------------------------------------ */
+
+    function formatSeconds(seconds) {
+        var value = parseInt(seconds, 10);
+        if (!isFinite(value) || value <= 0) {
+            if (value === 0) {
+                return "0m";
+            }
+            return "";
+        }
+        var units = [
+            ["w", 604800],
+            ["d", 86400],
+            ["h", 3600],
+            ["m", 60],
+        ];
+        for (var index = 0; index < units.length; index += 1) {
+            if (value % units[index][1] === 0) {
+                return value / units[index][1] + units[index][0];
+            }
+        }
+        return value + "s";
+    }
+
+    function parseLeadTime(text) {
+        var match = String(text || "")
+            .trim()
+            .match(/^(\d+)\s*([mhdw])?$/i);
+        if (!match) {
+            return undefined;
+        }
+        var sizes = { m: 60, h: 3600, d: 86400, w: 604800 };
+        var unit = (match[2] || "m").toLowerCase();
+        return parseInt(match[1], 10) * sizes[unit];
+    }
+
+    function buildReminders(value, ctx) {
+        if (!Array.isArray(value)) {
+            return el("p", {
+                class: classString("subtle"),
+                text: "Reminders must be a JSON list.",
+            });
+        }
+        var wrapper = el("div", { class: "flex flex-col gap-2" });
+        value.forEach(function (item, index) {
+            if (!item || typeof item !== "object" || Array.isArray(item)) {
+                wrapper.appendChild(
+                    rawElement(item, function () {
+                        value.splice(index, 1);
+                        ctx.structural(value);
+                    })
+                );
+                return;
+            }
+            wrapper.appendChild(
+                card([
+                    row([
+                        select(
+                            [
+                                { value: "Popup", label: "Popup" },
+                                { value: "Email", label: "Email" },
+                            ],
+                            item.type || "Popup",
+                            function (next) {
+                                item.type = next;
+                                ctx.onChange(value);
+                            }
+                        ),
+                        textInput(
+                            formatSeconds(item.seconds),
+                            function (next) {
+                                var seconds = parseLeadTime(next);
+                                item.seconds =
+                                    seconds === undefined ? next : seconds;
+                                ctx.onChange(value);
+                            },
+                            { placeholder: "e.g. 15m, 1h, 2d" }
+                        ),
+                        iconButton("arrow_upward", "Move up", function () {
+                            if (move(value, index, -1)) {
+                                ctx.structural(value);
+                            }
+                        }),
+                        iconButton("arrow_downward", "Move down", function () {
+                            if (move(value, index, 1)) {
+                                ctx.structural(value);
+                            }
+                        }),
+                        iconButton("delete", "Remove", function () {
+                            value.splice(index, 1);
+                            ctx.structural(value);
+                        }),
+                    ]),
+                ])
+            );
+        });
+        wrapper.appendChild(
+            button("+ reminder", function () {
+                value.push({ type: "Popup", seconds: 3600 });
+                ctx.structural(value);
+            })
+        );
+        return wrapper;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Recurrence builder ({frequency, interval, weekdays, count/until})   */
+    /* ------------------------------------------------------------------ */
+
+    var WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    function recurrenceRow(label, control) {
+        return row([
+            el("span", {
+                class: classString("subtle"),
+                style: "min-width: 7rem",
+                text: label,
+            }),
+            control,
+        ]);
+    }
+
+    function buildRecurrence(value, ctx) {
+        var root =
+            value && typeof value === "object" && !Array.isArray(value)
+                ? value
+                : {};
+        var wrapper = el("div", { class: "flex flex-col gap-2" });
+
+        if (!Object.keys(root).length) {
+            wrapper.appendChild(
+                el("p", { class: classString("subtle"), text: "No recurrence." })
+            );
+            wrapper.appendChild(
+                button("Enable recurrence", function () {
+                    root.frequency = "weekly";
+                    root.interval = 1;
+                    ctx.structural(root);
+                })
+            );
+            return wrapper;
+        }
+
+        var weekdays = Array.isArray(root.weekdays) ? root.weekdays : [];
+        root.weekdays = weekdays;
+
+        wrapper.appendChild(
+            card([
+                recurrenceRow(
+                    "Frequency",
+                    select(
+                        [
+                            { value: "daily", label: "Daily" },
+                            { value: "weekly", label: "Weekly" },
+                            { value: "monthly", label: "Monthly" },
+                        ],
+                        root.frequency || "weekly",
+                        function (next) {
+                            root.frequency = next;
+                            ctx.structural(root);
+                        }
+                    )
+                ),
+                recurrenceRow(
+                    "Interval",
+                    textInput(
+                        root.interval,
+                        function (next) {
+                            root.interval = next === "" ? 1 : Number(next);
+                            ctx.onChange(root);
+                        },
+                        { type: "number" }
+                    )
+                ),
+            ])
+        );
+
+        if (root.frequency === "weekly") {
+            var daysRow = row([]);
+            WEEKDAY_LABELS.forEach(function (label, day) {
+                var box = el("label", {
+                    class: "flex flex-row items-center gap-1 text-sm",
+                });
+                var input = el("input", { type: "checkbox" });
+                input.checked = weekdays.indexOf(day) !== -1;
+                input.addEventListener("change", function () {
+                    var position = weekdays.indexOf(day);
+                    if (input.checked && position === -1) {
+                        weekdays.push(day);
+                    }
+                    if (!input.checked && position !== -1) {
+                        weekdays.splice(position, 1);
+                    }
+                    weekdays.sort();
+                    ctx.structural(root);
+                });
+                box.appendChild(input);
+                box.appendChild(document.createTextNode(label));
+                daysRow.appendChild(box);
+            });
+            wrapper.appendChild(daysRow);
+        }
+
+        var endMode = root.count ? "count" : root.until ? "until" : "never";
+        wrapper.appendChild(
+            recurrenceRow(
+                "Ends",
+                select(
+                    [
+                        { value: "never", label: "Never" },
+                        { value: "count", label: "After occurrences" },
+                        { value: "until", label: "On date" },
+                    ],
+                    endMode,
+                    function (next) {
+                        delete root.count;
+                        delete root.until;
+                        if (next === "count") {
+                            root.count = 10;
+                        }
+                        if (next === "until") {
+                            root.until = "";
+                        }
+                        ctx.structural(root);
+                    }
+                )
+            )
+        );
+        if (endMode === "count") {
+            wrapper.appendChild(
+                recurrenceRow(
+                    "Occurrences",
+                    textInput(
+                        root.count,
+                        function (next) {
+                            root.count = next === "" ? null : Number(next);
+                            ctx.onChange(root);
+                        },
+                        { type: "number" }
+                    )
+                )
+            );
+        } else if (endMode === "until") {
+            wrapper.appendChild(
+                recurrenceRow(
+                    "Until",
+                    textInput(
+                        root.until,
+                        function (next) {
+                            root.until = next;
+                            ctx.onChange(root);
+                        },
+                        { type: "date" }
+                    )
+                )
+            );
+        }
+        wrapper.appendChild(
+            button("Remove recurrence", function () {
+                Object.keys(root).forEach(function (key) {
+                    delete root[key];
+                });
+                ctx.structural(root);
+            })
+        );
+        return wrapper;
+    }
+
     registry.registerBuilder("dynamic_logic", buildCondition);
     registry.registerBuilder("workflow_actions", buildSteps);
     registry.registerBuilder("custom_field", buildParams);
     registry.registerBuilder("lead_capture", buildChecklist);
+    registry.registerBuilder("layout", buildLayout);
+    registry.registerBuilder("reminders", buildReminders);
+    registry.registerBuilder("recurrence", buildRecurrence);
 })();

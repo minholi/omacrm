@@ -171,12 +171,77 @@ def _validate_lead_capture(value) -> list[dict]:
     ]
 
 
+def _validate_layout(entity_type: str, value, payload) -> list[dict]:
+    from omacrm.core.services import layouts
+
+    layout_name = str(payload.get("layout_name") or "")
+    if not layout_name:
+        return [_error("layout_name", "Choose a layout name.")]
+    return layouts.validate_layout(entity_type, layout_name, value)
+
+
+def _validate_reminders(value) -> list[dict]:
+    from omacrm.crm.models import ReminderType
+
+    if not value:
+        return []
+    if not isinstance(value, list):
+        return [_error("reminders", "Reminders must be a list.")]
+    errors = []
+    for index, item in enumerate(value):
+        path = f"reminders[{index}]"
+        if not isinstance(item, dict):
+            errors.append(_error(path, "Each reminder must be an object."))
+            continue
+        reminder_type = item.get("type")
+        if reminder_type and reminder_type not in ReminderType.values:
+            errors.append(_error(path, f"Unknown reminder type: {reminder_type}"))
+        try:
+            seconds = int(item.get("seconds", 0) or 0)
+        except (TypeError, ValueError):
+            errors.append(_error(path, "seconds must be a number."))
+            continue
+        if seconds < 0:
+            errors.append(_error(path, "seconds must be >= 0."))
+    return errors
+
+
+def _validate_recurrence(value) -> list[dict]:
+    from omacrm.crm.services import recurrence
+
+    if not value:
+        return []
+    try:
+        recurrence.validate_rule(value)
+    except DjangoValidationError as exc:
+        if hasattr(exc, "message_dict"):
+            return [
+                _error(field, "; ".join(str(item) for item in messages))
+                for field, messages in exc.message_dict.items()
+            ]
+        return [
+            _error("recurrence_rule", "; ".join(str(item) for item in exc.messages))
+        ]
+    return []
+
+
 _VALIDATORS = {
-    "workflow_actions": _validate_workflow_actions,
-    "dynamic_logic": lambda entity_type, value: _validate_dynamic_logic(value),
-    "formula": _validate_formula,
-    "custom_field": _validate_custom_field,
-    "lead_capture": lambda entity_type, value: _validate_lead_capture(value),
+    "workflow_actions": lambda entity_type, value, payload: _validate_workflow_actions(
+        entity_type, value
+    ),
+    "dynamic_logic": lambda entity_type, value, payload: _validate_dynamic_logic(
+        value
+    ),
+    "formula": lambda entity_type, value, payload: _validate_formula(
+        entity_type, value
+    ),
+    "custom_field": lambda entity_type, value, payload: _validate_custom_field(
+        entity_type, value
+    ),
+    "lead_capture": lambda entity_type, value, payload: _validate_lead_capture(value),
+    "layout": _validate_layout,
+    "reminders": lambda entity_type, value, payload: _validate_reminders(value),
+    "recurrence": lambda entity_type, value, payload: _validate_recurrence(value),
 }
 
 
@@ -199,5 +264,5 @@ def editor_validate(request):
             status=400,
         )
 
-    errors = validator(entity_type, payload.get("value"))
+    errors = validator(entity_type, payload.get("value"), payload)
     return JsonResponse({"ok": not errors, "errors": errors})

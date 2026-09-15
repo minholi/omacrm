@@ -44,6 +44,9 @@ class EditorWidget(UnfoldAdminTextareaWidget):
         "dynamic_logic",
         "custom_field",
         "lead_capture",
+        "layout",
+        "reminders",
+        "recurrence",
     )
 
     def __init__(

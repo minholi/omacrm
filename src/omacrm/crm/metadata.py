@@ -218,6 +218,7 @@ registry.register(
             "account": FieldDef("account", "link", _("Account"), model_field="account"),
             "contact": FieldDef("contact", "link", _("Contact"), model_field="contact"),
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
+            "reminders": FieldDef("reminders", "json", _("Reminders"), model_field="reminders"),
             **AUDIT_FIELDS,
         },
         ordering=["-created_at"],
@@ -226,6 +227,7 @@ registry.register(
         list_filter=["status", "priority", "assigned_user"],
         detail_layout=[
             {"title": _("Overview"), "fields": ["name", "status", "priority", "date_start", "date_end", "date_completed", "account", "contact", "description"]},
+            {"title": _("Reminders"), "fields": ["reminders"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,
@@ -251,6 +253,7 @@ registry.register(
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
             "recurrence_rule": FieldDef("recurrence_rule", "json", _("Recurrence Rule"), model_field="recurrence_rule"),
             "recurrence_uid": FieldDef("recurrence_uid", "varchar", _("Series"), read_only=True, model_field="recurrence_uid"),
+            "reminders": FieldDef("reminders", "json", _("Reminders"), model_field="reminders"),
             **AUDIT_FIELDS,
         },
         ordering=["-date_start"],
@@ -260,6 +263,7 @@ registry.register(
         detail_layout=[
             {"title": _("Overview"), "fields": ["name", "status", "date_start", "date_end", "duration", "direction", "account", "description"]},
             {"title": _("Recurrence"), "fields": ["recurrence_rule", "recurrence_uid"]},
+            {"title": _("Reminders"), "fields": ["reminders"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,
@@ -286,6 +290,7 @@ registry.register(
             "description": FieldDef("description", "text", _("Description"), model_field="description"),
             "recurrence_rule": FieldDef("recurrence_rule", "json", _("Recurrence Rule"), model_field="recurrence_rule"),
             "recurrence_uid": FieldDef("recurrence_uid", "varchar", _("Series"), read_only=True, model_field="recurrence_uid"),
+            "reminders": FieldDef("reminders", "json", _("Reminders"), model_field="reminders"),
             **AUDIT_FIELDS,
         },
         ordering=["-date_start"],
@@ -295,6 +300,7 @@ registry.register(
         detail_layout=[
             {"title": _("Overview"), "fields": ["name", "status", "date_start", "date_end", "duration", "is_all_day", "join_url", "external_service", "account", "description"]},
             {"title": _("Recurrence"), "fields": ["recurrence_rule", "recurrence_uid"]},
+            {"title": _("Reminders"), "fields": ["reminders"]},
             {"title": _("Assignment"), "fields": ["assigned_user", "teams", "created_at", "modified_at"]},
         ],
         stream=True,

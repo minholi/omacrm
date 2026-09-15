@@ -19,6 +19,7 @@ from unfold.views import BaseAutocompleteView, UnfoldSiteViewMixin
 from omacrm.core.metadata.registry import registry
 from omacrm.core.models import Layout
 from omacrm.core.services.acl import AclService
+from omacrm.core.services.layouts import clean_sections, validate_layout
 
 WEEKDAYS = [
     _("Mon"),
@@ -497,7 +498,6 @@ class LayoutEditorView(UnfoldSiteViewMixin, TemplateView):
         entity_type = kwargs["entity_type"]
         if not registry.has(entity_type):
             raise Http404(f"Unknown entity type: {entity_type}")
-        entity = registry.get(entity_type)
         fields = {
             **registry.fields(entity_type),
             **registry.link_fields(entity_type),
@@ -512,28 +512,11 @@ class LayoutEditorView(UnfoldSiteViewMixin, TemplateView):
             messages.error(request, _("Invalid JSON: %(error)s") % {"error": exc})
             return redirect("layout_editor", entity_type=entity_type)
 
-        if not isinstance(sections, list):
-            messages.error(request, _("The detail layout must be a JSON list."))
+        problem = validate_layout(entity_type, "detail", sections)
+        if problem:
+            messages.error(request, problem[0]["message"])
             return redirect("layout_editor", entity_type=entity_type)
-
-        cleaned = []
-        for section in sections:
-            if not isinstance(section, dict) or not isinstance(section.get("fields", []), list):
-                messages.error(
-                    request,
-                    _("Each section must be an object with a 'fields' list."),
-                )
-                return redirect("layout_editor", entity_type=entity_type)
-            unknown = [name for name in section.get("fields", []) if name not in fields]
-            if unknown:
-                messages.error(
-                    request,
-                    _("Unknown field(s): %(fields)s") % {"fields": ", ".join(unknown)},
-                )
-                return redirect("layout_editor", entity_type=entity_type)
-            cleaned.append(
-                {"title": section.get("title"), "fields": list(section.get("fields", []))}
-            )
+        cleaned = clean_sections(sections)
 
         Layout.objects.update_or_create(
             entity_type=entity_type,

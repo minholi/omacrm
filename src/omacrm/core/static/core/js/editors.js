@@ -302,14 +302,7 @@
             serverValue = parsed;
         }
 
-        var contextFields = {};
-        var form = this.root.closest("form");
-        (this.config.contextFields || []).forEach(function (name) {
-            var field = form ? form.elements.namedItem(name) : null;
-            if (field && typeof field.value === "string") {
-                contextFields[name] = field.value;
-            }
-        });
+        var contextFields = this.contextValues();
         if (this.config.kind === "custom_field") {
             serverValue = {
                 name: contextFields.name || "",
@@ -320,11 +313,16 @@
             serverValue = text;
         }
 
-        return postJSON(this.config.validateUrl, {
+        var payload = {
             kind: this.config.kind,
             entity_type: this.entityType(),
             value: serverValue,
-        })
+        };
+        if (contextFields.layout_name) {
+            payload.layout_name = contextFields.layout_name;
+        }
+
+        return postJSON(this.config.validateUrl, payload)
             .then(function (payload) {
                 return (payload.errors || []).map(function (error) {
                     var prefix = error.path ? error.path + ": " : "";
@@ -353,6 +351,7 @@
     };
 
     Editor.prototype.builderContext = function (value) {
+        var self = this;
         var metadata = this.metadata || {};
         var fields = (metadata.fields || []).slice();
         (metadata.links || []).forEach(function (link) {
@@ -371,11 +370,16 @@
             entityTypes: metadata.entityTypes || [],
             context: this.contextValues(),
             classes: this.config.classes || {},
-            onChange: this.applyValue.bind(this),
+            onChange: function (next) {
+                self.applyValue(next);
+            },
+            structural: function (next) {
+                self.applyValue(next, true);
+            },
         };
     };
 
-    Editor.prototype.applyValue = function (next) {
+    Editor.prototype.applyValue = function (next, rerender) {
         if (next === undefined) {
             return;
         }
@@ -390,6 +394,9 @@
         });
         this.applying = false;
         this.sync();
+        if (rerender) {
+            this.scheduleVisual(true);
+        }
     };
 
     Editor.prototype.scheduleVisual = function (immediate) {

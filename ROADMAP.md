@@ -14,7 +14,8 @@ captcha on public lead forms, the hosted web-to-lead form, app secrets, the
 OpenAPI specification and its Swagger UI, the staff-only metadata management
 API, the custom-entity record API fixes, the workflow engine's wait and
 branch steps and the authoring editors with their visual builders and flow
-visualization). 674 tests
+visualization, extended to the layout/reminder/recurrence declarations).
+685 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -441,13 +442,14 @@ always-available advanced tier, built into the existing admin change forms
 | AU1 | Editor foundation + JSON tier | **✅ delivered 2026-09-15** — staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
 | AU2 | Visual builders | **✅ delivered 2026-09-15** — inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
 | AU3 | Read-only flow & run visualization | **✅ delivered 2026-09-15** — `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
+| AU4 | Remaining JSON surfaces | **✅ delivered 2026-09-15** — Layout.data (shared `layouts.validate_layout`, visual builder for list columns and detail/edit sections, "Open in Layout Editor" link), Task/Call/Meeting reminders (builder with human lead times) and Call/Meeting recurrence rules (builder over `recurrence.validate_rule`), both now exposed as metadata fields; the unused `Preferences.dashboard_layout`/`preset_filters` and `Role.value_permissions` fields were removed |
 
 Locked decisions: inline form widgets, no standalone pages; JSON stays the
 storage format and escape hatch; workflow trigger/branch/`until` conditions
 remain formula expressions handled by the code editor (the row builder serves
 `DynamicLogic.condition`); the bundle is rebuilt with the existing
 `tools/build-codemirror.sh` and committed, following the CodeMirror/Swagger
-vendoring pattern. AU1, AU2 and AU3 are delivered (2026-09-15).
+vendoring pattern. AU1–AU4 are delivered (2026-09-15).
 
 ## Resume checklist
 
@@ -484,6 +486,22 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Authoring UX AU4: the remaining JSON declarations got
+  editors. `Layout.data` now has a `layout` validate kind backed by the new
+  shared `core/services/layouts.py` (the Layout editor page uses the same
+  rules), a visual builder for list columns and detail/edit sections with
+  add/remove/reorder, unknown fields kept and flagged, and an **Open in
+  Layout Editor** link. Task/Call/Meeting `reminders` are metadata fields now
+  and get a builder with Popup/Email rows and human lead times (`15m`, `2h`,
+  `3d`), and Call/Meeting `recurrence_rule` gets a frequency/interval/
+  weekdays/end-mode form validated through `recurrence.validate_rule`. The
+  builders gained a structural re-render channel, so adding, moving, removing
+  or switching types updates the visual pane immediately (previously the DOM
+  went stale until the next JSON edit). Cleanup: the unused
+  `Preferences.dashboard_layout`/`preset_filters` and
+  `Role.value_permissions` fields are removed (migration `core.0026`)
+  (685 tests).
 
 - **2026-09-15** — Authoring UX AU3: workflow flows are now visual and
   read-only on the detail pages. `WorkflowRun.trace` (migration

@@ -1,8 +1,11 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 
 from omacrm.core.admin.widgets import JSONEditorWidget
+from omacrm.core.metadata.registry import registry
 from omacrm.core.models import CustomField, CustomLink, Layout
 
 
@@ -53,12 +56,33 @@ class LayoutAdmin(ModelAdmin):
     list_display = ("entity_type", "layout_name", "is_custom", "modified_at")
     list_filter = ("entity_type", "layout_name", "is_custom")
     search_fields = ("entity_type", "layout_name")
-    readonly_fields = ("created_at", "modified_at")
+    readonly_fields = ("created_at", "modified_at", "editor_link")
     fieldsets = (
         (None, {"fields": ("entity_type", "layout_name", "is_custom")}),
-        (_("Layout data"), {"fields": ("data",)}),
+        (_("Layout data"), {"fields": ("data", "editor_link")}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change=change, **kwargs)
+        form.base_fields["data"].widget = JSONEditorWidget(
+            kind="layout",
+            entity_field="entity_type",
+            context_fields=("layout_name",),
+            rows=12,
+        )
+        return form
+
+    @admin.display(description=_("Layout editor"))
+    def editor_link(self, obj):
+        if obj is None or not obj.entity_type or not registry.has(obj.entity_type):
+            return "-"
+        url = reverse("layout_editor", kwargs={"entity_type": obj.entity_type})
+        return format_html(
+            '<a class="text-link" href="{}">{}</a>',
+            url,
+            _("Open in Layout Editor"),
+        )
 
 
 @admin.register(CustomLink)

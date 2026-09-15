@@ -4,7 +4,7 @@ from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.urls import reverse
 
-from omacrm.core.models import User
+from omacrm.core.models import Layout, User
 
 
 class EditorMetadataTests(TestCase):
@@ -182,6 +182,121 @@ class EditorValidateTests(TestCase):
         self.assertFalse(payload["ok"])
         self.assertIn("Unknown Lead field", payload["errors"][0]["message"])
 
+    def test_layout_valid_and_invalid(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "kind": "layout",
+                    "entity_type": "Task",
+                    "layout_name": "list",
+                    "value": ["name", "status"],
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertTrue(response.json()["ok"])
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "kind": "layout",
+                    "entity_type": "Task",
+                    "layout_name": "list",
+                    "value": ["name", "nope"],
+                }
+            ),
+            content_type="application/json",
+        )
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertIn("Unknown field: nope", payload["errors"][0]["message"])
+
+    def test_layout_detail_sections(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "kind": "layout",
+                    "entity_type": "Task",
+                    "layout_name": "detail",
+                    "value": [{"title": "Overview", "fields": ["name"]}],
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertTrue(response.json()["ok"])
+
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "kind": "layout",
+                    "entity_type": "Task",
+                    "layout_name": "detail",
+                    "value": [{"title": "Overview", "fields": ["nope"]}],
+                }
+            ),
+            content_type="application/json",
+        )
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["errors"][0]["path"], "data[0].fields")
+
+    def test_layout_requires_layout_name(self):
+        response = self.client.post(
+            self.url,
+            data=json.dumps(
+                {
+                    "kind": "layout",
+                    "entity_type": "Task",
+                    "value": [],
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.json()["errors"][0]["path"], "layout_name")
+
+    def test_reminders_valid_and_invalid(self):
+        valid = self._post(
+            "reminders",
+            [{"type": "Popup", "seconds": 3600}],
+            entity_type="",
+        )
+        self.assertTrue(valid.json()["ok"])
+
+        invalid = self._post(
+            "reminders",
+            [{"type": "Nope", "seconds": -1}],
+            entity_type="",
+        )
+        payload = invalid.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(len(payload["errors"]), 2)
+        self.assertEqual(payload["errors"][0]["path"], "reminders[0]")
+
+    def test_recurrence_valid_and_invalid(self):
+        valid = self._post(
+            "recurrence",
+            {"frequency": "weekly", "interval": 1, "weekdays": [0, 2]},
+            entity_type="",
+        )
+        self.assertTrue(valid.json()["ok"])
+
+        invalid = self._post(
+            "recurrence",
+            {"frequency": "yearly"},
+            entity_type="",
+        )
+        payload = invalid.json()
+        self.assertFalse(payload["ok"])
+        self.assertIn("frequency", payload["errors"][0]["message"])
+
+    def test_recurrence_empty_is_allowed(self):
+        response = self._post("recurrence", {}, entity_type="")
+        self.assertTrue(response.json()["ok"])
+
     def test_unknown_kind_returns_400(self):
         response = self._post("nope", {})
         self.assertEqual(response.status_code, 400)
@@ -242,3 +357,28 @@ class EditorAdminTests(TestCase):
 
     def test_lead_capture_form_uses_editor(self):
         self._assert_editor("admin:crm_leadcapture_add", "lead_capture")
+
+    def test_layout_form_uses_editor(self):
+        self._assert_editor("admin:core_layout_add", "layout")
+
+    def test_task_form_uses_reminders_builder(self):
+        self._assert_editor("admin:crm_task_add", "reminders")
+
+    def test_call_form_uses_reminders_and_recurrence(self):
+        self._assert_editor("admin:crm_call_add", "reminders")
+        self._assert_editor("admin:crm_call_add", "recurrence")
+
+    def test_meeting_form_uses_recurrence_builder(self):
+        self._assert_editor("admin:crm_meeting_add", "recurrence")
+
+    def test_layout_change_form_links_to_layout_editor(self):
+        layout = Layout.objects.create(
+            entity_type="Task", layout_name="list", data=["name"]
+        )
+        self.addCleanup(layout.delete)
+        response = self.client.get(
+            reverse("admin:core_layout_change", args=[layout.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Open in Layout Editor")
+        self.assertContains(response, "/admin/layout-editor/Task/")
