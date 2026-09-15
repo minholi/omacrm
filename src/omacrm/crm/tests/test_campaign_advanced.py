@@ -1,7 +1,8 @@
+import re
 from decimal import Decimal
 
 from djmoney.money import Money
-from django.core import mail
+from django.core import mail, signing
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -21,10 +22,10 @@ from omacrm.crm.models import (
 )
 from omacrm.crm.services.campaigns import recalc_revenue, record_bounce
 from omacrm.crm.services.mass_email import (
+    UNSUBSCRIBE_SALT,
     build_queue,
     process_mass_email,
     unsubscribe_token,
-    unsubscribe_url,
 )
 
 
@@ -87,7 +88,12 @@ class MassEmailUnsubscribeTests(TestCase):
             type("Job", (), {"data": {"mass_email_id": self.mass_email.pk}})()
         )
         item = self.mass_email.queue_items.first()
-        self.assertIn(unsubscribe_url(item), mail.outbox[0].body)
+
+        match = re.search(r"/unsubscribe/([^\s/]+)/", mail.outbox[0].body)
+        self.assertIsNotNone(match)
+        self.assertEqual(
+            signing.loads(match.group(1), salt=UNSUBSCRIBE_SALT)["id"], item.pk
+        )
 
     def test_unsubscribe_opts_out_and_logs(self):
         build_queue(self.mass_email)
