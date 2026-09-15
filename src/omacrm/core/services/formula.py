@@ -278,6 +278,11 @@ def build_context(instance, user=None) -> dict:
         logger.info("Formula: %s", message)
         return True
 
+    def get_secret(name):
+        from omacrm.core.services import secrets
+
+        return secrets.get(str(name))
+
     context = {
         "record": instance,
         "instance": instance,
@@ -291,6 +296,7 @@ def build_context(instance, user=None) -> dict:
         "get": get_value,
         "update": update,
         "log": log,
+        "secret": get_secret,
         "Decimal": Decimal,
         "date": date,
         "datetime": datetime,

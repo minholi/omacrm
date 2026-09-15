@@ -10,7 +10,8 @@ notifications, utilities, inbound email, saved filters, soft-delete restore,
 email template code editor with MJML source, dynamic logic server side,
 stars/favourites, record following, per-user kanban order, compact changelist
 currency columns, sortable generated columns, metadata-owned entity names,
-captcha on public lead forms and the hosted web-to-lead form). 578 tests
+captcha on public lead forms, the hosted web-to-lead form and app secrets).
+589 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -272,6 +273,7 @@ Nothing here is required for the current feature set to be usable.
 | Item | Origin | Notes / target |
 | --- | --- | --- |
 | Stream post attachments (file upload in Post Note) | C | `Note.attachments` M2M exists but the dialog has no upload. Target: backlog. |
+| Webhooks signed with an app secret / custom headers | #5 | App secrets are standalone (admin + formulas); `Webhook.secret` is still plaintext and requests carry no custom headers. Target: backlog. |
 
 ### CRM / activities
 
@@ -312,7 +314,7 @@ not treated as gaps.
 | 2 | Follow records + favourites (stars) | `StreamSubscription`, `StarSubscription`, `Tools/Stars` | **✅ delivered 2026-09-12** (stars, following, auto-follow, Starred/Following filters, follower notifications) |
 | 3 | Persisted kanban order | `KanbanOrder` | **✅ delivered 2026-09-12** (per-user card order within a column, batched id-list endpoint) |
 | 4 | Captcha on public forms | `Tools/Captcha` | **✅ delivered 2026-09-15** (per-capture `form_captcha`, switchable reCAPTCHA v3 / Turnstile, fail closed) |
-| 5 | App secrets | `Tools/AppSecret` | Named credentials for webhooks/integrations |
+| 5 | App secrets | `Tools/AppSecret` | **✅ delivered 2026-09-15** (encrypted `AppSecret` rows, admin under System, `secret("name")` in formulas) |
 | 6 | OpenAPI specification | `Tools/OpenApi` | Contract for integrators |
 | 7 | Popup notifications | `Tools/PopupNotification` | Browser-level notice on top of badge/toasts |
 | 8 | Rename labels from the UI | `Tools/LabelManager` | Rename entities/fields without code |
@@ -346,9 +348,10 @@ not treated as gaps.
 | 26 | Pluggable file storage (S3) | `Core/FileStorage` |
 
 Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
-(#1), **follow/favourites** (#2), **persisted kanban order** (#3) and
-**captcha on public forms** (#4) are delivered; the next item is **app
-secrets** (#5). Tiers 2 and 3 are recorded here but not scheduled.
+(#1), **follow/favourites** (#2), **persisted kanban order** (#3), **captcha on
+public forms** (#4) and **app secrets** (#5) are delivered; the next item is
+the **OpenAPI specification** (#6). Tiers 2 and 3 are recorded here but not
+scheduled.
 
 ### Workflow engine — improvement to the existing `Workflow`
 
@@ -447,6 +450,18 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — App secrets (Tier 1 #5): `AppSecret`
+  (`core/models/secrets.py`) stores named credentials (API keys, passwords)
+  Fernet-encrypted with a key derived from `SECRET_KEY`, like the IMAP
+  passwords, so a database dump does not expose them;
+  `core/services/secrets.py` provides `get`/`set`/`names` and returns `""` for
+  a missing or undecryptable value. The admin (System → App Secrets) enters
+  the value through a password widget, keeps the current value when left
+  blank and never renders it back — the list shows only
+  name/description/timestamps. Formulas gain a `secret("name")` helper, so
+  scripts can use credentials without hardcoding them. Wiring webhooks to app
+  secrets (and custom headers) is recorded as a follow-up (589 tests).
 
 - **2026-09-15** — Hosted web-to-lead form (deferred backlog item pulled
   forward): each `LeadCapture` now gets a server-rendered public form at

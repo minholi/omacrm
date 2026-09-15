@@ -58,18 +58,19 @@ src/omacrm/
                      # StarSubscription/StreamSubscription),
                      # jobs.py, currency.py, webhooks.py, automation.py
                      # (Formula/Workflow), dynamic.py (CustomEntity/
-                     # DynamicRecord), email.py (Email/EmailAccount)
+                     # DynamicRecord), email.py (Email/EmailAccount),
+                     # secrets.py (AppSecret)
     metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
     services/        # acl, hooks, stream, subscriptions, notifications,
                      # duplicates, jobs, context, builtin_jobs, currency,
-                     # webhooks, captcha, formula, workflows, custom_entities,
-                     # phone, reactions, address, crypto, inbound_email,
-                     # navigation, relations, custom_fields, kanban, demo/
-                     # (seed_demo)
+                     # webhooks, captcha, secrets, formula, workflows,
+                     # custom_entities, phone, reactions, address, crypto,
+                     # inbound_email, navigation, relations, custom_fields,
+                     # kanban, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
-                     # automation, dynamic, email, dashboard, filters.py
-                     # (Starred/Following list filters), views.py
+                     # automation, dynamic, email, secrets, dashboard,
+                     # filters.py (Starred/Following list filters), views.py
                      # (calendar + layout/ACL editors + subscription toggle),
                      # datasets.py, inlines.py
     static/core/js/  # notifications.js, subscriptions.js
@@ -291,7 +292,8 @@ src/omacrm/
   fields or custom fields (`custom.<name> = value`), with string helpers
   (`lower`, `upper`, `substring`, `replace`, `coalesce`, `concat`, `split`,
   `join`, `capitalize`, `is_empty`), number helpers (`number_format`, `ceil`,
-  `floor`, `sqrt`) and date helpers (`parse_date`, `date_format`, `date_add`);
+  `floor`, `sqrt`), date helpers (`parse_date`, `date_format`, `date_add`)
+  and `secret("name")` for stored credentials;
   `Workflow` rules evaluate a condition and run actions
   (`set_field`, `notify`, `create_record`, templated `send_email`, `webhook`,
   `update_related`) in `core/services/workflows.py`, wired in
@@ -310,6 +312,13 @@ src/omacrm/
   entries (`UNFOLD["COMMAND"]["search_callback"]` →
   `core/services/command_palette.py`): static commands, permission-filtered
   entity shortcuts (list/new) and the user's saved filters.
+- **App secrets** (`core/models/secrets.py`, `core/services/secrets.py`):
+  named credentials (API keys, passwords) stored Fernet-encrypted with a key
+  derived from `SECRET_KEY`, like the IMAP passwords. They are managed under
+  System → App Secrets, where the value is entered through a password widget
+  and left blank to keep the current value; `secrets.get(name)` returns `""`
+  for a missing or undecryptable secret and is exposed to formulas as
+  `secret("name")`. Values are never rendered back or logged.
 - **Dynamic logic** (`core/models/automation.py::DynamicLogic`,
   `core/services/dynamic_logic.py`): per-entity rules make a field `visible`,
   `required` or `readonly` while a JSON condition over other field values

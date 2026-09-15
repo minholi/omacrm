@@ -23,11 +23,13 @@ from omacrm.core.models.meta import (
     RecordLink,
 )
 from omacrm.core.models.portal import PortalRole
+from omacrm.core.models.secrets import AppSecret
 from omacrm.core.models.user import Preferences, Role, Team, TeamUser, User
 from omacrm.core.models.webhooks import Webhook, WebhookQueueItem
 
 __all__ = [
     "Attachment",
+    "AppSecret",
     "AuditMixin",
     "BaseEntity",
     "CustomDataMixin",

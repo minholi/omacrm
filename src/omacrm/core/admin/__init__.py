@@ -7,6 +7,7 @@ from omacrm.core.admin import (  # noqa: F401
     email,
     jobs,
     metadata_admin,
+    secrets,
     users,
     webhooks,
 )
