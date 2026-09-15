@@ -72,6 +72,10 @@ agreed order is:
 | P9 | Historical currency rates | Multi-currency completeness | ✅ done |
 | P10 | Polish: custom command palette entries, more formula functions, drag-and-drop detail sections | Small UX items | ✅ done |
 
+An authoring-UX program for the JSON/script declarations (AU1–AU3) is
+recorded below; it does not displace the parity backlog order (Tier 1 #7/#8
+are still next there).
+
 ## What was delivered (by phase)
 
 ### Phase A — Foundation
@@ -418,6 +422,32 @@ new front-end dependency.
 | --- | --- | --- |
 | **Mautic** | marketing automation, for installs that already run it | keep contacts and segments in step and hand campaigns over. Optional by design — the CRM must not need it to send, track or automate (see the scope decision above), because two-way contact sync has no clean owner for email, opt-out or "do not contact" |
 | **Chatwoot** | conversations / support inbox | sync contacts and conversations so a case carries its conversation history. A WhatsApp campaign script already drives Chatwoot for the Artmed Experience event, so there is practical ground here |
+
+## Authoring UX — JSON and visual editors (planned 2026-09-15)
+
+The automation and metadata declarations are JSON in the database (workflow
+steps, dynamic-logic conditions, custom-field params, lead-capture field
+lists) and are edited today through raw textareas. EspoCRM never exposes JSON:
+its Workflows tool is a typed form builder, its BPM tool a BPMN 2.0 flowchart
+canvas, Formula is an in-app code editor with autocomplete, and Dynamic Logic
+uses a row-based condition builder. The agreed approach is tiered: a visual
+builder as the primary surface plus a CodeMirror JSON/script editor as the
+always-available advanced tier, built into the existing admin change forms
+(one save path; `full_clean()` stays the gate).
+
+| # | Item | Notes |
+| --- | --- | --- |
+| AU1 | Editor foundation + JSON tier | Staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
+| AU2 | Visual builders | Inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
+| AU3 | Read-only flow & run visualization | `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
+
+Locked decisions: inline form widgets, no standalone pages; JSON stays the
+storage format and escape hatch; workflow trigger/branch/`until` conditions
+remain formula expressions handled by the code editor (the row builder serves
+`DynamicLogic.condition`); the bundle is rebuilt with the existing
+`tools/build-codemirror.sh` and committed, following the CodeMirror/Swagger
+vendoring pattern. Suggested order: **AU1 first for review, then AU2, then
+AU3**.
 
 ## Resume checklist
 
