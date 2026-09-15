@@ -35,6 +35,7 @@ class WaitStepTests(TestCase):
         run = WorkflowRun.objects.get(workflow=rule)
         self.assertEqual(run.status, WorkflowRun.Status.WAITING)
         self.assertIsNotNone(run.execute_time)
+        self.assertEqual(run.trace, [0])
         self.assertFalse(Notification.objects.filter(message="Waited").exists())
 
         self.assertEqual(workflows.resume_due_runs(), 0)
@@ -46,6 +47,7 @@ class WaitStepTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(run.status, WorkflowRun.Status.SUCCESS)
         self.assertIsNone(run.execute_time)
+        self.assertEqual(run.trace, [0, 1])
         self.assertTrue(
             Notification.objects.filter(
                 user=self.user, message="Waited"
@@ -337,6 +339,51 @@ class WorkflowRunAdminTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("admin:core_workflowrun_changelist"))
         self.assertEqual(response.status_code, 200)
+
+
+class WorkflowFlowViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser(
+            "wf-flow", "wf-flow@example.com", "pw"
+        )
+        self.client.force_login(self.user)
+        self.rule = Workflow.objects.create(
+            name="Flow view",
+            entity_type="Task",
+            event=Workflow.Event.CREATE,
+            actions=[
+                {"type": "notify", "message": "start"},
+                {"type": "wait", "duration": "1h"},
+                {
+                    "type": "branch",
+                    "condition": "status == 'Completed'",
+                    "then": [{"type": "notify", "message": "done"}],
+                    "else": [{"type": "notify", "message": "open"}],
+                },
+            ],
+        )
+        Task.objects.create(name="Flow task", assigned_user=self.user)
+
+    def test_workflow_change_shows_flow_preview(self):
+        response = self.client.get(
+            reverse("admin:core_workflow_change", args=[self.rule.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Flow")
+        self.assertContains(response, "Wait")
+        self.assertContains(response, "Branch")
+        self.assertContains(response, "status == &#x27;Completed&#x27;")
+
+    def test_workflow_run_change_shows_state(self):
+        run = WorkflowRun.objects.get(workflow=self.rule)
+        response = self.client.get(
+            reverse("admin:core_workflowrun_change", args=[run.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Flow")
+        self.assertContains(response, "check_circle")
+        self.assertContains(response, "schedule")
+        self.assertContains(response, "due")
 
 
 class ActionValidationTests(TestCase):

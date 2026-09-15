@@ -1,10 +1,13 @@
 from django.contrib import admin
+from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 
 from omacrm.core.admin.widgets import JSONEditorWidget, ScriptEditorWidget
 from omacrm.core.models import DynamicLogic, Formula, Workflow, WorkflowRun
+from omacrm.core.services.workflow_diagram import build_flow
 
 
 @admin.register(Formula)
@@ -64,11 +67,12 @@ class WorkflowAdmin(ModelAdmin):
     list_filter = ("event", "entity_type", "is_active")
     search_fields = ("name", "description", "entity_type")
     ordering = ("entity_type", "event", "order")
-    readonly_fields = ("created_at", "modified_at")
+    readonly_fields = ("created_at", "modified_at", "flow_preview")
     fieldsets = (
         (None, {"fields": ("name", "description", "is_active", "order")}),
         (_("Trigger"), {"fields": ("entity_type", "event", "condition")}),
         (_("Actions"), {"fields": ("actions",)}),
+        (_("Flow"), {"fields": ("flow_preview",)}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
 
@@ -81,6 +85,17 @@ class WorkflowAdmin(ModelAdmin):
             kind="workflow_actions", entity_field="entity_type", rows=16
         )
         return form
+
+    @admin.display(description=_("Flow"))
+    def flow_preview(self, obj):
+        if obj is None or not obj.pk:
+            return _("Save the rule to preview the flow.")
+        from omacrm.core.services.workflows import compile_actions
+
+        nodes = build_flow(compile_actions(obj.actions or []))
+        return mark_safe(
+            render_to_string("admin/workflow_flow.html", {"nodes": nodes})
+        )
 
 
 @admin.register(WorkflowRun)
@@ -98,6 +113,27 @@ class WorkflowRunAdmin(ModelAdmin):
     list_filter = ("status", "workflow", "entity_type")
     search_fields = ("entity_type", "last_error", "workflow__name")
     ordering = ("-created_at",)
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "workflow",
+                    "entity_type",
+                    "record_id",
+                    "status",
+                    "cursor",
+                    "execute_time",
+                    "wait_deadline",
+                    "last_error",
+                    "created_at",
+                    "finished_at",
+                )
+            },
+        ),
+        (_("Flow"), {"fields": ("flow_view",)}),
+        (_("Program"), {"fields": ("program", "trace", "context")}),
+    )
     readonly_fields = (
         "workflow",
         "entity_type",
@@ -105,14 +141,27 @@ class WorkflowRunAdmin(ModelAdmin):
         "status",
         "cursor",
         "program",
+        "trace",
         "context",
         "execute_time",
         "wait_deadline",
         "last_error",
         "created_at",
         "finished_at",
+        "flow_view",
     )
     actions = ("resume_now", "retry_failed", "cancel_runs")
+
+    @admin.display(description=_("Flow"))
+    def flow_view(self, obj):
+        if obj is None or not obj.pk:
+            return ""
+        return mark_safe(
+            render_to_string(
+                "admin/workflow_flow.html",
+                {"nodes": build_flow(obj.program, obj)},
+            )
+        )
 
     @admin.action(description=_("Resume selected runs now"))
     def resume_now(self, request, queryset):

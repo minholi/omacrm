@@ -199,6 +199,11 @@ class WorkflowRun(models.Model):
     )
     cursor = models.PositiveIntegerField(default=0)
     program = models.JSONField(default=list, blank=True)
+    trace = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_("Compiled step indices the run has executed."),
+    )
     context = models.JSONField(default=dict, blank=True)
     execute_time = models.DateTimeField(null=True, blank=True, db_index=True)
     wait_deadline = models.DateTimeField(null=True, blank=True)

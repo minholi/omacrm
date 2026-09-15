@@ -64,9 +64,9 @@ src/omacrm/
     services/        # acl, hooks, stream, subscriptions, notifications,
                      # duplicates, jobs, context, builtin_jobs, currency,
                      # webhooks, captcha, secrets, openapi, formula, workflows,
-                     # custom_entities, phone, reactions, address, crypto,
-                     # inbound_email, navigation, relations, custom_fields,
-                     # kanban, demo/ (seed_demo)
+                     # workflow_diagram, custom_entities, phone, reactions,
+                     # address, crypto, inbound_email, navigation, relations,
+                     # custom_fields, kanban, demo/ (seed_demo)
     admin/           # base.py (MetadataModelAdmin/AclAdminMixin), users,
                      # metadata_admin, collab, jobs, currency, webhooks,
                      # automation, dynamic, email, secrets, dashboard,
@@ -336,6 +336,10 @@ src/omacrm/
   demo, and in System → Scheduled Jobs elsewhere) advances due runs.
   Condition waits re-poll until their condition holds and fail on timeout;
   a vanished record cancels the run, and inline-only rules leave no rows.
+  Each run stores the step indices it visited (`WorkflowRun.trace`), and the
+  Workflow and Workflow Run change pages render a read-only flow diagram
+  (`core/services/workflow_diagram.py`, `templates/admin/workflow_flow*.html`)
+  with processed / waiting / pending / failed states and wait due times.
   Runs are managed under Customization → Workflow Runs (resume/retry/cancel).
   Entity
   admins also provide a **Mass update** action (enum/bool fields + assigned

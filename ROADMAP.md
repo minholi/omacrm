@@ -13,7 +13,8 @@ currency columns, sortable generated columns, metadata-owned entity names,
 captcha on public lead forms, the hosted web-to-lead form, app secrets, the
 OpenAPI specification and its Swagger UI, the staff-only metadata management
 API, the custom-entity record API fixes, the workflow engine's wait and
-branch steps and the authoring editors with their visual builders). 663 tests
+branch steps and the authoring editors with their visual builders and flow
+visualization). 674 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -439,15 +440,14 @@ always-available advanced tier, built into the existing admin change forms
 | --- | --- | --- |
 | AU1 | Editor foundation + JSON tier | **✅ delivered 2026-09-15** — staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
 | AU2 | Visual builders | **✅ delivered 2026-09-15** — inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
-| AU3 | Read-only flow & run visualization | `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
+| AU3 | Read-only flow & run visualization | **✅ delivered 2026-09-15** — `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
 
 Locked decisions: inline form widgets, no standalone pages; JSON stays the
 storage format and escape hatch; workflow trigger/branch/`until` conditions
 remain formula expressions handled by the code editor (the row builder serves
 `DynamicLogic.condition`); the bundle is rebuilt with the existing
 `tools/build-codemirror.sh` and committed, following the CodeMirror/Swagger
-vendoring pattern. Suggested order: **AU1 and AU2 delivered 2026-09-15; next
-AU3**.
+vendoring pattern. AU1, AU2 and AU3 are delivered (2026-09-15).
 
 ## Resume checklist
 
@@ -484,6 +484,18 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Authoring UX AU3: workflow flows are now visual and
+  read-only on the detail pages. `WorkflowRun.trace` (migration
+  `core.0025`) records the compiled step indices each run executes, and
+  `core/services/workflow_diagram.py` turns a compiled program into a nested
+  display tree annotated with the run's state — processed, active, waiting
+  (with the resume time), failed, cancelled or pending — resolving the paused
+  wait from the trace (a duration wait advances the cursor past itself, a
+  condition wait does not). The Workflow change page renders the declared
+  flow (rule preview) and the Workflow Run change page the executed run,
+  through `templates/admin/workflow_flow*.html` (branch rails, wait details
+  and due dates) (674 tests).
 
 - **2026-09-15** — Authoring UX AU2: the JSON editors gained a **Visual |
   JSON** toggle. `core/static/core/js/builders.js` renders type-aware

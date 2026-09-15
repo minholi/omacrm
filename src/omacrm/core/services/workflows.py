@@ -480,6 +480,8 @@ def _walk(program: list[dict], record, run, now=None):
 
     while cursor < len(program):
         run.cursor = cursor
+        if len(run.trace) < 1000:
+            run.trace.append(cursor)
 
         step = program[cursor]
         op = step.get("op")
@@ -613,6 +615,7 @@ def _finish(run, status, error="", now=None):
             "status",
             "last_error",
             "cursor",
+            "trace",
             "execute_time",
             "wait_deadline",
             "finished_at",
@@ -688,7 +691,13 @@ def advance(run, now=None):
             run.status = WorkflowRun.Status.WAITING
             run.execute_time = due
             run.save(
-                update_fields=["status", "cursor", "execute_time", "wait_deadline"]
+                update_fields=[
+                    "status",
+                    "cursor",
+                    "trace",
+                    "execute_time",
+                    "wait_deadline",
+                ]
             )
             return run
         return _finish(run, WorkflowRun.Status.SUCCESS, "", now)
