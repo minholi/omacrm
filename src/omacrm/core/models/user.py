@@ -18,7 +18,6 @@ class Role(CustomDataMixin, models.Model):
     description = models.TextField(blank=True, default="")
     data = models.JSONField(default=dict, blank=True)
     field_data = models.JSONField(default=dict, blank=True)
-    value_permissions = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 
@@ -188,8 +187,6 @@ class Preferences(models.Model):
     language = models.CharField(max_length=10, blank=True, default="en")
     theme = models.CharField(max_length=32, blank=True, default="")
     default_currency = models.CharField(max_length=3, blank=True, default="")
-    dashboard_layout = models.JSONField(default=dict, blank=True)
-    preset_filters = models.JSONField(default=dict, blank=True)
     notifications_config = models.JSONField(default=dict, blank=True)
     auto_follow_entity_types = models.JSONField(default=list, blank=True)
     updated_at = models.DateTimeField(auto_now=True)

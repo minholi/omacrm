@@ -440,8 +440,6 @@ class PreferencesAdminTests(TestCase):
                 "language": "en",
                 "theme": "",
                 "default_currency": "",
-                "dashboard_layout": "{}",
-                "preset_filters": "{}",
                 "notifications_config": "{}",
                 "auto_follow_entity_types": ["Account", "Task"],
             },
