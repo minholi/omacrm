@@ -1,5 +1,17 @@
-<div class="oma-editor" data-editor-root>
-    <textarea name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
-    <div class="oma-editor-mount" data-editor-mount></div>
+{% load i18n %}
+<div class="oma-editor flex flex-col gap-2" data-editor-root>
+    {% if editor.tabs %}
+        <div class="flex flex-row items-center gap-2" data-editor-tabs>
+            <button type="button" data-editor-tab="visual"
+                    class="font-medium text-sm px-2 py-1 rounded-default">{% translate "Visual" %}</button>
+            <button type="button" data-editor-tab="json"
+                    class="font-medium text-sm px-2 py-1 rounded-default">{% translate "JSON" %}</button>
+        </div>
+        <div data-editor-visual></div>
+    {% endif %}
+    <div data-editor-json>
+        <textarea name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>{% if widget.value %}{{ widget.value }}{% endif %}</textarea>
+        <div class="oma-editor-mount" data-editor-mount></div>
+    </div>
     {{ editor|json_script:config_id }}
 </div>

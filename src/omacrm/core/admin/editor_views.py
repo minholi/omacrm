@@ -82,6 +82,13 @@ def editor_metadata(request, entity_type):
             "actions": sorted(workflows.ACTION_TYPES),
             "operators": sorted(dynamic_logic.OPERATORS),
             "formulaHelpers": _formula_helpers(entity_type),
+            "entityTypes": [
+                {
+                    "value": name,
+                    "label": str(registry.get(name).display_label),
+                }
+                for name in registry.entity_types()
+            ],
         }
     )
 

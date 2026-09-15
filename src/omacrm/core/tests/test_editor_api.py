@@ -49,6 +49,7 @@ class EditorMetadataTests(TestCase):
         self.assertIn("branch", payload["actions"])
         self.assertIn("equals", payload["operators"])
         self.assertIn("notify", payload["formulaHelpers"])
+        self.assertTrue(payload["entityTypes"])
 
     def test_metadata_rejects_post(self):
         self.assertEqual(self.client.post(self.url).status_code, 405)
@@ -203,25 +204,35 @@ class EditorAdminTests(TestCase):
         )
         self.client.force_login(self.staff)
 
-    def _assert_editor(self, url_name, kind):
+    def _assert_editor(self, url_name, kind, visual=True):
         response = self.client.get(reverse(url_name))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "vendor/codemirror/codemirror6.bundle.js")
         self.assertContains(response, "core/js/editors.js")
+        self.assertContains(response, "core/js/builders.js")
         self.assertContains(response, "data-editor-root")
         self.assertContains(response, '"kind": "%s"' % kind)
+        self.assertContains(response, '"classes"')
+        if visual:
+            self.assertContains(response, "data-editor-tabs")
+            self.assertContains(response, "data-editor-visual")
+            self.assertContains(response, '"tabs": true')
+        else:
+            self.assertContains(response, '"tabs": false')
+            self.assertNotContains(response, "data-editor-tabs")
 
     def test_editor_assets_exist(self):
         self.assertIsNotNone(
             finders.find("vendor/codemirror/codemirror6.bundle.js")
         )
         self.assertIsNotNone(finders.find("core/js/editors.js"))
+        self.assertIsNotNone(finders.find("core/js/builders.js"))
 
     def test_workflow_form_uses_editors(self):
         self._assert_editor("admin:core_workflow_add", "workflow_actions")
 
     def test_formula_form_uses_editor(self):
-        self._assert_editor("admin:core_formula_add", "formula")
+        self._assert_editor("admin:core_formula_add", "formula", visual=False)
 
     def test_dynamic_logic_form_uses_editor(self):
         self._assert_editor("admin:core_dynamiclogic_add", "dynamic_logic")

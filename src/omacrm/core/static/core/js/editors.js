@@ -13,6 +13,15 @@
     }
     var CM = window.OmaCodeMirror;
 
+    window.OmaEditors = window.OmaEditors || {};
+    window.OmaEditors.builders = window.OmaEditors.builders || {};
+    window.OmaEditors.registerBuilder = function (kind, builder) {
+        window.OmaEditors.builders[kind] = builder;
+    };
+    window.OmaEditors.getBuilder = function (kind) {
+        return window.OmaEditors.builders[kind];
+    };
+
     var ACTION_SNIPPETS = [
         { label: "set_field", apply: '{"type": "set_field", "field": "", "value": ""}' },
         { label: "notify", apply: '{"type": "notify", "message": ""}' },
@@ -130,10 +139,15 @@
         this.root = root;
         this.textarea = root.querySelector("textarea");
         this.mount = root.querySelector("[data-editor-mount]");
+        this.visualPane = root.querySelector("[data-editor-visual]");
+        this.tabBar = root.querySelector("[data-editor-tabs]");
         var configEl = root.querySelector('script[type="application/json"]');
         this.config = configEl ? parseJSON(configEl.textContent) || {} : {};
         this.metadata = null;
         this.editor = null;
+        this.applying = false;
+        this.visualTimer = null;
+        this.activeTab = "json";
     }
 
     Editor.prototype.entityType = function () {
@@ -152,6 +166,7 @@
         var entityType = this.entityType();
         if (!entityType) {
             this.metadata = null;
+            this.scheduleVisual(true);
             return Promise.resolve();
         }
         var url = String(this.config.metadataUrl || "").replace(
@@ -168,6 +183,7 @@
             })
             .then(function (payload) {
                 self.metadata = payload;
+                self.scheduleVisual(true);
             })
             .catch(function () {
                 self.metadata = null;
@@ -324,8 +340,142 @@
         this.textarea.value = this.editor.state.doc.toString();
     };
 
+    Editor.prototype.contextValues = function () {
+        var values = {};
+        var form = this.root.closest("form");
+        (this.config.contextFields || []).forEach(function (name) {
+            var field = form ? form.elements.namedItem(name) : null;
+            if (field && typeof field.value === "string") {
+                values[name] = field.value;
+            }
+        });
+        return values;
+    };
+
+    Editor.prototype.builderContext = function (value) {
+        var metadata = this.metadata || {};
+        var fields = (metadata.fields || []).slice();
+        (metadata.links || []).forEach(function (link) {
+            fields.push({
+                name: link.name,
+                label: link.label,
+                type: link.multiple ? "linkMultiple" : "link",
+                choices: [],
+            });
+        });
+        return {
+            kind: this.config.kind,
+            value: value,
+            fields: fields,
+            operators: metadata.operators || [],
+            entityTypes: metadata.entityTypes || [],
+            context: this.contextValues(),
+            classes: this.config.classes || {},
+            onChange: this.applyValue.bind(this),
+        };
+    };
+
+    Editor.prototype.applyValue = function (next) {
+        if (next === undefined) {
+            return;
+        }
+        this.applying = true;
+        var text = JSON.stringify(next, null, 2);
+        this.editor.dispatch({
+            changes: {
+                from: 0,
+                to: this.editor.state.doc.length,
+                insert: text,
+            },
+        });
+        this.applying = false;
+        this.sync();
+    };
+
+    Editor.prototype.scheduleVisual = function (immediate) {
+        if (!this.config.tabs || !this.visualPane || this.applying) {
+            return;
+        }
+        var self = this;
+        if (this.visualTimer) {
+            clearTimeout(this.visualTimer);
+            this.visualTimer = null;
+        }
+        if (immediate) {
+            this.renderVisual();
+            return;
+        }
+        this.visualTimer = setTimeout(function () {
+            self.renderVisual();
+        }, 200);
+    };
+
+    Editor.prototype.defaultVisualValue = function () {
+        if (
+            this.config.kind === "workflow_actions" ||
+            this.config.kind === "lead_capture"
+        ) {
+            return [];
+        }
+        return {};
+    };
+
+    Editor.prototype.renderVisual = function () {
+        if (!this.config.tabs || !this.visualPane || this.applying) {
+            return;
+        }
+        var builder = window.OmaEditors.getBuilder(this.config.kind);
+        var pane = this.visualPane;
+        pane.innerHTML = "";
+        if (!builder) {
+            return;
+        }
+        var text = this.editor.state.doc.toString();
+        var parsed = text.trim() ? parseJSON(text) : this.defaultVisualValue();
+        if (parsed === undefined) {
+            var problem = document.createElement("p");
+            problem.className = "text-sm text-base-500";
+            problem.textContent = "Fix the JSON to use the visual editor.";
+            pane.appendChild(problem);
+            this.showTab("json");
+            return;
+        }
+        try {
+            pane.appendChild(builder(parsed, this.builderContext(parsed)));
+        } catch (error) {
+            /* The JSON editor stays usable if a builder fails. */
+        }
+    };
+
+    Editor.prototype.showTab = function (tab) {
+        if (!this.tabBar) {
+            return;
+        }
+        this.activeTab = tab;
+        var classes = this.config.classes || {};
+        Array.prototype.forEach.call(
+            this.root.querySelectorAll("[data-editor-tab]"),
+            function (button) {
+                var active =
+                    button.getAttribute("data-editor-tab") === tab;
+                button.className = active
+                    ? classes.primary || ""
+                    : classes.button || "";
+            }
+        );
+        if (this.visualPane) {
+            this.visualPane.hidden = tab !== "visual";
+        }
+        var jsonPane = this.root.querySelector("[data-editor-json]");
+        if (jsonPane) {
+            jsonPane.hidden = tab === "visual";
+        }
+    };
+
     Editor.prototype.start = function () {
         var self = this;
+        window.OmaEditors.classes =
+            this.config.classes || window.OmaEditors.classes || {};
         var language =
             this.config.mode === "script"
                 ? FORMULA_LANGUAGE
@@ -349,6 +499,9 @@
                     CM.EditorView.updateListener.of(function (update) {
                         if (update.docChanged) {
                             self.sync();
+                            if (!self.applying) {
+                                self.scheduleVisual();
+                            }
                         }
                     }),
                 ],
@@ -365,6 +518,7 @@
             var formatButton = document.createElement("button");
             formatButton.type = "button";
             formatButton.className =
+                (self.config.classes || {}).button ||
                 "text-xs text-primary-600 hover:underline dark:text-primary-500";
             formatButton.textContent = "Format JSON";
             formatButton.addEventListener("click", function () {
@@ -419,6 +573,26 @@
                     });
                 }
             }
+            (this.config.contextFields || []).forEach(function (name) {
+                var field = form.elements.namedItem(name);
+                if (field) {
+                    field.addEventListener("change", function () {
+                        self.scheduleVisual(true);
+                    });
+                }
+            });
+        }
+
+        if (this.tabBar) {
+            Array.prototype.forEach.call(
+                this.tabBar.querySelectorAll("[data-editor-tab]"),
+                function (button) {
+                    button.addEventListener("click", function () {
+                        self.showTab(button.getAttribute("data-editor-tab"));
+                    });
+                }
+            );
+            this.showTab("visual");
         }
 
         this.loadMetadata();

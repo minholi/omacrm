@@ -13,7 +13,7 @@ currency columns, sortable generated columns, metadata-owned entity names,
 captcha on public lead forms, the hosted web-to-lead form, app secrets, the
 OpenAPI specification and its Swagger UI, the staff-only metadata management
 API, the custom-entity record API fixes, the workflow engine's wait and
-branch steps and the authoring-editor foundation). 663 tests
+branch steps and the authoring editors with their visual builders). 663 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -438,7 +438,7 @@ always-available advanced tier, built into the existing admin change forms
 | # | Item | Notes |
 | --- | --- | --- |
 | AU1 | Editor foundation + JSON tier | **✅ delivered 2026-09-15** — staff-only `/admin/editor/metadata/<Entity>/` and `/admin/editor/validate/` endpoints reusing the existing validators (`workflows.validate_actions`, `dynamic_logic.condition_errors`, `formula`, `CustomField.clean`); the vendored CodeMirror bundle gains JSON + formula highlighting; completion and live lint (with a JSON fallback) on Workflow actions/condition, DynamicLogic condition, Formula script, CustomField params and LeadCapture field_list |
-| AU2 | Visual builders | Inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
+| AU2 | Visual builders | **✅ delivered 2026-09-15** — inline widgets with a Visual/JSON toggle: condition builder (field / operator / type-aware value, and-or-not groups) for DynamicLogic, typed step builder for Workflow actions (nested `then`/`else`, wait modes), per-`field_type` params form, LeadCapture field checklist; unknown keys/nodes are preserved |
 | AU3 | Read-only flow & run visualization | `WorkflowRun.trace` (executed step indices, migration) and a diagram on Workflow and WorkflowRun detail pages: processed / waiting / pending / failed / timed-out, wait due dates |
 
 Locked decisions: inline form widgets, no standalone pages; JSON stays the
@@ -446,8 +446,8 @@ storage format and escape hatch; workflow trigger/branch/`until` conditions
 remain formula expressions handled by the code editor (the row builder serves
 `DynamicLogic.condition`); the bundle is rebuilt with the existing
 `tools/build-codemirror.sh` and committed, following the CodeMirror/Swagger
-vendoring pattern. Suggested order: **AU1 delivered 2026-09-15; next AU2,
-then AU3**.
+vendoring pattern. Suggested order: **AU1 and AU2 delivered 2026-09-15; next
+AU3**.
 
 ## Resume checklist
 
@@ -484,6 +484,25 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Authoring UX AU2: the JSON editors gained a **Visual |
+  JSON** toggle. `core/static/core/js/builders.js` renders type-aware
+  builders that mutate the same parsed JSON and call back into the editor
+  (which rewrites the document, keeping the textarea and CodeMirror in sync):
+  a condition builder for `DynamicLogic.condition` (and/or/not groups,
+  field/operator rows with type-aware value widgets, `in`/`notIn` lists),
+  a step builder for `Workflow.actions` (typed action cards, move/remove,
+  nested `then`/`else` branches, wait-mode switching, entity-type pickers)
+  plus per-`field_type` param forms for `CustomField.params` (choices editor,
+  number prefix/padding, foreign link/field) and an ordered checklist for
+  `LeadCapture.field_list`. Unknown keys, action types and condition nodes
+  are preserved as raw JSON cards; invalid JSON falls back to the JSON tab.
+  The builders render with Unfold's own widget classes (fed to the editor
+  config from `unfold.widgets`), and the now-redundant JSON declaration help
+  texts on the Workflow, DynamicLogic, Formula, CustomField and LeadCapture
+  forms were trimmed so the editors are the documentation. The editor
+  metadata endpoint now also lists entity types for the create-record picker
+  (663 tests).
 
 - **2026-09-15** — Authoring UX AU1: the JSON/script declarations get a
   CodeMirror tier. Staff-only `GET /admin/editor/metadata/<Entity>/` serves
