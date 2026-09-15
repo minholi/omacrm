@@ -66,6 +66,7 @@ SCHEDULED_JOBS = (
     ("Send reminders", "crm.send_reminders", "* * * * *"),
     ("Control knowledge base status", "crm.control_kb_article_status", "10 1 * * *"),
     ("Process webhooks", "core.process_webhooks", "*/2 * * * *"),
+    ("Resume workflow runs", "core.resume_workflow_runs", "* * * * *"),
     ("Send notification emails", "core.send_notification_emails", "*/5 * * * *"),
     ("Fetch inbound email", "core.fetch_inbound_email", "*/5 * * * *"),
     ("Sync currency rates", "core.sync_currency_rates", "15 2 * * *"),

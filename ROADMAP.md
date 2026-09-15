@@ -12,7 +12,8 @@ stars/favourites, record following, per-user kanban order, compact changelist
 currency columns, sortable generated columns, metadata-owned entity names,
 captcha on public lead forms, the hosted web-to-lead form, app secrets, the
 OpenAPI specification and its Swagger UI, the staff-only metadata management
-API and the custom-entity record API fixes). 618 tests
+API, the custom-entity record API fixes and the workflow engine's wait and
+branch steps). 640 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -375,16 +376,17 @@ holds what Mautic cannot see — the deal stage, the open case, the history — 
 rule like "opened the proposal twice *and* the deal has been idle for ten days" is
 something only the CRM can run at all.
 
-Today `Workflow` is trigger (`create`/`update`/`delete`) → condition → a
-**linear** list of actions. There are no steps, waits, branching or execution
-history, and the trigger is always a record write — never an engagement event.
+Today `Workflow` is trigger (`create`/`update`/`delete`) → condition → a list of
+steps. The first two engine increments are delivered (see below); the trigger is
+still always a record write — never an engagement event — and runs have no
+step-level log yet.
 
 **In scope — the engine, plus the automation this data enables**
 
 | # | Item | Notes |
 | --- | --- | --- |
-| W1 | Steps with waits | "wait 3 days", "wait until a date", "wait until a condition" — needs a scheduler |
-| W2 | Branching / decision steps | route by condition instead of running one linear list |
+| W1 | Steps with waits | **✅ delivered 2026-09-15** (duration / date-field / condition waits persisted as `WorkflowRun`, resumed by the `core.resume_workflow_runs` job; condition waits poll until true and fail after their timeout) |
+| W2 | Branching / decision steps | **✅ delivered 2026-09-15** (`{"type": "branch", "condition", "then", "else"}`, nested; compiled to a jump-based program together with W1) |
 | W3 | Engagement triggers | email opened / clicked / bounced, per recipient, on our own campaigns — the data already exists (`Campaign` counters and per-recipient tracking); only the trigger is missing |
 | W4 | Execution history | per-run state, logs and retry; today a failed action is simply lost |
 | W5 | Target lists that recompute | `TargetList` holds a static member list today; derive its members from a saved filter, reusing the existing filter infrastructure |
@@ -402,9 +404,9 @@ alive afterwards. Every external channel — SMS providers, social APIs that cha
 policy, tracking rules under cookie and consent law — is a permanent obligation.
 That argues for ordering by maintenance cost, not for avoiding the work.
 
-Suggested order: **W1 + W2 + W3 + W4** first — the engine together with the
-engagement triggers is what actually removes the dependency — then **W5 + W6**,
-then **W7 + W8**.
+Suggested order: **W1 + W2** are delivered; next is **W3 + W4** — the engagement
+triggers are what actually removes the dependency — then **W5 + W6**, then
+**W7 + W8**.
 
 ### Integrations (desired, not scheduled)
 
@@ -452,6 +454,24 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Workflow engine W1 + W2: workflow rules are now step lists
+  that can pause and branch. A `{"type": "wait", "duration": "3d"}` step, a
+  wait on a record date field (`until_date_field`, custom fields included) or
+  a condition wait (`until_condition` with `poll_interval`/`timeout`, 30 days
+  by default) stop the rule; a `{"type": "branch", "condition", "then",
+  "else"}` step routes nested steps. `core/services/workflows.py` compiles the
+  nested steps into a jump-based program and executes it with a cursor; when
+  the executed path reaches a wait, a new `WorkflowRun` (migration
+  `core.0023_workflowrun`) stores the compiled program, cursor and resume
+  time. The `core.resume_workflow_runs` job advances due runs (seeded every
+  minute), condition waits re-poll and fail on timeout, a vanished record
+  cancels the run, and rules/paths without waits still run inline and create
+  no rows. `Workflow.clean()` delegates to a recursive
+  `core/services/workflows.py::validate_actions` that checks waits (exact
+  mode, duration format, known date field, condition syntax) and branch
+  bodies, the read-only Workflow Runs admin offers resume/retry/cancel, and
+  the demo gains a wait+branch rule (640 tests).
 
 - **2026-09-15** — Record API fixes + metadata management API. Custom entities
   are now served **only** by the capitalized `/api/v1/<Entity>/` catch-all:

@@ -35,6 +35,15 @@ def cleanup_stream_events(job: Job) -> None:
     StreamEvent.objects.filter(created_at__lt=cutoff).delete()
 
 
+@jobs.register("core.resume_workflow_runs", name="Resume waiting workflow runs")
+def resume_workflow_runs(job: Job) -> int:
+    """Continue workflow runs whose wait has elapsed."""
+
+    from omacrm.core.services import workflows
+
+    return workflows.resume_due_runs()
+
+
 @jobs.register("core.send_notification_emails", name="Email unread notifications")
 def send_notification_emails(job: Job) -> int:
     """Email unread notifications as one digest per user."""

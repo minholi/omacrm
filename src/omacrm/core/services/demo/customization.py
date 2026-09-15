@@ -91,6 +91,32 @@ WORKFLOWS = (
             }
         ],
     ),
+    (
+        "Chase stale proposals",
+        "Opportunity",
+        "update",
+        "stage == 'Proposal'",
+        [
+            {"type": "wait", "duration": "2d"},
+            {
+                "type": "branch",
+                "condition": "stage == 'Proposal'",
+                "then": [
+                    {
+                        "type": "notify",
+                        "message": "Proposal is still open after two days",
+                    }
+                ],
+                "else": [
+                    {
+                        "type": "set_field",
+                        "field": "description",
+                        "value": "Advanced past the proposal stage.",
+                    }
+                ],
+            },
+        ],
+    ),
 )
 
 SAVED_FILTERS = (

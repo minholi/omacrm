@@ -57,7 +57,7 @@ src/omacrm/
                      # collab.py (Attachment/Note/Notification/UserReaction/
                      # StarSubscription/StreamSubscription),
                      # jobs.py, currency.py, webhooks.py, automation.py
-                     # (Formula/Workflow), dynamic.py (CustomEntity/
+                     # (Formula/Workflow/WorkflowRun), dynamic.py (CustomEntity/
                      # DynamicRecord), email.py (Email/EmailAccount),
                      # secrets.py (AppSecret)
     metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
@@ -323,7 +323,18 @@ src/omacrm/
   `Workflow` rules evaluate a condition and run actions
   (`set_field`, `notify`, `create_record`, templated `send_email`, `webhook`,
   `update_related`) in `core/services/workflows.py`, wired in
-  `core/services/hooks.py`. Entity
+  `core/services/hooks.py`. Rules are step lists: a
+  `{"type": "wait", ...}` step (a `duration`, an `until_date_field` or an
+  `until_condition` with `poll_interval`/`timeout`) pauses the rule and a
+  `{"type": "branch", "condition", "then", "else"}` step routes it. Nested
+  actions are compiled into a jump-based program; when an executed path
+  reaches a wait a `WorkflowRun` row stores the program, cursor and resume
+  time, and the `core.resume_workflow_runs` job (scheduled every minute in the
+  demo, and in System → Scheduled Jobs elsewhere) advances due runs.
+  Condition waits re-poll until their condition holds and fail on timeout;
+  a vanished record cancels the run, and inline-only rules leave no rows.
+  Runs are managed under Customization → Workflow Runs (resume/retry/cancel).
+  Entity
   admins also provide a **Mass update** action (enum/bool fields + assigned
   user) through an intermediate page (`MassUpdateView`). Entity admins also
   offer a **Merge selected records** action (`MergeView` +

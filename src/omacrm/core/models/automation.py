@@ -133,6 +133,8 @@ class Workflow(models.Model):
         SEND_EMAIL = "send_email", _("Send email")
         WEBHOOK = "webhook", _("Call webhook")
         UPDATE_RELATED = "update_related", _("Update related records")
+        WAIT = "wait", _("Wait")
+        BRANCH = "branch", _("Branch")
 
     name = models.CharField(max_length=255, unique=True)
     entity_type = models.CharField(max_length=64, db_index=True)
@@ -164,68 +166,63 @@ class Workflow(models.Model):
     def clean(self):
         super().clean()
         from omacrm.core.metadata.registry import registry
+        from omacrm.core.services.workflows import validate_actions
 
         errors = {}
         if self.entity_type and not registry.has(self.entity_type):
             errors["entity_type"] = _("Unknown entity type.")
         elif self.entity_type:
-            model = registry.model_for(self.entity_type)
-            field_names = {field.name for field in model._meta.get_fields()}
             actions = self.actions or []
             if not isinstance(actions, list):
                 errors["actions"] = _("Actions must be a list.")
             else:
-                for index, action in enumerate(actions):
-                    if not isinstance(action, dict) or action.get("type") not in self.ActionType.values:
-                        errors["actions"] = _(
-                            "Action #%(index)s is invalid." % {"index": index + 1}
-                        )
-                        break
-                    if action.get("type") == self.ActionType.SET_FIELD:
-                        if action.get("field") not in field_names:
-                            errors["actions"] = _(
-                                "Action #%(index)s references an unknown field."
-                                % {"index": index + 1}
-                            )
-                            break
-                    if action.get("type") == self.ActionType.WEBHOOK:
-                        try:
-                            int(action.get("webhook_id"))
-                        except (TypeError, ValueError):
-                            errors["actions"] = _(
-                                "Action #%(index)s requires a numeric webhook_id."
-                                % {"index": index + 1}
-                            )
-                            break
-                    if action.get("type") == self.ActionType.UPDATE_RELATED:
-                        relation = action.get("relation")
-                        related_fields = action.get("fields") or {}
-                        try:
-                            related_field = model._meta.get_field(relation)
-                        except Exception:  # noqa: BLE001 - unknown relation
-                            errors["actions"] = _(
-                                "Action #%(index)s references an unknown relation."
-                                % {"index": index + 1}
-                            )
-                            break
-                        related_model = related_field.related_model
-                        if related_model is None:
-                            errors["actions"] = _(
-                                "Action #%(index)s is not a related field."
-                                % {"index": index + 1}
-                            )
-                            break
-                        valid_fields = {
-                            field.name for field in related_model._meta.get_fields()
-                        }
-                        unknown = [
-                            name for name in related_fields if name not in valid_fields
-                        ]
-                        if unknown:
-                            errors["actions"] = _(
-                                "Action #%(index)s references unknown related field(s): %(fields)s."
-                                % {"index": index + 1, "fields": ", ".join(unknown)}
-                            )
-                            break
+                problem = validate_actions(actions, self.entity_type)
+                if problem:
+                    errors["actions"] = problem
         if errors:
             raise ValidationError(errors)
+
+
+class WorkflowRun(models.Model):
+    """One execution of a :class:`Workflow` rule.
+
+    A run is persisted only when a rule reaches a ``wait`` step, so rules
+    that execute entirely inline leave no rows behind. ``program`` is the
+    compiled action list at creation time (see
+    :mod:`omacrm.core.services.workflows`), which keeps in-flight runs stable
+    when the rule is edited afterwards.
+    """
+
+    class Status(models.TextChoices):
+        RUNNING = "running", _("Running")
+        WAITING = "waiting", _("Waiting")
+        SUCCESS = "success", _("Success")
+        FAILED = "failed", _("Failed")
+        CANCELLED = "cancelled", _("Cancelled")
+
+    workflow = models.ForeignKey(
+        Workflow, on_delete=models.CASCADE, related_name="runs"
+    )
+    entity_type = models.CharField(max_length=64, db_index=True)
+    record_id = models.PositiveBigIntegerField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.RUNNING,
+        db_index=True,
+    )
+    cursor = models.PositiveIntegerField(default=0)
+    program = models.JSONField(default=list, blank=True)
+    context = models.JSONField(default=dict, blank=True)
+    execute_time = models.DateTimeField(null=True, blank=True, db_index=True)
+    wait_deadline = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "workflow runs"
+
+    def __str__(self):
+        return f"{self.workflow} on {self.entity_type}#{self.record_id} ({self.status})"

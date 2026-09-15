@@ -344,11 +344,21 @@ def build_context(instance, user=None) -> dict:
     return context
 
 
-def evaluate(source: str, context: dict):
+def _parse_expression(source: str):
     try:
-        tree = ast.parse(source.strip(), mode="eval")
+        return ast.parse((source or "").strip(), mode="eval")
     except SyntaxError as exc:
         raise FormulaError(f"Syntax error: {exc.msg}") from exc
+
+
+def validate_expression(source: str) -> None:
+    """Raise :class:`FormulaError` when ``source`` is not a valid expression."""
+
+    _parse_expression(source)
+
+
+def evaluate(source: str, context: dict):
+    tree = _parse_expression(source)
     try:
         return SafeEvaluator(context).visit(tree)
     except FormulaError:

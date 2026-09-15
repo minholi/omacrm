@@ -51,6 +51,7 @@ RESET_MODELS = (
     "core.Layout",
     "core.CustomField",
     "core.Formula",
+    "core.WorkflowRun",
     "core.Workflow",
     "core.WebhookQueueItem",
     "core.Webhook",

@@ -1,5 +1,5 @@
 from omacrm.core.models.base import AuditMixin, BaseEntity, CustomDataMixin
-from omacrm.core.models.automation import DynamicLogic, Formula, Workflow
+from omacrm.core.models.automation import DynamicLogic, Formula, Workflow, WorkflowRun
 from omacrm.core.models.collab import (
     Attachment,
     KanbanOrder,
@@ -66,4 +66,5 @@ __all__ = [
     "Webhook",
     "WebhookQueueItem",
     "Workflow",
+    "WorkflowRun",
 ]

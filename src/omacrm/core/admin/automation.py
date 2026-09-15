@@ -1,10 +1,11 @@
 from django.contrib import admin
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.widgets import UnfoldAdminTextareaWidget
 
-from omacrm.core.models import DynamicLogic, Formula, Workflow
+from omacrm.core.models import DynamicLogic, Formula, Workflow, WorkflowRun
 
 
 @admin.register(Formula)
@@ -78,9 +79,86 @@ class WorkflowAdmin(ModelAdmin):
                     '"subject": "Hi {{ name }}", "body": "<p>{{ name }}</p>"}, '
                     '{"type": "webhook", "webhook_id": 1}, '
                     '{"type": "update_related", "relation": "opportunities", '
-                    '"fields": {"stage": "Closed Lost"}}].'
+                    '"fields": {"stage": "Closed Lost"}}]. Steps: '
+                    '{"type": "wait", "duration": "3d"} or '
+                    '{"type": "wait", "until_date_field": "date_end"} or '
+                    '{"type": "wait", "until_condition": "status == \'Completed\'", '
+                    '"poll_interval": "1h", "timeout": "30d"} pauses the rule '
+                    '(resumed by the "Resume waiting workflow runs" scheduled '
+                    'job); {"type": "branch", "condition": "stage == \'Proposal\'", '
+                    '"then": [...], "else": [...]} routes the steps.'
                 ),
             },
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
+
+
+@admin.register(WorkflowRun)
+class WorkflowRunAdmin(ModelAdmin):
+    list_display = (
+        "id",
+        "workflow",
+        "entity_type",
+        "record_id",
+        "status",
+        "cursor",
+        "execute_time",
+        "created_at",
+    )
+    list_filter = ("status", "workflow", "entity_type")
+    search_fields = ("entity_type", "last_error", "workflow__name")
+    ordering = ("-created_at",)
+    readonly_fields = (
+        "workflow",
+        "entity_type",
+        "record_id",
+        "status",
+        "cursor",
+        "program",
+        "context",
+        "execute_time",
+        "wait_deadline",
+        "last_error",
+        "created_at",
+        "finished_at",
+    )
+    actions = ("resume_now", "retry_failed", "cancel_runs")
+
+    @admin.action(description=_("Resume selected runs now"))
+    def resume_now(self, request, queryset):
+        from omacrm.core.services import workflows
+
+        resumed = 0
+        for run in queryset.filter(
+            status__in=[WorkflowRun.Status.RUNNING, WorkflowRun.Status.WAITING]
+        ):
+            workflows.advance(run)
+            resumed += 1
+        self.message_user(request, _("%(count)s run(s) resumed.") % {"count": resumed})
+
+    @admin.action(description=_("Retry selected failed runs"))
+    def retry_failed(self, request, queryset):
+        from omacrm.core.services import workflows
+
+        retried = 0
+        for run in queryset.filter(status=WorkflowRun.Status.FAILED):
+            run.status = WorkflowRun.Status.RUNNING
+            run.last_error = ""
+            run.finished_at = None
+            run.save(update_fields=["status", "last_error", "finished_at"])
+            workflows.advance(run)
+            retried += 1
+        self.message_user(request, _("%(count)s run(s) retried.") % {"count": retried})
+
+    @admin.action(description=_("Cancel selected runs"))
+    def cancel_runs(self, request, queryset):
+        cancelled = queryset.filter(
+            status__in=[WorkflowRun.Status.RUNNING, WorkflowRun.Status.WAITING]
+        ).update(
+            status=WorkflowRun.Status.CANCELLED,
+            execute_time=None,
+            wait_deadline=None,
+            finished_at=timezone.now(),
+        )
+        self.message_user(request, _("%(count)s run(s) cancelled.") % {"count": cancelled})
