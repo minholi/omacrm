@@ -124,6 +124,17 @@ class CustomEntity(models.Model):
         super().clean()
         from omacrm.core.metadata.registry import registry
 
+        if self.pk:
+            previous_name = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values_list("name", flat=True)
+                .first()
+            )
+            if previous_name and previous_name != self.name:
+                raise ValidationError(
+                    {"name": _("The name cannot be changed after creation.")}
+                )
         if not CUSTOM_ENTITY_NAME_RE.match(self.name or ""):
             raise ValidationError(
                 {

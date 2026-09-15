@@ -5,16 +5,22 @@ from omacrm.core.metadata.registry import registry
 
 
 def build_api_router() -> DefaultRouter:
-    """Create one REST endpoint per registered entity type."""
+    """Create one REST endpoint per registered built-in entity type.
+
+    Runtime custom entities are served by the capitalized
+    ``/api/v1/<Entity>/`` catch-all in the URLconf, so they resolve without a
+    restart and never leave stale routes behind after deactivation.
+    """
 
     router = DefaultRouter()
     for entity_type, entity in registry.entities().items():
+        if registry.is_dynamic(entity_type):
+            continue
         viewset = type(
             f"{entity_type}ViewSet",
             (RecordViewSet,),
             {
                 "entity_type": entity_type,
-                "search_fields": list(entity.search_fields),
                 "ordering_fields": "__all__",
                 "ordering": list(entity.ordering),
             },

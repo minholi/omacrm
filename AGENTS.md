@@ -75,7 +75,8 @@ src/omacrm/
                      # datasets.py, inlines.py
     static/core/js/  # notifications.js, subscriptions.js
     static/vendor/   # codemirror (email editor), swagger-ui (API docs)
-    api/             # serializers.py, viewsets.py, router.py, openapi.py
+    api/             # serializers.py, viewsets.py, router.py, openapi.py,
+                     # metadata.py (staff-only definition CRUD)
     middleware.py    # CurrentUserMiddleware
     forms.py, managers.py
     management/commands/  # rebuild_metadata, run_jobs, run_cron, seed_demo
@@ -158,11 +159,25 @@ src/omacrm/
   by the requesting user's read ACL (paths and fields); it covers built-in and
   dynamic custom entities, their CRUD operations, list parameters, custom
   fields under `custom_data`, custom links and the public lead-capture
-  endpoint. `/swagger/` (`SwaggerView`, staff-only) is a standalone page
-  rendering it with the vendored Swagger UI 5 bundle under
-  `core/static/vendor/swagger-ui/` (no admin chrome is applied); its "Try it
-  out" calls authenticate with the session cookie or a key set through the
-  Authorize dialog.
+  endpoint. Built-in entities use lowercase router paths; runtime custom
+  entities are served by the capitalized `/api/v1/<Entity>/` catch-all, so
+  they need no restart and cannot leave stale routes behind when deactivated
+  (search/ordering come from the metadata too). The document also lists the
+  staff-only metadata endpoints below. `/swagger/` (`SwaggerView`, staff-only)
+  is a standalone page rendering it with the vendored Swagger UI 5 bundle
+  under `core/static/vendor/swagger-ui/` (no admin chrome is applied); its
+  "Try it out" calls authenticate with the session cookie or a key set through
+  the Authorize dialog.
+- **Metadata API**: `/api/v1/metadata/{entities,fields,layouts,links}/`
+  (`core/api/metadata.py`) is a staff-only (`IsAdminUser`) CRUD surface over
+  `CustomEntity`, `CustomField`, `Layout` and `CustomLink`, so the schema can
+  be managed without the admin. Serializers run the model's `full_clean()`
+  (name/template locks, reserved names, foreign-link params) and writes reuse
+  the admin's signals: creating or deactivating a `CustomEntity` materializes
+  or unregisters it plus refreshes the URLconf, so its record endpoint is live
+  immediately. `CustomEntity.name` is locked after creation (model `clean()`,
+  admin and API alike) because renaming would orphan the entity's records.
+  Staff users see these paths in the OpenAPI document; everyone else does not.
 - **Import/export**: `MetadataModelAdmin` inherits
   `MetadataImportExportMixin` (`core/admin/import_export.py`), so every
   metadata-driven admin (including runtime custom entities) gets CSV/XLSX

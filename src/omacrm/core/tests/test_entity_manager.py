@@ -166,3 +166,38 @@ class DynamicApiTests(TestCase):
 
     def test_builtin_routes_still_work(self):
         self.assertEqual(self.client.get("/api/v1/account/").status_code, 200)
+
+    def test_lowercase_alias_is_gone(self):
+        self.assertEqual(self.client.get("/api/v1/project/").status_code, 404)
+
+    def test_search_filters_custom_entity_records(self):
+        DynamicRecord.objects.create(entity_type="Project", name="Apollo")
+        DynamicRecord.objects.create(entity_type="Project", name="Zeus")
+
+        response = self.client.get("/api/v1/Project/", {"search": "Apo"})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["name"], "Apollo")
+
+    def test_default_ordering_follows_metadata(self):
+        self.entity.sort_field = CustomEntity.SortField.NAME
+        self.entity.sort_direction = CustomEntity.SortDirection.ASC
+        self.entity.save()
+        registry.invalidate()
+        DynamicRecord.objects.create(entity_type="Project", name="Zeus")
+        DynamicRecord.objects.create(entity_type="Project", name="Apollo")
+
+        response = self.client.get("/api/v1/Project/")
+        names = [record["name"] for record in response.json()["results"]]
+        self.assertEqual(names, ["Apollo", "Zeus"])
+
+    def test_deactivated_entity_returns_404(self):
+        self.entity.is_active = False
+        self.entity.save()
+
+        self.assertEqual(self.client.get("/api/v1/Project/").status_code, 404)
+        response = self.client.post(
+            "/api/v1/Project/", {"name": "Hera"}, format="json"
+        )
+        self.assertEqual(response.status_code, 404)

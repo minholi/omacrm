@@ -11,7 +11,8 @@ email template code editor with MJML source, dynamic logic server side,
 stars/favourites, record following, per-user kanban order, compact changelist
 currency columns, sortable generated columns, metadata-owned entity names,
 captcha on public lead forms, the hosted web-to-lead form, app secrets, the
-OpenAPI specification and its Swagger UI). 603 tests
+OpenAPI specification and its Swagger UI, the staff-only metadata management
+API and the custom-entity record API fixes). 618 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -167,8 +168,9 @@ are materialized into per-entity proxy models, admins and registry entries
 `custom_data`), so no runtime schema changes are needed; `CustomField` rows
 work on custom entities exactly like built-ins, and the Layout editor,
 formulas, workflows, stream and webhooks apply to them too. Custom entities
-appear in the admin under "All applications"; admin URLs and API endpoints are
-built at startup, so **restart the server after creating a custom entity**.
+appear in the admin under "All applications"; admin URLs and the capitalized
+`/api/v1/<Entity>/` record endpoints resolve without a restart (the metadata
+API manages definitions at `/api/v1/metadata/`, staff-only).
 Startup re-materializes all active entities automatically.
 
 **Delivered — real-time + email notifications:**
@@ -450,6 +452,25 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-15** — Record API fixes + metadata management API. Custom entities
+  are now served **only** by the capitalized `/api/v1/<Entity>/` catch-all:
+  `build_api_router` skips runtime entities, so the accidental lowercase
+  aliases (`/api/v1/project/`) are gone, the 500 that deactivating a
+  startup-persisted entity produced on them is gone with them, and
+  `RecordViewSet.initial` still 404s any unknown entity as defense in depth.
+  `?search=` is now wired to the entity's metadata `search_fields` on every
+  endpoint (it was a no-op on the catch-all despite being documented), and
+  custom-entity lists default to the entity's `sort_field`/`sort_direction`
+  instead of the proxy model's `-created_at`. `CustomEntity.name` is locked
+  after creation (`clean()`), matching the template lock, because renaming
+  would orphan the entity's records. New staff-only
+  `/api/v1/metadata/{entities,fields,layouts,links}/` (`core/api/metadata.py`,
+  `IsAdminUser`) CRUDs the definitions themselves; serializers run the model's
+  `full_clean()` and writes reuse the admin signals (registry invalidation,
+  materialize/unregister, URLconf refresh), so a new entity's record endpoint
+  is live immediately. The OpenAPI document gains the Metadata section for
+  staff users (618 tests).
 
 - **2026-09-15** — Swagger UI at `/swagger/`: a staff-only standalone page
   (`SwaggerView`, deliberately without the admin chrome) renders the generated

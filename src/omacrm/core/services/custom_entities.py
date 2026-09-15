@@ -2,8 +2,9 @@
 
 Each active ``CustomEntity`` gets a proxy model and its own admin, reusing the
 metadata/custom-field machinery. Adding new custom fields after creation is
-supported (values live in ``custom_data``); an API endpoint requires a restart
-because the router is built at startup.
+supported (values live in ``custom_data``); the API is served by the
+capitalized ``/api/v1/<Entity>/`` catch-all, so it resolves without a restart
+and leaves no stale routes behind after deactivation.
 """
 
 import logging

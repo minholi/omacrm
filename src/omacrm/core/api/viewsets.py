@@ -40,6 +40,23 @@ class RecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, AclPermission]
     entity_type = ""
 
+    def initial(self, request, *args, **kwargs):
+        entity_type = self.entity_type
+        if entity_type and not (
+            registry.is_builtin(entity_type) or registry.is_dynamic(entity_type)
+        ):
+            raise NotFound("Unknown entity type.")
+        super().initial(request, *args, **kwargs)
+
+    @property
+    def search_fields(self):
+        """The entity's metadata search fields (read by ``SearchFilter``)."""
+
+        try:
+            return list(registry.get(self.entity_type).search_fields)
+        except KeyError:
+            return []
+
     def get_queryset(self):
         queryset = registry.model_for(self.entity_type).objects.all()
         if registry.is_dynamic(self.entity_type):
@@ -117,6 +134,15 @@ class DynamicRecordViewSet(RecordViewSet):
     @property
     def entity_type(self):
         return self.kwargs.get("entity_type", "")
+
+    @property
+    def ordering(self):
+        """Default to the entity's metadata ordering (sort field/direction)."""
+
+        try:
+            return list(registry.get(self.entity_type).ordering)
+        except KeyError:
+            return None
 
     def initial(self, request, *args, **kwargs):
         if not registry.is_dynamic(self.entity_type):

@@ -19,6 +19,7 @@ from omacrm.core.admin.views import (
     kanban_order,
     notification_stream,
 )
+from omacrm.core.api.metadata import metadata_router
 from omacrm.core.api.openapi import OpenApiView
 from omacrm.core.api.router import router
 from omacrm.core.api.viewsets import DynamicRecordViewSet
@@ -153,6 +154,7 @@ urlpatterns = [
     path("portal/", include("omacrm.crm.portal_urls")),
     path("hijack/", include("hijack.urls")),
     path("api/v1/openapi.json", OpenApiView.as_view(), name="openapi_spec"),
+    path("api/v1/metadata/", include(metadata_router.urls)),
     re_path(
         r"^api/v1/(?P<entity_type>[A-Z][A-Za-z0-9]*)/$",
         DynamicRecordViewSet.as_view({"get": "list", "post": "create"}),

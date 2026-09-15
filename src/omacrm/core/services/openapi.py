@@ -7,6 +7,7 @@ custom relationships, and it is filtered by the requesting user's ACL.
 
 from omacrm.core.api.filters import _COMPARISONS
 from omacrm.core.metadata.registry import registry
+from omacrm.core.models import CustomEntity, CustomField, CustomLink
 from omacrm.core.services.acl import AclService
 
 OPENAPI_VERSION = "3.1.1"
@@ -76,6 +77,116 @@ _LEAD_CAPTURE_RESPONSE = {
         "status": {
             "type": "string",
             "description": "pending_confirmation when the capture uses double opt-in.",
+        },
+    },
+}
+
+_METADATA_TAG = "Metadata"
+
+_METADATA_RESOURCES = (
+    ("entities", "CustomEntity", "custom entity", ["name", "label", "description"]),
+    ("fields", "CustomField", "custom field", ["entity_type", "name", "label"]),
+    ("layouts", "Layout", "layout", ["entity_type", "layout_name"]),
+    (
+        "links",
+        "CustomLink",
+        "link",
+        ["entity_type", "name", "link_entity", "foreign_name"],
+    ),
+)
+
+_METADATA_SCHEMAS = {
+    "CustomEntity": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer", "readOnly": True},
+            "name": {
+                "type": "string",
+                "description": "CamelCase entity name; locked after creation.",
+            },
+            "label": {"type": "string"},
+            "label_plural": {"type": "string"},
+            "description": {"type": "string"},
+            "template": {
+                "type": "string",
+                "enum": list(CustomEntity.Template.values),
+                "description": "Initial fields/layouts; locked after creation.",
+            },
+            "icon": {"type": "string"},
+            "color": {"type": "string"},
+            "show_in_menu": {"type": "boolean"},
+            "menu_order": {"type": "integer"},
+            "show_in_calendar": {"type": "boolean"},
+            "status_field": {"type": "string"},
+            "stream": {"type": "boolean"},
+            "sort_field": {
+                "type": "string",
+                "enum": list(CustomEntity.SortField.values),
+            },
+            "sort_direction": {
+                "type": "string",
+                "enum": list(CustomEntity.SortDirection.values),
+            },
+            "search_fields": {"type": "string"},
+            "duplicate_check_fields": {"type": "string"},
+            "is_active": {"type": "boolean"},
+            "created_at": {"type": "string", "format": "date-time", "readOnly": True},
+            "modified_at": {"type": "string", "format": "date-time", "readOnly": True},
+        },
+    },
+    "CustomField": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer", "readOnly": True},
+            "entity_type": {"type": "string"},
+            "name": {"type": "string"},
+            "label": {"type": "string"},
+            "field_type": {
+                "type": "string",
+                "enum": list(CustomField.FieldType.values),
+            },
+            "params": {"type": "object", "additionalProperties": True},
+            "required": {"type": "boolean"},
+            "read_only": {"type": "boolean"},
+            "order": {"type": "integer"},
+            "is_active": {"type": "boolean"},
+            "created_at": {"type": "string", "format": "date-time", "readOnly": True},
+            "modified_at": {"type": "string", "format": "date-time", "readOnly": True},
+        },
+    },
+    "Layout": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer", "readOnly": True},
+            "entity_type": {"type": "string"},
+            "layout_name": {"type": "string"},
+            "data": {
+                "description": (
+                    "List columns or detail sections, in the same shape the "
+                    "Layout editor writes."
+                ),
+            },
+            "is_custom": {"type": "boolean"},
+            "created_at": {"type": "string", "format": "date-time", "readOnly": True},
+            "modified_at": {"type": "string", "format": "date-time", "readOnly": True},
+        },
+    },
+    "CustomLink": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer", "readOnly": True},
+            "entity_type": {"type": "string"},
+            "name": {"type": "string"},
+            "label": {"type": "string"},
+            "link_type": {
+                "type": "string",
+                "enum": list(CustomLink.LinkType.values),
+            },
+            "link_entity": {"type": "string"},
+            "foreign_name": {"type": "string"},
+            "label_foreign": {"type": "string"},
+            "is_active": {"type": "boolean"},
+            "created_at": {"type": "string", "format": "date-time", "readOnly": True},
         },
     },
 }
@@ -179,7 +290,7 @@ def _entity_schema(entity_type: str, user) -> dict:
     return schema
 
 
-def _list_schema(entity_type: str) -> dict:
+def _list_schema(schema_name: str) -> dict:
     return {
         "type": "object",
         "properties": {
@@ -188,13 +299,13 @@ def _list_schema(entity_type: str) -> dict:
             "previous": {"type": ["string", "null"]},
             "results": {
                 "type": "array",
-                "items": {"$ref": f"#/components/schemas/{entity_type}"},
+                "items": {"$ref": f"#/components/schemas/{schema_name}"},
             },
         },
     }
 
 
-def _list_parameters(entity) -> list[dict]:
+def _list_parameters(search_fields: list[str], where: bool = True) -> list[dict]:
     parameters = [
         {
             "name": "limit",
@@ -209,14 +320,14 @@ def _list_parameters(entity) -> list[dict]:
             "description": "Number of records to skip.",
         },
     ]
-    if entity.search_fields:
+    if search_fields:
         parameters.append(
             {
                 "name": "search",
                 "in": "query",
                 "schema": {"type": "string"},
                 "description": "Search terms across: %s."
-                % ", ".join(entity.search_fields),
+                % ", ".join(search_fields),
             }
         )
     parameters.append(
@@ -227,20 +338,55 @@ def _list_parameters(entity) -> list[dict]:
             "description": "Comma-separated field names; '-' prefixes descending order.",
         }
     )
-    parameters.append(
-        {
-            "name": "where",
-            "in": "query",
-            "schema": {"type": "string"},
-            "description": _WHERE_DESCRIPTION,
-        }
-    )
+    if where:
+        parameters.append(
+            {
+                "name": "where",
+                "in": "query",
+                "schema": {"type": "string"},
+                "description": _WHERE_DESCRIPTION,
+            }
+        )
     return parameters
 
 
 def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
-    ref = {"$ref": f"#/components/schemas/{entity_type}"}
-    list_ref = {"$ref": f"#/components/schemas/{entity_type}List"}
+    return _crud_paths(
+        prefix,
+        entity_type,
+        tag=entity_type,
+        label=str(entity.display_label),
+        label_plural=str(entity.display_label_plural),
+        search_fields=list(entity.search_fields),
+    )
+
+
+def _metadata_paths(
+    resource: str, schema_name: str, label: str, search_fields: list[str]
+) -> dict:
+    return _crud_paths(
+        f"metadata/{resource}",
+        schema_name,
+        tag=_METADATA_TAG,
+        label=label,
+        label_plural=f"{label}s",
+        search_fields=search_fields,
+        where=False,
+    )
+
+
+def _crud_paths(
+    prefix: str,
+    schema_name: str,
+    *,
+    tag: str,
+    label: str,
+    label_plural: str,
+    search_fields: list[str],
+    where: bool = True,
+) -> dict:
+    ref = {"$ref": f"#/components/schemas/{schema_name}"}
+    list_ref = {"$ref": f"#/components/schemas/{schema_name}List"}
     id_parameter = {
         "name": "id",
         "in": "path",
@@ -254,10 +400,10 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
 
     collection = {
         "get": {
-            "tags": [entity_type],
-            "summary": "List %s" % entity.display_label_plural,
+            "tags": [tag],
+            "summary": "List %s" % label_plural,
             "operationId": "%s_list" % prefix,
-            "parameters": _list_parameters(entity),
+            "parameters": _list_parameters(search_fields, where=where),
             "responses": {
                 "200": {
                     "description": "Paginated list of records.",
@@ -267,8 +413,8 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
             },
         },
         "post": {
-            "tags": [entity_type],
-            "summary": "Create a %s" % entity.display_label,
+            "tags": [tag],
+            "summary": "Create a %s" % label,
             "operationId": "%s_create" % prefix,
             "requestBody": {
                 "required": True,
@@ -287,8 +433,8 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
 
     detail = {
         "get": {
-            "tags": [entity_type],
-            "summary": "Retrieve a %s" % entity.display_label,
+            "tags": [tag],
+            "summary": "Retrieve a %s" % label,
             "operationId": "%s_retrieve" % prefix,
             "parameters": [id_parameter],
             "responses": {
@@ -301,8 +447,8 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
             },
         },
         "put": {
-            "tags": [entity_type],
-            "summary": "Replace a %s" % entity.display_label,
+            "tags": [tag],
+            "summary": "Replace a %s" % label,
             "operationId": "%s_update" % prefix,
             "parameters": [id_parameter],
             "requestBody": {
@@ -320,8 +466,8 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
             },
         },
         "patch": {
-            "tags": [entity_type],
-            "summary": "Update a %s partially" % entity.display_label,
+            "tags": [tag],
+            "summary": "Update a %s partially" % label,
             "operationId": "%s_partial_update" % prefix,
             "parameters": [id_parameter],
             "requestBody": {
@@ -339,8 +485,8 @@ def _entity_paths(entity_type: str, entity, prefix: str) -> dict:
             },
         },
         "delete": {
-            "tags": [entity_type],
-            "summary": "Delete a %s" % entity.display_label,
+            "tags": [tag],
+            "summary": "Delete a %s" % label,
             "operationId": "%s_delete" % prefix,
             "parameters": [id_parameter],
             "responses": {
@@ -425,6 +571,23 @@ def build_spec(user) -> dict:
             "description": "Public web-to-lead endpoint.",
         }
     )
+
+    if getattr(user, "is_staff", False):
+        for resource, schema_name, label, search_fields in _METADATA_RESOURCES:
+            schemas[schema_name] = _METADATA_SCHEMAS[schema_name]
+            schemas[f"{schema_name}List"] = _list_schema(schema_name)
+            paths.update(
+                _metadata_paths(resource, schema_name, label, search_fields)
+            )
+        tags.append(
+            {
+                "name": _METADATA_TAG,
+                "description": (
+                    "Staff-only management of custom entities, custom fields, "
+                    "layouts and custom relationships."
+                ),
+            }
+        )
 
     return {
         "openapi": OPENAPI_VERSION,
