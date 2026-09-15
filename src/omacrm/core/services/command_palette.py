@@ -50,6 +50,13 @@ STATIC_COMMANDS = (
         "admin:core_role_changelist",
         True,
     ),
+    (
+        "API docs",
+        _("Browse the REST API contract"),
+        "api",
+        "swagger",
+        False,
+    ),
 )
 
 

@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'vendor/swagger-ui/swagger-ui.css' %}">
+    <style>
+        html, body { margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+               color-scheme: light; }
+        .api-docs-bar { align-items: center; background: #fff;
+                        border-bottom: 1px solid #e5e7eb; display: flex;
+                        font-size: 14px; gap: 16px; padding: 10px 16px; }
+        .api-docs-bar .spacer { margin-left: auto; }
+        .api-docs-bar a { color: #4b5563; text-decoration: none; }
+        .api-docs-bar a:hover { color: #111827; text-decoration: underline; }
+        .api-docs-title { font-weight: 600; }
+        .swagger-ui .view-line-link.copy-to-clipboard button svg { display: none; }
+    </style>
+</head>
+<body>
+    <div class="api-docs-bar">
+        <span class="api-docs-title">{{ title }}</span>
+        <span class="spacer"></span>
+        <a href="{{ api_root_url }}">API root</a>
+        <a href="{{ spec_url }}" target="_blank" rel="noopener">OpenAPI JSON</a>
+        <a href="/admin/">Back to admin</a>
+    </div>
+    <div id="swagger-ui"></div>
+
+    {{ swagger_config|json_script:"swagger-config" }}
+    <script src="{% static 'vendor/swagger-ui/swagger-ui-bundle.js' %}"></script>
+    <script>
+        (function () {
+            var config = JSON.parse(
+                document.getElementById("swagger-config").textContent
+            );
+            SwaggerUIBundle({
+                url: config.specUrl,
+                dom_id: "#swagger-ui",
+                deepLinking: true,
+                persistAuthorization: true,
+                docExpansion: "list",
+                defaultModelsExpandDepth: 1
+            });
+        })();
+    </script>
+</body>
+</html>

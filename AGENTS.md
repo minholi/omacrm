@@ -63,7 +63,7 @@ src/omacrm/
     metadata/        # defs.py, registry.py, fields.py, entities.py, email.py
     services/        # acl, hooks, stream, subscriptions, notifications,
                      # duplicates, jobs, context, builtin_jobs, currency,
-                     # webhooks, captcha, secrets, formula, workflows,
+                     # webhooks, captcha, secrets, openapi, formula, workflows,
                      # custom_entities, phone, reactions, address, crypto,
                      # inbound_email, navigation, relations, custom_fields,
                      # kanban, demo/ (seed_demo)
@@ -74,7 +74,8 @@ src/omacrm/
                      # (calendar + layout/ACL editors + subscription toggle),
                      # datasets.py, inlines.py
     static/core/js/  # notifications.js, subscriptions.js
-    api/             # serializers.py, viewsets.py, router.py
+    static/vendor/   # codemirror (email editor), swagger-ui (API docs)
+    api/             # serializers.py, viewsets.py, router.py, openapi.py
     middleware.py    # CurrentUserMiddleware
     forms.py, managers.py
     management/commands/  # rebuild_metadata, run_jobs, run_cron, seed_demo
@@ -152,6 +153,16 @@ src/omacrm/
   search, ordering, limit/offset pagination and an Espo-style `where` JSON
   filter (`core/api/filters.py`, e.g. `?where=[{"type":"equals","attribute":
   "stage","value":"Proposal"}]`, with `and`/`or`/`not` groups).
+  `GET /api/v1/openapi.json` (`core/api/openapi.py`) serves an OpenAPI 3.1
+  contract generated from the metadata (`core/services/openapi.py`), filtered
+  by the requesting user's read ACL (paths and fields); it covers built-in and
+  dynamic custom entities, their CRUD operations, list parameters, custom
+  fields under `custom_data`, custom links and the public lead-capture
+  endpoint. `/swagger/` (`SwaggerView`, staff-only) is a standalone page
+  rendering it with the vendored Swagger UI 5 bundle under
+  `core/static/vendor/swagger-ui/` (no admin chrome is applied); its "Try it
+  out" calls authenticate with the session cookie or a key set through the
+  Authorize dialog.
 - **Import/export**: `MetadataModelAdmin` inherits
   `MetadataImportExportMixin` (`core/admin/import_export.py`), so every
   metadata-driven admin (including runtime custom entities) gets CSV/XLSX

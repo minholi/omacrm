@@ -14,10 +14,12 @@ from omacrm.core.admin.views import (
     LayoutEditorView,
     LinkAutocompleteView,
     RoleAclEditorView,
+    SwaggerView,
     kanban_move,
     kanban_order,
     notification_stream,
 )
+from omacrm.core.api.openapi import OpenApiView
 from omacrm.core.api.router import router
 from omacrm.core.api.viewsets import DynamicRecordViewSet
 from omacrm.crm import views as crm_views
@@ -88,6 +90,11 @@ urlpatterns = [
         name="global_search",
     ),
     path(
+        "swagger/",
+        admin.site.admin_view(SwaggerView.as_view()),
+        name="swagger",
+    ),
+    path(
         "admin/kanban/<str:entity_type>/",
         admin.site.admin_view(KanbanView.as_view(admin_site=admin.site)),
         name="kanban_board",
@@ -145,6 +152,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("portal/", include("omacrm.crm.portal_urls")),
     path("hijack/", include("hijack.urls")),
+    path("api/v1/openapi.json", OpenApiView.as_view(), name="openapi_spec"),
     re_path(
         r"^api/v1/(?P<entity_type>[A-Z][A-Za-z0-9]*)/$",
         DynamicRecordViewSet.as_view({"get": "list", "post": "create"}),

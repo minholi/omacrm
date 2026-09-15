@@ -820,6 +820,23 @@ class GlobalSearchView(UnfoldSiteViewMixin, TemplateView):
         return context
 
 
+class SwaggerView(TemplateView):
+    """Standalone API documentation page over the generated OpenAPI document."""
+
+    title = _("API documentation")
+
+    template_name = "api_docs.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = self.title
+        spec_url = reverse("openapi_spec")
+        context["spec_url"] = spec_url
+        context["api_root_url"] = reverse("api-root")
+        context["swagger_config"] = {"specUrl": spec_url}
+        return context
+
+
 def _display_value(value) -> str:
     if value is None or value == "":
         return "-"
