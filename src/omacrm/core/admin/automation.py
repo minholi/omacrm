@@ -21,15 +21,7 @@ class FormulaAdmin(ModelAdmin):
         ),
         (
             _("Script"),
-            {
-                "fields": ("script",),
-                "description": _(
-                    "One statement per line. Assignments, e.g. "
-                    "`probability = 50`, custom fields, e.g. "
-                    "`custom.score = 10`, and calls, e.g. "
-                    "`notify('Deal updated')` or `update('stage', 'Proposal')`."
-                ),
-            },
+            {"fields": ("script",)},
         ),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
@@ -76,28 +68,7 @@ class WorkflowAdmin(ModelAdmin):
     fieldsets = (
         (None, {"fields": ("name", "description", "is_active", "order")}),
         (_("Trigger"), {"fields": ("entity_type", "event", "condition")}),
-        (
-            _("Actions"),
-            {
-                "fields": ("actions",),
-                "description": _(
-                    'JSON list, e.g. [{"type": "set_field", "field": "priority", '
-                    '"value": "High"}, {"type": "notify", "message": "Updated"}, '
-                    '{"type": "send_email", "to": "email_address", '
-                    '"subject": "Hi {{ name }}", "body": "<p>{{ name }}</p>"}, '
-                    '{"type": "webhook", "webhook_id": 1}, '
-                    '{"type": "update_related", "relation": "opportunities", '
-                    '"fields": {"stage": "Closed Lost"}}]. Steps: '
-                    '{"type": "wait", "duration": "3d"} or '
-                    '{"type": "wait", "until_date_field": "date_end"} or '
-                    '{"type": "wait", "until_condition": "status == \'Completed\'", '
-                    '"poll_interval": "1h", "timeout": "30d"} pauses the rule '
-                    '(resumed by the "Resume waiting workflow runs" scheduled '
-                    'job); {"type": "branch", "condition": "stage == \'Proposal\'", '
-                    '"then": [...], "else": [...]} routes the steps.'
-                ),
-            },
-        ),
+        (_("Actions"), {"fields": ("actions",)}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
 

@@ -33,15 +33,7 @@ class CustomFieldAdmin(ModelAdmin):
                 )
             },
         ),
-        (
-            _("Parameters"),
-            {
-                "fields": ("params",),
-                "description": _(
-                    "JSON parameters such as choices, default, max_length or tooltip."
-                ),
-            },
-        ),
+        (_("Parameters"), {"fields": ("params",)}),
         (_("System"), {"fields": ("created_at", "modified_at")}),
     )
 

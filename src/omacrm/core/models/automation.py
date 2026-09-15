@@ -18,8 +18,9 @@ class Formula(models.Model):
     event = models.CharField(max_length=20, choices=Event.choices)
     script = models.TextField(
         help_text=_(
-            "One statement per line, e.g. `probability = 50` or "
-            "`notify('Deal updated')`."
+            "One statement per line: `probability = 50`, "
+            "`custom.score = 10`, `notify('Deal updated')` or "
+            "`update('stage', 'Proposal')`."
         )
     )
     description = models.CharField(max_length=255, blank=True, default="")
@@ -67,17 +68,9 @@ class DynamicLogic(models.Model):
     condition = models.JSONField(
         default=dict,
         help_text=_(
-            "Condition tree, e.g. "
-            '{"type": "equals", "attribute": "status", "value": "Open"}. '
-            "Group nodes: "
-            '{"type": "and", "value": [node, node]}, '
-            '{"type": "or", "value": [node, node]}, '
-            '{"type": "not", "value": node}. '
-            "Operators: equals, notEquals, isTrue, isFalse, isEmpty, "
-            "isNotEmpty, contains, notContains, startsWith, endsWith, "
-            "matches (regex), has, notHas, in, notIn, greaterThan, lessThan, "
-            "greaterThanOrEquals, lessThanOrEquals, isToday, inFuture, inPast."
-        )
+            "Condition tree over this record's field values; the editor "
+            "lists the available fields and operators."
+        ),
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -142,9 +135,7 @@ class Workflow(models.Model):
     actions = models.JSONField(
         default=list,
         blank=True,
-        help_text=_(
-            'List of actions, e.g. [{"type": "set_field", "field": "priority", "value": "High"}].'
-        ),
+        help_text=_("Workflow steps: immediate actions, waits or branches."),
     )
     description = models.CharField(max_length=255, blank=True, default="")
     is_active = models.BooleanField(default=True)

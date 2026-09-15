@@ -286,7 +286,7 @@ class LeadCapture(models.Model):
     field_list = models.JSONField(
         default=list,
         blank=True,
-        help_text='Allowed field names, e.g. ["first_name", "last_name", "email_address"].',
+        help_text=_("Allowed form fields; leave empty to use the defaults."),
     )
     opt_in_confirmation = models.BooleanField(
         default=False, help_text="Require email confirmation before storing the lead."
