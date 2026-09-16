@@ -301,6 +301,7 @@ Nothing here is required for the current feature set to be usable.
 
 | Item | Origin | Notes / target |
 | --- | --- | --- |
+| Changelist header display alignment on mobile | UI | Upstream request filed 2026-09-16 ([django-unfold#2288](https://github.com/unfoldadmin/django-unfold/issues/2288)); `display_header.html` right-aligns the name/subtitle block below `lg`. If upstream declines or stalls, override that helper locally (`text-left`). |
 
 ## EspoCRM parity backlog (surveyed 2026-09-12)
 
