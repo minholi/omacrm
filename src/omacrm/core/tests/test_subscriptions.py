@@ -440,7 +440,7 @@ class PreferencesAdminTests(TestCase):
                 "language": "en",
                 "theme": "",
                 "default_currency": "",
-                "notifications_config": "{}",
+                "notifications_email": "on",
                 "auto_follow_entity_types": ["Account", "Task"],
             },
         )
@@ -448,6 +448,56 @@ class PreferencesAdminTests(TestCase):
         preferences.refresh_from_db()
         self.assertEqual(
             set(preferences.auto_follow_entity_types), {"Account", "Task"}
+        )
+        self.assertEqual(
+            preferences.notifications_config, {"email": True, "browser": False}
+        )
+
+    def test_notification_preferences_keep_unknown_keys(self):
+        preferences = Preferences.objects.create(
+            user=self.user, notifications_config={"keep": "me"}
+        )
+        response = self.client.post(
+            reverse("admin:core_preferences_change", args=[preferences.pk]),
+            {
+                "user": self.user.pk,
+                "time_zone": "",
+                "date_format": "",
+                "time_format": "",
+                "language": "en",
+                "theme": "",
+                "default_currency": "",
+                "notifications_email": "on",
+                "notifications_browser": "on",
+                "auto_follow_entity_types": [],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        preferences.refresh_from_db()
+        self.assertEqual(
+            preferences.notifications_config,
+            {"keep": "me", "email": True, "browser": True},
+        )
+
+        response = self.client.post(
+            reverse("admin:core_preferences_change", args=[preferences.pk]),
+            {
+                "user": self.user.pk,
+                "time_zone": "",
+                "date_format": "",
+                "time_format": "",
+                "language": "en",
+                "theme": "",
+                "default_currency": "",
+                "notifications_email": "on",
+                "auto_follow_entity_types": [],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        preferences.refresh_from_db()
+        self.assertEqual(
+            preferences.notifications_config,
+            {"keep": "me", "email": True, "browser": False},
         )
 
     def test_form_only_offers_stream_enabled_entities(self):
@@ -465,6 +515,10 @@ class PreferencesAdminTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "auto_follow_entity_types")
+        self.assertContains(response, "notifications_email")
+        self.assertContains(response, "notifications_browser")
+        self.assertContains(response, "core/js/notification_preference.js")
+        self.assertNotContains(response, 'name="notifications_config"')
 
 
 class NoSubscriptionBehaviourTests(TestCase):

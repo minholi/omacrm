@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from omacrm.core.models import Notification, Preferences, User
 from omacrm.core.services.jobs import JobRunner, schedule
+from omacrm.core.services.notifications import browser_popups_enabled
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -71,10 +72,43 @@ class NotificationEmailTests(TestCase):
             config.notification_email_enabled = True
 
 
+class BrowserPopupPreferenceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("popup", "popup@example.com", "pw")
+
+    def test_disabled_by_default(self):
+        self.assertFalse(browser_popups_enabled(self.user))
+        self.assertFalse(browser_popups_enabled(None))
+
+    def test_enabled_with_preference(self):
+        Preferences.objects.create(
+            user=self.user, notifications_config={"browser": True}
+        )
+        self.assertTrue(browser_popups_enabled(self.user))
+
+    def test_global_toggle_wins(self):
+        from constance import config
+
+        Preferences.objects.create(
+            user=self.user, notifications_config={"browser": True}
+        )
+        config.notification_browser_enabled = False
+        try:
+            self.assertFalse(browser_popups_enabled(self.user))
+        finally:
+            config.notification_browser_enabled = True
+
+
 class NotificationStreamTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser("sse", "sse@example.com", "pw")
         self.client.force_login(self.admin)
+
+    def _init_payload(self):
+        response = self.client.get(reverse("notification_stream"))
+        chunk = next(iter(response.streaming_content)).decode()
+        response.close()
+        return json.loads(chunk[len("data: "):])
 
     def test_stream_emits_init_event(self):
         Notification.objects.create(
@@ -89,7 +123,26 @@ class NotificationStreamTests(TestCase):
         payload = json.loads(first_chunk[len("data: "):])
         self.assertEqual(payload["type"], "init")
         self.assertEqual(payload["count"], 1)
+        self.assertFalse(payload["browser"])
         response.close()
+
+    def test_stream_reports_browser_popups_enabled(self):
+        Preferences.objects.create(
+            user=self.admin, notifications_config={"browser": True}
+        )
+        self.assertTrue(self._init_payload()["browser"])
+
+    def test_stream_browser_flag_follows_global_toggle(self):
+        from constance import config
+
+        Preferences.objects.create(
+            user=self.admin, notifications_config={"browser": True}
+        )
+        config.notification_browser_enabled = False
+        try:
+            self.assertFalse(self._init_payload()["browser"])
+        finally:
+            config.notification_browser_enabled = True
 
     def test_stream_requires_staff(self):
         self.client.force_login(
@@ -104,3 +157,4 @@ class NotificationStreamTests(TestCase):
 
     def test_static_asset_exists(self):
         self.assertIsNotNone(finders.find("core/js/notifications.js"))
+        self.assertIsNotNone(finders.find("core/js/notification_preference.js"))

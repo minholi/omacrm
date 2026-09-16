@@ -657,9 +657,17 @@ def notification_stream(request):
         return queryset.order_by("-id").values_list("id", flat=True).first() or 0
 
     def events():
+        from omacrm.core.services.notifications import browser_popups_enabled
+
         last_notification = latest_id(Notification.objects.filter(user=user))
         last_event = latest_id(StreamEvent.objects.filter(user=user))
-        yield f"data: {json.dumps({'type': 'init', 'count': unread_count()})}\n\n"
+        yield "data: " + json.dumps(
+            {
+                "type": "init",
+                "count": unread_count(),
+                "browser": browser_popups_enabled(user),
+            }
+        ) + "\n\n"
 
         # Each connection lives ~5 minutes, then EventSource reconnects.
         for _ in range(100):

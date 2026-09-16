@@ -6,44 +6,51 @@
         return;
     }
 
-    var BADGE_CLASSES = [
-        "inline-block font-semibold rounded-default text-[11px] uppercase",
-        "whitespace-nowrap h-6 leading-6 px-2 ml-auto",
-        "bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400",
-    ].join(" ");
+    // Set from the SSE init event; the server combines the constance switch
+    // with the user's Preferences opt-in.
+    var browserPopups = false;
 
     function notificationLinks() {
-        return document.querySelectorAll('a[href$="/core/notification/"]');
+        // The sidebar hosts the notification pages (and the avatar badge);
+        // restricting the match keeps page links like the breadcrumb or the
+        // dashboard card from being decorated with the count.
+        return document.querySelectorAll(
+            '#nav-sidebar a[href$="/core/notification/"]'
+        );
     }
 
     function updateBadge(count) {
         notificationLinks().forEach(function (link) {
-            var badge = link.querySelector("[data-notification-badge]");
-
-            if (!badge) {
-                // Adopt the server-rendered badge (numeric span) if present.
-                var spans = link.querySelectorAll("span");
-                for (var index = 0; index < spans.length; index += 1) {
-                    if (/^\d+$/.test(spans[index].textContent.trim())) {
-                        badge = spans[index];
-                        badge.setAttribute("data-notification-badge", "true");
-                        break;
-                    }
-                }
+            // Only the avatar badge carries the unread count: it is a
+            // childless link whose text is the number, so it is updated in
+            // place rather than given a badge span.
+            if (link.children.length || !/^\d+$/.test(link.textContent.trim())) {
+                return;
             }
-
-            if (count > 0) {
-                if (!badge) {
-                    badge = document.createElement("span");
-                    badge.setAttribute("data-notification-badge", "true");
-                    badge.className = BADGE_CLASSES;
-                    link.appendChild(badge);
-                }
-                badge.textContent = String(count);
-            } else if (badge) {
-                badge.remove();
-            }
+            link.textContent = count > 0 ? String(count) : "";
+            link.style.display = count > 0 ? "" : "none";
         });
+    }
+
+    function showPopup(kind, id, message) {
+        if (!browserPopups || !window.Notification) {
+            return;
+        }
+        if (window.Notification.permission !== "granted" || !document.hidden) {
+            return;
+        }
+        try {
+            var popup = new window.Notification("OmaCRM", {
+                body: message,
+                tag: "omacrm-" + kind + "-" + (id || 0),
+            });
+            popup.onclick = function () {
+                window.focus();
+                popup.close();
+            };
+        } catch (error) {
+            /* popups are an enhancement; the toast still shows */
+        }
     }
 
     function showToast(message) {
@@ -81,14 +88,19 @@
                 } catch (error) {
                     return;
                 }
+                if (data.type === "init") {
+                    browserPopups = data.browser === true;
+                }
                 if (typeof data.count === "number") {
                     updateBadge(data.count);
                 }
                 if (data.type === "new" && data.message) {
                     showToast(data.message);
+                    showPopup("notification", data.id, data.message);
                 }
                 if (data.type === "stream" && data.message) {
                     showToast(data.message);
+                    showPopup("stream", data.id, data.message);
                 }
             };
             // EventSource reconnects automatically; errors are expected on idle.

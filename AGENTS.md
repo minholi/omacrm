@@ -234,13 +234,27 @@ src/omacrm/
   `MetadataModelAdmin` renders any metadata `currency` column (built-in or
   custom) as a compact value with the `Money` symbol and the exact value in
   the `title`, and keeps it sortable via `admin_order_field`.
-- **Notifications**: unread count is shown as a sidebar badge and on the
-  dashboard; `core.send_notification_emails` emails a digest of unread
+- **Notifications**: unread count is shown on the dashboard and on the
+  sidebar avatar; `core.send_notification_emails` emails a digest of unread
   notifications (constance `notification_email_enabled` + per-user
   `Preferences.notifications_config.email`), and
   `/admin/notifications/stream/` is an SSE endpoint consumed by
   `core/static/core/js/notifications.js` (loaded via `UNFOLD["SCRIPTS"]`) for
   live badge updates and toasts. Admins can mark notifications read in bulk.
+  The SSE init event also reports the effective browser-popup flag —
+  constance `notification_browser_enabled` combined with the opt-in per-user
+  `Preferences.notifications_config.browser` (default off) — and
+  `notifications.js` raises a desktop notification for `new`/`stream` events
+  while the admin tab is hidden (toasts cover the visible case). The
+  Preferences admin form edits both notification flags as checkboxes
+  (`core/admin/users.py`, unknown JSON keys preserved) and
+  `core/static/core/js/notification_preference.js` requests the browser
+  permission when the popup box is checked, warning inline when the origin is
+  not secure (needs localhost/127.0.0.1 or HTTPS) or the permission is
+  blocked. Only the avatar badge carries the unread count: it is a childless
+  link whose text is the number, so `notifications.js` updates it in place
+  (scoped to `#nav-sidebar`, which keeps breadcrumbs and other page links
+  clean).
 - **Live stream updates**: changing a stream-enabled record assigned to
   someone else queues a `StreamEvent`; the same SSE endpoint delivers it and
   the admin shows a toast (`core/services/stream.py`,

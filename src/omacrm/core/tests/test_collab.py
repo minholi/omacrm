@@ -4,7 +4,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from omacrm.core.admin.dashboard import unread_notifications_badge
 from omacrm.core.models import Attachment, Note, Notification, User
 from omacrm.core.services import stream
 
@@ -38,13 +37,23 @@ class StreamServiceTests(TestCase):
         stream.post_note(self.account, "Self @author2", user=self.author)
         self.assertFalse(Notification.objects.filter(user=self.author).exists())
 
-    def test_unread_badge_callback(self):
+    def test_dashboard_unread_kpi_is_user_scoped(self):
+        from omacrm.core.admin.dashboard import dashboard_callback
+
         Notification.objects.create(user=self.author, type=Notification.Type.SYSTEM)
         Notification.objects.create(
             user=self.author, type=Notification.Type.SYSTEM, read=True
         )
-        request = type("Request", (), {"user": self.author})()
-        self.assertEqual(unread_notifications_badge(request), 1)
+        other = User.objects.create_user("other-kpi", "other@example.com", "pw")
+        Notification.objects.create(user=other, type=Notification.Type.SYSTEM)
+
+        context = dashboard_callback(
+            type("Request", (), {"user": self.author})(), {}
+        )
+        unread = next(
+            kpi for kpi in context["kpis"] if kpi["label"] == "Unread notifications"
+        )
+        self.assertEqual(unread["value"], 1)
 
 
 class NotificationAdminTests(TestCase):

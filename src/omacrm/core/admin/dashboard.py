@@ -14,14 +14,6 @@ def environment_callback(request):
     return None
 
 
-def unread_notifications_badge(request):
-    if not getattr(request, "user", None) or not request.user.is_authenticated:
-        return None
-    from omacrm.core.models import Notification
-
-    return Notification.objects.filter(user=request.user, read=False).count()
-
-
 def _scoped_count(user, entity_type, model, queryset=None):
     scoped = AclService.scope_queryset(
         user, entity_type, queryset if queryset is not None else model.objects.all()
@@ -120,7 +112,9 @@ def dashboard_callback(request, context):
         },
         {
             "label": _("Unread notifications"),
-            "value": Notification.objects.filter(read=False).count(),
+            "value": Notification.objects.filter(
+                user=request.user, read=False
+            ).count(),
             "icon": "notifications",
             "link": reverse("admin:core_notification_changelist"),
         },

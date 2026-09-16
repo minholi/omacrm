@@ -214,6 +214,12 @@ CONSTANCE_CONFIG = {
         "Email unread notifications as a digest",
         bool,
     ),
+    "notification_browser_enabled": (
+        True,
+        "Allow browser popup notifications (each user opts in through their "
+        "Preferences)",
+        bool,
+    ),
     "captcha_provider": (
         "",
         "Captcha provider checked by forms with captcha enabled; empty "
@@ -254,7 +260,10 @@ CONSTANCE_CONFIG_FIELDSETS = {
     ),
     "Localization": ("phone_default_region",),
     "Email": ("public_base_url",),
-    "Notifications": ("notification_email_enabled",),
+    "Notifications": (
+        "notification_email_enabled",
+        "notification_browser_enabled",
+    ),
     "Captcha": (
         "captcha_provider",
         "captcha_site_key",

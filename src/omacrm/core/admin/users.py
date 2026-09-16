@@ -154,16 +154,47 @@ class PreferencesAdminForm(forms.ModelForm):
         widget=UnfoldAdminSelect2MultipleWidget,
         help_text=_("Automatically follow new records of these entity types."),
     )
+    notifications_email = forms.BooleanField(
+        label=_("Email notification digest"),
+        required=False,
+        help_text=_("Email unread notifications as a digest."),
+    )
+    notifications_browser = forms.BooleanField(
+        label=_("Browser popup notifications"),
+        required=False,
+        help_text=_(
+            "Show desktop notifications while the admin is in a background "
+            "tab; the browser asks for permission."
+        ),
+    )
+
+    class Media:
+        js = ("core/js/notification_preference.js",)
 
     class Meta:
         model = Preferences
         fields = "__all__"
+        exclude = ("notifications_config",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["auto_follow_entity_types"].choices = (
             subscriptions.stream_entity_choices()
         )
+        options = (self.instance.notifications_config or {}) if self.instance else {}
+        self.fields["notifications_email"].initial = options.get("email", True)
+        self.fields["notifications_browser"].initial = bool(options.get("browser"))
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        options = dict(instance.notifications_config or {})
+        options["email"] = bool(self.cleaned_data.get("notifications_email"))
+        options["browser"] = bool(self.cleaned_data.get("notifications_browser"))
+        instance.notifications_config = options
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 @admin.register(Preferences)

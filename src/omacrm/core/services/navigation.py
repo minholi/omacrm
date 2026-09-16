@@ -191,7 +191,6 @@ def sidebar_navigation(request=None):
                     _("Notifications"),
                     "notifications",
                     "admin:core_notification_changelist",
-                    badge="omacrm.core.admin.dashboard.unread_notifications_badge",
                 ),
                 _item(
                     _("Settings"), "settings", "admin:constance_config_changelist"

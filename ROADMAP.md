@@ -4,18 +4,19 @@
 > be resumed at any time by any developer/agent. Architecture conventions live
 > in [AGENTS.md](AGENTS.md); run instructions live in [README.md](README.md).
 
-_Last updated: 2026-09-15 — Phases A–G implemented (runtime, sales CRM,
+_Last updated: 2026-09-16 — Phases A–G implemented (runtime, sales CRM,
 collaboration, productivity, marketing, customization, entity manager, portal,
-notifications, utilities, inbound email, saved filters, soft-delete restore,
-email template code editor with MJML source, dynamic logic server side,
-stars/favourites, record following, per-user kanban order, compact changelist
-currency columns, sortable generated columns, metadata-owned entity names,
-captcha on public lead forms, the hosted web-to-lead form, app secrets, the
-OpenAPI specification and its Swagger UI, the staff-only metadata management
-API, the custom-entity record API fixes, the workflow engine's wait and
-branch steps and the authoring editors with their visual builders and flow
-visualization, extended to the layout/reminder/recurrence declarations).
-685 tests
+notifications including browser popups, utilities, inbound email, saved
+filters, soft-delete restore, email template code editor with MJML source,
+dynamic logic server side, stars/favourites, record following, per-user kanban
+order, compact changelist currency columns, sortable generated columns,
+metadata-owned entity names, captcha on public lead forms, the hosted
+web-to-lead form, app secrets, the OpenAPI specification and its Swagger UI,
+the staff-only metadata management API, the custom-entity record API fixes,
+the workflow engine's wait and branch steps and the authoring editors with
+their visual builders and flow visualization, extended to the
+layout/reminder/recurrence declarations).
+691 tests
 passing; see the
 [deferred backlog](#deferred-backlog-not-yet-implemented) and the
 [EspoCRM parity backlog](#espocrm-parity-backlog-surveyed-2026-09-12) for the
@@ -325,7 +326,7 @@ not treated as gaps.
 | 4 | Captcha on public forms | `Tools/Captcha` | **✅ delivered 2026-09-15** (per-capture `form_captcha`, switchable reCAPTCHA v3 / Turnstile, fail closed) |
 | 5 | App secrets | `Tools/AppSecret` | **✅ delivered 2026-09-15** (encrypted `AppSecret` rows, admin under System, `secret("name")` in formulas) |
 | 6 | OpenAPI specification | `Tools/OpenApi` | **✅ delivered 2026-09-15** (metadata-generated OpenAPI 3.1 at `/api/v1/openapi.json`, ACL-filtered, includes custom entities/fields and lead capture; staff-only Swagger UI at `/swagger/`) |
-| 7 | Popup notifications | `Tools/PopupNotification` | Browser-level notice on top of badge/toasts |
+| 7 | Popup notifications | `Tools/PopupNotification` | **✅ delivered 2026-09-16** (desktop popup while the admin tab is hidden, opt-in Preferences checkbox with permission request, constance kill switch) |
 | 8 | Rename labels from the UI | `Tools/LabelManager` | Rename entities/fields without code |
 
 ### Tier 2 — medium investments (high product value)
@@ -358,9 +359,9 @@ not treated as gaps.
 
 Execution order agreed on 2026-09-12: work **Tier 1 top-down**. Dynamic logic
 (#1), **follow/favourites** (#2), **persisted kanban order** (#3), **captcha on
-public forms** (#4), **app secrets** (#5) and the **OpenAPI specification**
-(#6) are delivered; the next item is **popup notifications** (#7). Tiers 2 and
-3 are recorded here but not scheduled.
+public forms** (#4), **app secrets** (#5), the **OpenAPI specification** (#6)
+and **popup notifications** (#7) are delivered; the next item is **rename
+labels from the UI** (#8). Tiers 2 and 3 are recorded here but not scheduled.
 
 ### Workflow engine — improvement to the existing `Workflow`
 
@@ -486,6 +487,29 @@ tables — so "the tests of the file I changed" would not have caught them.
    when a phase or significant feature lands.
 
 ## Change log
+
+- **2026-09-16** — Popup notifications (Tier 1 #7): the SSE stream reports on
+  connect whether browser popups are on for the user — the constance
+  `notification_browser_enabled` switch combined with an opt-in per-user
+  `Preferences.notifications_config.browser` (default off) — and
+  `core/static/core/js/notifications.js` raises a desktop notification for
+  `new`/`stream` events while the admin tab is hidden (the in-page toast
+  covers the focused case; clicking focuses the tab). The Preferences admin
+  form exposes the email-digest and browser-popup flags as checkboxes instead
+  of the raw `notifications_config` JSON (unknown keys are preserved), and
+  `core/static/core/js/notification_preference.js` asks the browser for
+  permission when the popup box is checked, warning inline when the origin is
+  not secure (localhost/127.0.0.1 or HTTPS required) or the permission is
+  blocked. Fixes bundled with this entry: the unread count is shown only on
+  the sidebar avatar — `notifications.js` updates that childless badge link
+  in place (no duplicated span) and is scoped to `#nav-sidebar`, so
+  breadcrumbs and other page links are no longer decorated; the sidebar
+  Notifications nav badge (`unread_notifications_badge`) is gone and the
+  dashboard KPI is user-scoped. The dynamic-logic visual builder now renders
+  a new rule's empty `{}` condition as an `and` group with a blank leaf row
+  instead of a Raw JSON card, emptied groups show a hint, and an empty
+  condition validates as "must contain at least one condition"
+  (691 tests).
 
 - **2026-09-15** — Authoring UX AU4: the remaining JSON declarations got
   editors. `Layout.data` now has a `layout` validate kind backed by the new
