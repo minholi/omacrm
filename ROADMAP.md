@@ -508,8 +508,9 @@ tables — so "the tests of the file I changed" would not have caught them.
   dashboard KPI is user-scoped. The dynamic-logic visual builder now renders
   a new rule's empty `{}` condition as an `and` group with a blank leaf row
   instead of a Raw JSON card, emptied groups show a hint, and an empty
-  condition validates as "must contain at least one condition"
-  (691 tests).
+  condition validates as "must contain at least one condition". The star
+  column also moved from the far right of the changelist to right after the
+  record name (691 tests).
 
 - **2026-09-15** — Authoring UX AU4: the remaining JSON declarations got
   editors. `Layout.data` now has a `layout` validate kind backed by the new

@@ -544,7 +544,7 @@ class MetadataModelAdmin(
             if field_def.name not in used_custom:
                 base.append(self._custom_display(field_def))
         if self.supports_stars():
-            base.append(self._star_display(request))
+            base.insert(1, self._star_display(request))
         resolved = self._resolve_currency_columns(base)
         cache[self] = resolved
         return resolved

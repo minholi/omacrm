@@ -209,7 +209,8 @@ src/omacrm/
   `StreamSubscription` in `core/models/collab.py`): every metadata-driven
   entity can be starred (one row per user and record) or followed; records are
   identified by metadata entity type plus pk, so runtime custom entities work
-  too. Changelists get a star column, "Starred"/"Following" filters and the
+  too. Changelists get a star column right after the record name, plus
+  "Starred"/"Following" filters and the
   record form a star plus Follow/Unfollow control, all toggled in place via
   `/admin/<app>/<model>/subscriptions/<star|follow>/<id>/` and
   `core/static/core/js/subscriptions.js` (no reload); list annotations use one

@@ -204,6 +204,12 @@ class RenderedNotSortableColumnTests(TestCase):
         )
         self.assertContains(response, toggle_url)
 
-        star_header = _header_cells(response)[-1]
+        headers = _header_cells(response)
+        name_index = next(
+            index
+            for index, cell in enumerate(headers)
+            if _header_label(cell) == "Name"
+        )
+        star_header = headers[name_index + 1]
         self.assertEqual(_header_text(star_header), "")
         self.assertIsNone(_sort_url(star_header))
