@@ -298,6 +298,10 @@ class DynamicLogicOperatorTests(SimpleTestCase):
 
     def test_condition_errors(self):
         self.assertEqual(condition_errors({"type": "equals", "attribute": "x", "value": 1}), [])
+        self.assertEqual(
+            condition_errors({}),
+            ["condition must contain at least one condition."],
+        )
         self.assertTrue(condition_errors({"type": "bogus"}))
         self.assertTrue(condition_errors({"type": "not", "value": []}))
         self.assertTrue(condition_errors({"type": "and", "value": []}))

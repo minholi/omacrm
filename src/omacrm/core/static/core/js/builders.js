@@ -390,6 +390,14 @@
                     conditionNode(child, ctx, root, node.value)
                 );
             });
+            if (!node.value.length) {
+                wrapper.appendChild(
+                    el("span", {
+                        class: classString("subtle"),
+                        text: "No conditions yet.",
+                    })
+                );
+            }
             wrapper.appendChild(
                 row([
                     button("+ condition", function () {
@@ -496,6 +504,10 @@
             value && typeof value === "object" && !Array.isArray(value)
                 ? value
                 : {};
+        if (!Object.keys(root).length) {
+            root.type = "and";
+            root.value = [defaultLeaf()];
+        }
         return conditionNode(root, ctx, root, null);
     }
 

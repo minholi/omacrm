@@ -314,6 +314,8 @@ def condition_errors(condition, path: str = "condition") -> list[str]:
 
     if not isinstance(condition, dict):
         return [f"{path} must be a JSON object."]
+    if not condition:
+        return [f"{path} must contain at least one condition."]
 
     node_type = condition.get("type")
     if node_type not in OPERATORS:
